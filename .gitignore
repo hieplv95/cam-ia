@@ -41,3 +41,9 @@ app-example
 # generated native folders
 /ios
 /android
+
+# secrets
+.env
+
+# Accounts and AI usage (SQLite)
+/data/

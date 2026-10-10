@@ -1,0 +1,849 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Group, Image as SkImageNode, ImageSVG, Skia, useFont, type SkImage, type SkSVG } from '@shopify/react-native-skia';
+import { usePreventRemove } from '@react-navigation/native';
+import { useNavigation, useRouter } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { aiEdit, type AiRequest } from '@/src/ai/client';
+import type { RetouchOptionId } from '@/src/ai/retouch';
+import { addCustomPreset, findPreset, nextRecipeName, removeCustomPreset, useCustomPresets } from '@/src/develop/customPresets';
+import { developPresets, presetDevelop, type DevelopPreset } from '@/src/develop/presets';
+import { DevelopedImage } from '@/src/develop/shader';
+import { defaultDevelop, isDefault } from '@/src/develop/types';
+import { Dialog, type DialogAction } from '@/src/Dialog';
+import { loadDraft, newDraftId, saveDraft, timeAgo } from '@/src/drafts/drafts';
+import { EditorCanvas, type PenSettings } from '@/src/editor/EditorCanvas';
+import { FrameOverlay, frames } from '@/src/editor/frames';
+import {
+  blankImage,
+  encodeBase64,
+  flatten,
+  flattenFull,
+  imageFromBase64,
+  loadPhotoPair,
+  padImage,
+  pairFromBase64,
+  renderJpegThumbnail,
+  renderThumbnail,
+  resizeImage,
+  sceneThumbnail,
+  transformImage,
+  type TransformOp,
+} from '@/src/editor/imageOps';
+import {
+  AdjustPanel,
+  AiPanel,
+  BasicPanel,
+  BeautyPanel,
+  DrawPanel,
+  EffectsPanel,
+  FiltersPanel,
+  FramePanel,
+  StickerPanel,
+  TextPanel,
+  type BasicTool,
+  type BeautyTool,
+  type DevelopKey,
+  type DevelopKeyId,
+} from '@/src/editor/panels';
+import { HistorySheet } from '@/src/editor/HistorySheet';
+import { BASE_FONT_SIZE } from '@/src/editor/Scene';
+import { stickers } from '@/src/editor/stickers';
+import { newId, type Doc, type Layer, type TransformableLayer } from '@/src/editor/types';
+import { CategoryTabs, ec } from '@/src/editor/ui';
+import { useDocHistory } from '@/src/editor/useDocHistory';
+import { aiPresetLabel, Icon, type IconSpec } from '@/src/icons';
+import { notify } from '@/src/notify';
+import { setPendingExport, setPendingPhoto, takePendingPhoto } from '@/src/pendingPhoto';
+import { font, paintColors } from '@/src/theme';
+import { track, trackPreset } from '@/src/track';
+import { t, useT, type MessageKey } from '@/src/i18n';
+
+type Category = 'basic' | 'beauty' | 'filters' | 'ai' | 'adjust';
+type BottomTool = 'effects' | 'text' | 'sticker' | 'frame' | 'draw';
+type Panel = Category | BottomTool;
+
+const categories: Category[] = ['basic', 'beauty', 'filters', 'ai', 'adjust'];
+
+const bottomTools: { id: BottomTool; icon: IconSpec }[] = [
+  { id: 'effects', icon: { set: 'mci', name: 'auto-fix' } },
+  { id: 'text', icon: { set: 'mci', name: 'format-text' } },
+  { id: 'sticker', icon: { set: 'mci', name: 'sticker-emoji' } },
+  { id: 'frame', icon: { set: 'mci', name: 'image-frame' } },
+  { id: 'draw', icon: { set: 'mci', name: 'draw' } },
+];
+
+const THUMB = 124;
+
+const cropRatioLabels: Partial<Record<TransformOp, string>> = { square: '1:1', portrait: '4:5', classic: '3:4', story: '9:16', landscape: '16:9' };
+
+/** Name of a rotate/flip/crop step in the edit history. */
+const transformName = (op: TransformOp) => {
+  const ratio = cropRatioLabels[op];
+  return ratio ? t('editor.op.crop', { ratio }) : t(`editor.op.${op}` as MessageKey);
+};
+
+const aiStepName = (req: AiRequest) => {
+  if ('prompt' in req && req.prompt) return t('editor.aiStep.prompt');
+  const id = 'preset' in req ? req.preset : undefined;
+  if (id === 'retouch') return t('editor.aiStep.retouch');
+  return t('editor.aiStep.preset', { name: id ? aiPresetLabel(id) : t('editor.aiStep.generic') });
+};
+
+type DialogState =
+  { type: 'recipe'; name: string } | { type: 'recipeMenu'; preset: DevelopPreset } | { type: 'leave'; proceed: () => void } | null;
+
+const freshDoc = (image: Doc['image'], full?: Doc['full'], step?: string): Doc => ({
+  image,
+  full,
+  step,
+  develop: defaultDevelop(),
+  frame: 'none',
+  layers: [],
+});
+
+/** Same shape within 1%: the "before" picture can be laid over the current one. */
+const sameAspect = (a: SkImage, b: SkImage) => Math.abs(a.width() / a.height() - b.width() / b.height()) < 0.01;
+
+function TopButton({
+  icon,
+  label,
+  onPress,
+  disabled,
+  active,
+}: {
+  icon: IconSpec;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  active?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityLabel={label}
+      onPress={onPress}
+      disabled={disabled}
+      hitSlop={6}
+      style={({ pressed }) => [styles.topBtn, active && styles.topBtnActive, (pressed || disabled) && { opacity: 0.35 }]}
+    >
+      <Icon icon={icon} size={21} color={active ? ec.gold : ec.text} />
+    </Pressable>
+  );
+}
+
+export default function Editor() {
+  useT();
+  const router = useRouter();
+  const skFont = useFont(require('@expo-google-fonts/baloo-2/700Bold/Baloo2_700Bold.ttf'), BASE_FONT_SIZE);
+  const svgs = useMemo<Record<string, SkSVG | null>>(
+    () => Object.fromEntries(stickers.map((s) => [s.id, Skia.SVG.MakeFromString(s.svg)])),
+    [],
+  );
+  const { doc, timeline, position, jumpTo, canUndo, canRedo, checkpoint, update, commit, undo, redo } = useDocHistory(null);
+  const original = useRef<SkImage | null>(null);
+  const navigation = useNavigation();
+  const custom = useCustomPresets();
+
+  // Drafts: once saved, every later change is saved again automatically.
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [openedDraft, setOpenedDraft] = useState(false);
+  const savedDoc = useRef<Doc | null>(null);
+  /** Same as savedDoc, as state so "unsaved changes" re-renders (the leave guard depends on it). */
+  const [savedMark, setSavedMark] = useState<Doc | null>(null);
+  const saveChain = useRef<Promise<void>>(Promise.resolve());
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [dialog, setDialog] = useState<DialogState>(null);
+  const allowLeave = useRef(false);
+  const live = useRef({ doc, draftId, canUndo });
+  live.current = { doc, draftId, canUndo };
+
+  const [panel, setPanel] = useState<Panel>('basic');
+  const [basicTool, setBasicTool] = useState<BasicTool>('exposure');
+  const [adjustTool, setAdjustTool] = useState<DevelopKeyId>('exposure');
+  const [effectTool, setEffectTool] = useState<DevelopKeyId>('vignette');
+  const [beauty, setBeauty] = useState<RetouchOptionId[]>(['face', 'skin']);
+  const [beautyMode, setBeautyMode] = useState<'free' | 'ai'>('free');
+  const [beautyTool, setBeautyTool] = useState<BeautyTool>('smooth');
+  const [brushWidth, setBrushWidth] = useState(26);
+  const [compare, setCompare] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pen, setPen] = useState<PenSettings>({ color: paintColors[0], width: 12, kind: 'normal' });
+  const [textColor, setTextColor] = useState('#FFFFFF');
+  const [busy, setBusy] = useState<string | null>(t('common.openingPhoto'));
+  const [toast, setToast] = useState<string | null>(null);
+  const [stickerThumbs, setStickerThumbs] = useState<Record<string, string>>({});
+  const [presetThumbs, setPresetThumbs] = useState<Record<string, string>>({});
+  const [frameThumbs, setFrameThumbs] = useState<Record<string, string>>({});
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
+  const leave = () => (router.canGoBack() ? router.back() : router.replace('/'));
+
+  /** Runs an operation on the flattened picture and replaces the doc with the result. */
+  const runFlattened = async (base: Doc, message: string, step: string, op: (flat: SkImage) => Promise<SkImage>) => {
+    setBusy(message);
+    setSelectedId(null);
+    setCompare(false);
+    try {
+      commit(freshDoc(await op(await flatten(base, skFont, svgs)), undefined, step));
+      return true;
+    } catch (e: any) {
+      showToast(e.message ?? t('common.error'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /** Rotates/flips/crops the working picture and, separately, the full-resolution original. */
+  const runTransform = async (base: Doc, op: TransformOp) => {
+    setBusy(t('editor.processing'));
+    setSelectedId(null);
+    setCompare(false);
+    try {
+      const image = await transformImage(await flatten(base, skFont, svgs), op);
+      const hasFull = base.full && base.full !== base.image;
+      const full = hasFull ? await transformImage(await flattenFull(base, skFont, svgs), op) : undefined;
+      commit(freshDoc(image, full, transformName(op)));
+    } catch (e: any) {
+      showToast(e.message ?? t('common.error'));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const runAi = async (base: Doc, req: AiRequest) => {
+    let summary = '';
+    const ok = await runFlattened(base, t('editor.aiWorking'), aiStepName(req), async (flat) => {
+      let input = await resizeImage(flat, 1024);
+      if ('preset' in req && req.preset === 'expand') input = await resizeImage(await padImage(input), 1024);
+      const result = await aiEdit(encodeBase64(input, 88), req);
+      summary = result.summary;
+      return imageFromBase64(result.image);
+    });
+    if (ok) showToast(`Xong ✨ ${summary}`);
+  };
+
+  // Load the photo chosen on another screen, then apply what the user picked there.
+  useEffect(() => {
+    const pending = takePendingPhoto();
+    if (!pending) {
+      router.replace('/');
+      return;
+    }
+    if (pending.kind === 'draft') {
+      loadDraft(pending.id)
+        .then((d) => {
+          original.current = d.image;
+          savedDoc.current = d;
+          setSavedMark(d);
+          commit(d);
+          setDraftId(pending.id);
+          setOpenedDraft(true);
+          track('draft_resume');
+          if (d.preset) setPanel('filters');
+        })
+        .catch((e) => {
+          notify(e.message ?? t('editor.cantOpenDraft'));
+          leave();
+        })
+        .finally(() => setBusy(null));
+      return;
+    }
+    const load: Promise<{ image: SkImage; full?: SkImage }> =
+      pending.kind === 'uri'
+        ? loadPhotoPair(pending.uri)
+        : pending.kind === 'base64'
+          ? pairFromBase64(pending.data)
+          : pending.kind === 'image'
+            ? Promise.resolve({ image: pending.image, full: pending.full })
+            : blankImage(pending.gradient ?? pending.color, pending.width, pending.height).then((image) => ({ image }));
+    load
+      .then(({ image, full }) => {
+        original.current = image;
+        const first = freshDoc(image, full);
+        const intent = pending.intent;
+        commit(first);
+        if (intent?.type === 'ai') {
+          setPanel('ai');
+          runAi(first, { preset: intent.preset });
+        } else if (pending.kind === 'blank') {
+          setPanel('draw');
+        }
+      })
+      .catch((e) => {
+        notify(e.message ?? t('common.cantOpenPhoto'));
+        leave();
+      })
+      .finally(() => setBusy((b) => (b === t('common.openingPhoto') ? null : b)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    Promise.all(
+      stickers.map(async (s) => {
+        const svg = svgs[s.id];
+        if (!svg) return [s.id, ''] as const;
+        return [s.id, await renderThumbnail(<ImageSVG svg={svg} x={0} y={0} width={100} height={100} />, 100, 100)] as const;
+      }),
+    ).then((entries) => setStickerThumbs(Object.fromEntries(entries)));
+  }, [svgs]);
+
+  // Preset and frame previews are rendered from the user's own photo.
+  const image = doc?.image;
+  useEffect(() => {
+    if (!image) return;
+    let cancelled = false;
+    (async () => {
+      const small = await resizeImage(image, 200);
+      const plain = <SkImageNode image={small} x={0} y={0} width={THUMB} height={THUMB} fit="cover" />;
+      const presets = await Promise.all(
+        [...custom, ...developPresets].map(async (p) => [
+          p.id,
+          await renderThumbnail(
+            <DevelopedImage image={small} develop={presetDevelop(p)} width={THUMB} height={THUMB} fit="cover" />,
+            THUMB,
+            THUMB,
+          ),
+        ]),
+      );
+      const none = await renderThumbnail(plain, THUMB, THUMB);
+      if (cancelled) return;
+      setPresetThumbs({ none, ...Object.fromEntries(presets) });
+      const frameEntries = await Promise.all(
+        frames.map(async (f) => [
+          f.id,
+          await renderThumbnail(
+            <Group>
+              {plain}
+              <FrameOverlay frame={f.id} width={THUMB} height={THUMB} />
+            </Group>,
+            THUMB,
+            THUMB,
+          ),
+        ]),
+      );
+      if (!cancelled) setFrameThumbs(Object.fromEntries(frameEntries));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [image, custom]);
+
+  /** Writes the draft; saves run one after another so an older save never lands last. */
+  const writeDraft = (d: Doc, id: string) => {
+    const run = saveChain.current.then(async () => {
+      await saveDraft(id, d, await sceneThumbnail(d, skFont, svgs));
+      savedDoc.current = d;
+      setSavedMark(d);
+      setSavedAt(Date.now());
+    });
+    saveChain.current = run.catch(() => {});
+    return run;
+  };
+
+  useEffect(() => {
+    if (!draftId || !doc || doc === savedDoc.current) return;
+    const timer = setTimeout(() => writeDraft(doc, draftId).catch((e) => showToast(e.message ?? t('editor.draftSaveFailed'))), 1500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doc, draftId]);
+
+  const saveDraftNow = async () => {
+    const current = live.current.doc;
+    if (!current) return false;
+    const id = draftId ?? newDraftId();
+    setBusy(t('editor.savingDraft'));
+    setSelectedId(null);
+    try {
+      await writeDraft(current, id);
+      setDraftId(id);
+      return true;
+    } catch (e: any) {
+      showToast(e.message ?? t('editor.draftSaveFailed'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  // Leaving with unsaved edits asks first; a picture that already has a draft is simply saved again.
+  // usePreventRemove (not a plain beforeRemove listener) also blocks the iOS swipe-back gesture.
+  const unsaved = !!doc && doc !== savedMark && (!!draftId || canUndo);
+  usePreventRemove(unsaved, ({ data }) => {
+    const proceed = () => {
+      allowLeave.current = true;
+      navigation.dispatch(data.action);
+    };
+    const { doc: d, draftId: id } = live.current;
+    if (allowLeave.current || !d) proceed();
+    // If the automatic save fails, ask instead of silently losing the edits.
+    else if (id) writeDraft(d, id).then(proceed, () => setDialog({ type: 'leave', proceed }));
+    else setDialog({ type: 'leave', proceed });
+  });
+
+  if (!doc) {
+    return (
+      <SafeAreaView style={[styles.safe, styles.center]}>
+        <ActivityIndicator size="large" color={ec.gold} />
+      </SafeAreaView>
+    );
+  }
+
+  const iw = doc.image.width();
+  const ih = doc.image.height();
+  const minSide = Math.min(iw, ih);
+  const selected = doc.layers.find((l): l is TransformableLayer => l.id === selectedId && (l.kind === 'sticker' || l.kind === 'text'));
+  const compareWith = compare && original.current && sameAspect(original.current, doc.image) ? original.current : null;
+
+  const addLayer = (layer: Layer) => {
+    commit({ ...doc, layers: [...doc.layers, layer] });
+    if (layer.kind === 'sticker' || layer.kind === 'text') setSelectedId(layer.id);
+  };
+
+  const patchSelected = (fn: (l: TransformableLayer) => Partial<TransformableLayer>) => {
+    if (!selected) return;
+    commit({ ...doc, layers: doc.layers.map((l) => (l.id === selected.id ? ({ ...l, ...fn(selected) } as Layer) : l)) });
+  };
+
+  const removeSelected = () => {
+    if (!selected) return;
+    commit({ ...doc, layers: doc.layers.filter((l) => l.id !== selected.id) });
+    setSelectedId(null);
+  };
+
+  const setDevelopValue = (k: DevelopKey, v: number) =>
+    update((d) => ({ ...d, develop: { ...d.develop, [k.group]: { ...d.develop[k.group], [k.key]: v } } }));
+
+  const pickPreset = (id: string | null) => {
+    const p = id ? findPreset(id) : undefined;
+    if (!p) {
+      commit({ ...doc, develop: defaultDevelop(), preset: undefined });
+      return;
+    }
+    const intensity = doc.preset?.intensity ?? 80;
+    trackPreset(p.id);
+    commit({ ...doc, develop: presetDevelop(p, intensity), preset: { id: p.id, intensity } });
+  };
+
+  const setPresetIntensity = (v: number) => {
+    const p = doc.preset && findPreset(doc.preset.id);
+    if (p) update((d) => ({ ...d, develop: presetDevelop(p, v), preset: { id: p.id, intensity: v } }));
+  };
+
+  const askRecipeName = () => {
+    if (isDefault(doc.develop)) {
+      showToast(t('recipe.adjustOrFilterFirst'));
+      return;
+    }
+    setDialog({ type: 'recipe', name: nextRecipeName(custom) });
+  };
+
+  const saveRecipe = async (name: string) => {
+    setDialog(null);
+    try {
+      const small = await resizeImage(doc.image, 480);
+      const thumb = await renderJpegThumbnail(
+        <DevelopedImage image={small} develop={doc.develop} width={360} height={280} fit="cover" />,
+        360,
+        280,
+      );
+      const p = await addCustomPreset(name, doc.develop, thumb);
+      checkpoint();
+      update((d) => ({ ...d, preset: { id: p.id, intensity: 100 } }));
+      showToast(t('recipe.savedToFilters', { name: p.name }));
+    } catch (e: any) {
+      showToast(e.message ?? t('recipe.saveFailed'));
+    }
+  };
+
+  /** Flattens the picture and opens the Export screen (format, quality, size, destination). */
+  const openExport = async () => {
+    setBusy(t('common.preparing'));
+    setSelectedId(null);
+    try {
+      setPendingExport(await flattenFull(doc, skFont, svgs));
+      router.push('/export');
+    } catch (e: any) {
+      showToast(e.message ?? t('common.error'));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /** Hands the current picture to the Retouch or Adjust screen, which comes back here with the result. */
+  const openScreen = async (type: 'retouch' | 'adjust') => {
+    setBusy(t('common.opening'));
+    setSelectedId(null);
+    try {
+      const flat = await flatten(doc, skFont, svgs);
+      const full = doc.full && doc.full !== doc.image ? await flattenFull(doc, skFont, svgs) : undefined;
+      if (draftId) await writeDraft(doc, draftId).catch(() => {});
+      setPendingPhoto({ kind: 'image', image: flat, full, intent: { type } });
+      allowLeave.current = true;
+      router.replace(type === 'retouch' ? '/retouch' : '/adjust');
+    } catch (e: any) {
+      showToast(e.message ?? t('common.error'));
+      setBusy(null);
+    }
+  };
+
+  const choosePanel = (p: Panel) => {
+    setPanel(p);
+    if (p === 'draw') setSelectedId(null);
+  };
+
+  const toggleCompare = () => {
+    if (!compare && !(original.current && sameAspect(original.current, doc.image))) {
+      showToast(t('editor.cantCompare'));
+      return;
+    }
+    setSelectedId(null);
+    setCompare((c) => !c);
+  };
+
+  const slider = { develop: doc.develop, onStart: checkpoint, onDevelop: setDevelopValue };
+  // The teeth / under-eye brushes paint masks on the canvas instead of moving stickers.
+  const brushEffect =
+    panel === 'beauty' && beautyMode === 'free' && (beautyTool === 'whiten' || beautyTool === 'lighten') ? beautyTool : null;
+  const canvasMode = panel === 'draw' ? 'draw' : brushEffect ? 'retouch' : 'move';
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={styles.topBar}>
+        <TopButton icon={{ set: 'ion', name: 'chevron-back' }} label={t('common.back')} onPress={leave} />
+        <View style={styles.topCenter}>
+          <TopButton icon={{ set: 'ion', name: 'arrow-undo-outline' }} label={t('common.undo')} onPress={undo} disabled={!canUndo} />
+          <TopButton icon={{ set: 'ion', name: 'arrow-redo-outline' }} label={t('common.redo')} onPress={redo} disabled={!canRedo} />
+          <TopButton
+            icon={{ set: 'ion', name: 'time-outline' }}
+            label={t('editor.history')}
+            onPress={() => {
+              setSelectedId(null);
+              setHistoryOpen(true);
+            }}
+            active={historyOpen}
+          />
+          <TopButton icon={{ set: 'mci', name: 'compare' }} label={t('editor.compare')} onPress={toggleCompare} active={compare} />
+        </View>
+        <Pressable style={({ pressed }) => [styles.saveBtn, pressed && { opacity: 0.85 }]} onPress={openExport}>
+          <Text style={styles.saveText}>{t('common.save')}</Text>
+        </Pressable>
+      </View>
+
+      <EditorCanvas
+        doc={doc}
+        font={skFont}
+        svgs={svgs}
+        mode={canvasMode}
+        brush={brushEffect ? { effect: brushEffect, width: brushWidth } : undefined}
+        pen={pen}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
+        checkpoint={checkpoint}
+        update={update}
+        compareWith={compareWith}
+      />
+
+      {selected && panel !== 'draw' && !compareWith && (
+        <View style={styles.layerBar}>
+          {(
+            [
+              ['remove', t('editor.layer.smaller'), () => patchSelected((l) => ({ size: Math.max(20, l.size * 0.8) }))],
+              ['add', t('editor.layer.bigger'), () => patchSelected((l) => ({ size: l.size * 1.25 }))],
+              ['refresh', t('editor.layer.rotate'), () => patchSelected((l) => ({ rotation: l.rotation + Math.PI / 12 }))],
+              ...(selected.kind === 'text' ? [['color-palette-outline', t('editor.layer.color'), () => patchSelected(() => ({ color: textColor }))]] : []),
+              ['trash-outline', t('editor.layer.delete'), removeSelected],
+              ['checkmark', t('editor.layer.done'), () => setSelectedId(null)],
+            ] as [React.ComponentProps<typeof Ionicons>['name'], string, () => void][]
+          ).map(([icon, label, onPress]) => (
+            <Pressable key={label} onPress={onPress} style={styles.layerBtn}>
+              <Ionicons name={icon} size={19} color={ec.text} />
+              <Text style={styles.layerText}>{label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      <View style={styles.sheet}>
+        <CategoryTabs
+          tabs={categories.map((id) => ({ id, label: t(`editor.tab.${id}` as MessageKey) }))}
+          value={(categories.includes(panel as Category) ? panel : null) as Category | null}
+          onChange={choosePanel}
+        />
+        <View style={styles.panel}>
+          {panel === 'basic' && (
+            <BasicPanel {...slider} tool={basicTool} onTool={setBasicTool} onTransform={(op) => runTransform(doc, op)} />
+          )}
+          {panel === 'beauty' && (
+            <BeautyPanel
+              mode={beautyMode}
+              onMode={setBeautyMode}
+              tool={beautyTool}
+              onTool={(t) => {
+                setBeautyTool(t);
+                setSelectedId(null);
+              }}
+              develop={doc.develop}
+              onStart={checkpoint}
+              onBeauty={(key, v) => update((d) => ({ ...d, develop: { ...d.develop, beauty: { ...d.develop.beauty, [key]: v } } }))}
+              brushWidth={brushWidth}
+              onBrushWidth={setBrushWidth}
+              onClearBrush={(effect) =>
+                commit({ ...doc, layers: doc.layers.filter((l) => !(l.kind === 'retouch' && l.effect === effect)) })
+              }
+              aiSelected={beauty}
+              onAiToggle={(id) => setBeauty((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))}
+              onAiRun={() => runAi(doc, { preset: 'retouch', options: beauty })}
+              onAdvanced={() => openScreen('retouch')}
+            />
+          )}
+          {panel === 'filters' && (
+            <FiltersPanel
+              thumbs={presetThumbs}
+              custom={custom}
+              preset={doc.preset}
+              onPick={pickPreset}
+              onIntensity={setPresetIntensity}
+              onStart={checkpoint}
+              onSaveRecipe={askRecipeName}
+              onRecipeMenu={(preset) => setDialog({ type: 'recipeMenu', preset })}
+            />
+          )}
+          {panel === 'ai' && <AiPanel onPreset={(preset) => runAi(doc, { preset })} onPrompt={(prompt) => runAi(doc, { prompt })} />}
+          {panel === 'adjust' && (
+            <AdjustPanel {...slider} active={adjustTool} onActive={setAdjustTool} onAdvanced={() => openScreen('adjust')} />
+          )}
+          {panel === 'effects' && <EffectsPanel {...slider} active={effectTool} onActive={setEffectTool} />}
+          {panel === 'text' && (
+            <TextPanel
+              color={textColor}
+              onColor={(c) => {
+                setTextColor(c);
+                if (selected?.kind === 'text') patchSelected(() => ({ color: c }));
+              }}
+              onAdd={(text) => {
+                // Shrink long captions so they fit inside the picture.
+                const widthAtBase = skFont?.getTextWidth(text) ?? text.length * BASE_FONT_SIZE * 0.5;
+                const size = Math.min(minSide * 0.12, (iw * 0.85 * BASE_FONT_SIZE) / Math.max(widthAtBase, 1));
+                addLayer({ kind: 'text', id: newId(), text, color: textColor, x: iw / 2, y: ih * 0.8, size, rotation: 0 });
+              }}
+            />
+          )}
+          {panel === 'sticker' && (
+            <StickerPanel
+              thumbs={stickerThumbs}
+              onAdd={(stickerId) =>
+                addLayer({
+                  kind: 'sticker',
+                  id: newId(),
+                  stickerId,
+                  x: iw / 2 + (Math.random() - 0.5) * minSide * 0.2,
+                  y: ih / 2 + (Math.random() - 0.5) * minSide * 0.2,
+                  size: minSide * 0.3,
+                  rotation: 0,
+                })
+              }
+            />
+          )}
+          {panel === 'frame' && <FramePanel value={doc.frame} thumbs={frameThumbs} onPick={(frame) => commit({ ...doc, frame })} />}
+          {panel === 'draw' && <DrawPanel pen={pen} onChange={setPen} />}
+        </View>
+
+        <View style={styles.bottomBar}>
+          {bottomTools.map((tool) => {
+            const active = panel === tool.id;
+            return (
+              <Pressable key={tool.id} onPress={() => choosePanel(tool.id)} style={styles.bottomItem}>
+                <Icon icon={tool.icon} size={22} color={active ? ec.gold : ec.text} />
+                <Text style={[styles.bottomLabel, active && { color: ec.gold }]}>{t(`editor.tool.${tool.id}` as MessageKey)}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      <HistorySheet
+        visible={historyOpen}
+        timeline={timeline}
+        position={position}
+        firstLabel={openedDraft ? t('editor.openedDraft') : t('common.original')}
+        draftStatus={
+          draftId ? (savedAt ? t('editor.autoSaved', { time: timeAgo(savedAt) }) : t('editor.autoSaveOn')) : t('editor.noDraft')
+        }
+        onJump={(i) => {
+          setSelectedId(null);
+          jumpTo(i);
+        }}
+        onSaveDraft={async () => {
+          setHistoryOpen(false);
+          if (await saveDraftNow()) showToast(t('editor.draftSaved'));
+        }}
+        onClose={() => setHistoryOpen(false)}
+      />
+
+      <Dialog
+        tone="dark"
+        visible={!!dialog}
+        onClose={() => setDialog(null)}
+        {...dialogProps(dialog, {
+          setName: (name) => setDialog({ type: 'recipe', name }),
+          saveRecipe,
+          close: () => setDialog(null),
+          deleteRecipe: async (p) => {
+            setDialog(null);
+            await removeCustomPreset(p.id);
+            if (doc.preset?.id === p.id) update((d) => ({ ...d, preset: undefined }));
+            showToast(t('recipe.deleted', { name: p.name }));
+          },
+          applyRecipe: (p) => {
+            setDialog(null);
+            pickPreset(p.id);
+          },
+          saveAndLeave: async (proceed) => {
+            setDialog(null);
+            if (await saveDraftNow()) proceed();
+          },
+        })}
+      />
+
+      {toast && (
+        <View pointerEvents="none" style={styles.toast}>
+          <Text style={styles.toastText}>{toast}</Text>
+        </View>
+      )}
+
+      {busy && (
+        <View style={styles.overlay}>
+          <View style={styles.busyCard}>
+            <Icon icon={{ set: 'ion', name: 'sparkles' }} size={30} color={ec.gold} />
+            <ActivityIndicator size="small" color={ec.gold} />
+            <Text style={styles.busyText}>{busy}</Text>
+          </View>
+        </View>
+      )}
+    </SafeAreaView>
+  );
+}
+
+/** Title, message, text field and buttons for whichever dialog is open. */
+function dialogProps(
+  dialog: DialogState,
+  on: {
+    setName: (name: string) => void;
+    saveRecipe: (name: string) => void;
+    close: () => void;
+    deleteRecipe: (p: DevelopPreset) => void;
+    applyRecipe: (p: DevelopPreset) => void;
+    saveAndLeave: (proceed: () => void) => void;
+  },
+): {
+  title: string;
+  message?: string;
+  input?: { value: string; onChange: (v: string) => void; placeholder?: string };
+  actions: DialogAction[];
+} {
+  if (dialog?.type === 'recipe') {
+    return {
+      title: t('recipe.saveTitle'),
+      message: t('recipe.saveMsgEditor'),
+      input: { value: dialog.name, onChange: on.setName, placeholder: t('recipe.namePlaceholder') },
+      actions: [
+        { label: t('common.save'), primary: true, onPress: () => on.saveRecipe(dialog.name) },
+        { label: t('common.cancel'), onPress: on.close },
+      ],
+    };
+  }
+  if (dialog?.type === 'recipeMenu') {
+    return {
+      title: dialog.preset.name,
+      message: t('editor.recipeMenuMsg'),
+      actions: [
+        { label: t('common.apply'), primary: true, onPress: () => on.applyRecipe(dialog.preset) },
+        { label: t('recipe.delete'), destructive: true, onPress: () => on.deleteRecipe(dialog.preset) },
+        { label: t('common.close'), onPress: on.close },
+      ],
+    };
+  }
+  if (dialog?.type === 'leave') {
+    return {
+      title: t('editor.leaveTitle'),
+      message: t('editor.leaveMsg'),
+      actions: [
+        { label: t('editor.leaveSave'), primary: true, onPress: () => on.saveAndLeave(dialog.proceed) },
+        { label: t('editor.leaveDiscard'), destructive: true, onPress: dialog.proceed },
+        { label: t('editor.leaveStay'), onPress: on.close },
+      ],
+    };
+  }
+  return { title: '', actions: [] };
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: ec.bg },
+  center: { alignItems: 'center', justifyContent: 'center' },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10, paddingVertical: 6 },
+  topCenter: { flexDirection: 'row', gap: 6 },
+  topBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  topBtnActive: { backgroundColor: ec.goldSoft },
+  saveBtn: { backgroundColor: ec.gold, borderRadius: 999, paddingHorizontal: 22, paddingVertical: 9 },
+  saveText: { fontFamily: font.semi, fontSize: 15, color: ec.onGold },
+  layerBar: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    gap: 4,
+    backgroundColor: ec.surface2,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: ec.border,
+  },
+  layerBtn: { alignItems: 'center', minWidth: 40, gap: 1 },
+  layerText: { fontFamily: font.regular, fontSize: 10, color: ec.textSoft },
+  sheet: {
+    backgroundColor: ec.surface,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingTop: 12,
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
+  },
+  // Fixed height so the tabs don't jump when switching between taller and shorter panels.
+  panel: { height: 184, justifyContent: 'center' },
+  bottomBar: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: ec.border, paddingTop: 10, paddingBottom: 6 },
+  bottomItem: { flex: 1, alignItems: 'center', gap: 4 },
+  bottomLabel: { fontFamily: font.regular, fontSize: 11, color: ec.textSoft },
+  toast: {
+    position: 'absolute',
+    top: 70,
+    alignSelf: 'center',
+    backgroundColor: ec.surface2,
+    borderWidth: 1,
+    borderColor: ec.gold,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 999,
+    maxWidth: '90%',
+  },
+  toastText: { fontFamily: font.medium, color: ec.text, fontSize: 14, textAlign: 'center' },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
+  busyCard: {
+    backgroundColor: ec.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: ec.border,
+    padding: 26,
+    alignItems: 'center',
+    gap: 12,
+    minWidth: 220,
+  },
+  busyText: { fontFamily: font.serif, fontSize: 18, color: ec.text },
+});

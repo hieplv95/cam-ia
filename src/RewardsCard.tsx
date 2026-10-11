@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
 import { getRewards, inviteLink, openAuth, useAccount } from './account';
-import { MAX_REFERRALS_PER_MONTH, REFERRAL_FRIEND_POINTS, REFERRAL_INVITER_POINTS, SHARE_POINTS, type Rewards, type SharePlatform } from './ai/credits';
+import type { Rewards, SharePlatform } from './ai/credits';
 import { cardShadow, colors, font, goldGradient } from './theme';
 import { track } from './track';
 import { useT } from './i18n';
@@ -16,7 +16,7 @@ import { useT } from './i18n';
  */
 export function RewardsCard() {
   const t = useT();
-  const { user } = useAccount();
+  const { user, rewardPoints } = useAccount();
   const [rewards, setRewards] = useState<Rewards | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -36,7 +36,7 @@ export function RewardsCard() {
       <View style={styles.card}>
         <Header />
         <Text style={styles.body}>
-          {t('rewards.guestBody', { n: REFERRAL_INVITER_POINTS })}
+          {t('rewards.guestBody', { n: rewardPoints.inviter })}
         </Text>
         <GoldButton icon="person-add-outline" label={t('rewards.guestButton')} onPress={() => openAuth({ mode: 'register' })} />
       </View>
@@ -51,8 +51,10 @@ export function RewardsCard() {
     );
   }
 
+  // Amounts set on the admin page (sent with the rewards, so they match what the server will give).
+  const points = rewards.points;
   const link = inviteLink(rewards.code);
-  const message = t('rewards.inviteMessage', { code: rewards.code, n: REFERRAL_FRIEND_POINTS, link });
+  const message = t('rewards.inviteMessage', { code: rewards.code, n: points.friend, link });
 
   const copyCode = async () => {
     await Clipboard.setStringAsync(rewards.code);
@@ -95,7 +97,7 @@ export function RewardsCard() {
       // Facebook's share page posts the link (tagged s=fb); points come when someone else opens it.
       track('fb_share');
       await Linking.openURL(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(inviteLink(rewards.code, 'fb'))}`);
-      if (!rewards.shared[platform]) say(t('rewards.sharePending', { n: SHARE_POINTS }));
+      if (!rewards.shared[platform]) say(t('rewards.sharePending', { n: rewards.points.share }));
     } catch (e: any) {
       say(e.message ?? t('rewards.shareFailed'));
     } finally {
@@ -111,7 +113,7 @@ export function RewardsCard() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t('rewards.inviteTitle')}</Text>
         <Text style={styles.small}>
-          {t('rewards.inviteBody', { inviter: REFERRAL_INVITER_POINTS, friend: REFERRAL_FRIEND_POINTS })}
+          {t('rewards.inviteBody', { inviter: points.inviter, friend: points.friend })}
         </Text>
         <View style={styles.inviteRow}>
           <Pressable onPress={copyCode} style={({ pressed }) => [styles.code, pressed && { opacity: 0.7 }]} accessibilityLabel={t('rewards.copyCode')}>
@@ -128,22 +130,21 @@ export function RewardsCard() {
         </Pressable>
         <Text style={styles.small}>
           {t('rewards.invitedStats', { n: rewards.invited, points: rewards.referralPoints })}
-          {rewards.invitesLeftThisMonth < MAX_REFERRALS_PER_MONTH ? t('rewards.invitesLeft', { n: rewards.invitesLeftThisMonth }) : ''}
+          {rewards.invitesLeftThisMonth < points.maxPerMonth ? t('rewards.invitesLeft', { n: rewards.invitesLeftThisMonth }) : ''}
         </Text>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('rewards.shareTitle')}</Text>
-        <Text style={styles.small}>
-          {t('rewards.shareBody', { n: SHARE_POINTS })}
-        </Text>
-        <View style={styles.shareRow}>
-          <ShareButton platform="facebook" claimed={rewards.shared.facebook} busy={busy === 'facebook'} onPress={() => shareOn('facebook')} />
+      {/* Hidden when the admin set the share bonus to 0. */}
+      {points.share > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('rewards.shareTitle')}</Text>
+          <Text style={styles.small}>{t('rewards.shareBody', { n: points.share })}</Text>
+          <View style={styles.shareRow}>
+            <ShareButton platform="facebook" points={points.share} claimed={rewards.shared.facebook} busy={busy === 'facebook'} onPress={() => shareOn('facebook')} />
+          </View>
+          {rewards.shareVisits > 0 && <Text style={styles.small}>{t('rewards.shareVisits', { n: rewards.shareVisits })}</Text>}
         </View>
-        {rewards.shareVisits > 0 && (
-          <Text style={styles.small}>{t('rewards.shareVisits', { n: rewards.shareVisits })}</Text>
-        )}
-      </View>
+      )}
 
       {note ? <Text style={styles.note}>{note}</Text> : null}
     </View>
@@ -177,7 +178,7 @@ const brand = {
   facebook: { label: 'Facebook', icon: 'logo-facebook', color: '#1877F2' },
 } as const;
 
-function ShareButton({ platform, claimed, busy, onPress }: { platform: SharePlatform; claimed: boolean; busy: boolean; onPress: () => void }) {
+function ShareButton({ platform, points, claimed, busy, onPress }: { platform: SharePlatform; points: number; claimed: boolean; busy: boolean; onPress: () => void }) {
   const t = useT();
   const b = brand[platform];
   return (
@@ -185,7 +186,7 @@ function ShareButton({ platform, claimed, busy, onPress }: { platform: SharePlat
       {busy ? <ActivityIndicator size="small" color={b.color} /> : <Ionicons name={b.icon} size={20} color={b.color} />}
       <View style={{ flex: 1 }}>
         <Text style={styles.shareLabel}>{b.label}</Text>
-        <Text style={[styles.shareSub, claimed && { color: colors.textMute }]}>{claimed ? t('rewards.shareClaimed', { n: SHARE_POINTS }) : t('rewards.shareCta', { n: SHARE_POINTS })}</Text>
+        <Text style={[styles.shareSub, claimed && { color: colors.textMute }]}>{claimed ? t('rewards.shareClaimed', { n: points }) : t('rewards.shareCta', { n: points })}</Text>
       </View>
     </Pressable>
   );

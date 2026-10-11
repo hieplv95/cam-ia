@@ -4,8 +4,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { accountState, pendingInvite, refreshAccount, setAuthHandler, signIn, signUp, takeInviteFromLink } from './account';
-import { GUEST_FREE_TRIES, MONTHLY_POINTS, REFERRAL_FRIEND_POINTS } from './ai/credits';
+import { accountState, pendingInvite, refreshAccount, setAuthHandler, signIn, signUp, takeInviteFromLink, useAccount } from './account';
+import { pointsFor } from './ai/credits';
 import { imageModels } from './ai/models';
 import { colors, font, goldGradient } from './theme';
 import { t, useT } from './i18n';
@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!code) return;
       await refreshAccount();
       if (accountState().user) return;
-      setOpen({ mode: 'register', reason: t('auth.invited', { code, n: REFERRAL_FRIEND_POINTS }) });
+      setOpen({ mode: 'register', reason: t('auth.invited', { code, n: accountState().rewardPoints.friend }) });
     });
     return () => setAuthHandler(null);
   }, []);
@@ -37,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 function AuthSheet({ reason, initialMode, onClose }: { reason?: string; initialMode: Mode; onClose: () => void }) {
   useT();
+  const { plan } = useAccount();
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [name, setName] = useState('');
@@ -70,7 +71,7 @@ function AuthSheet({ reason, initialMode, onClose }: { reason?: string; initialM
     }
   };
 
-  const perPoints = imageModels.map((m) => `${m.name} ${t('common.points', { n: m.points })}`).join(', ');
+  const perPoints = imageModels.map((m) => `${m.name} ${t('common.points', { n: pointsFor(plan, m.id) })}`).join(', ');
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
@@ -91,8 +92,8 @@ function AuthSheet({ reason, initialMode, onClose }: { reason?: string; initialM
                 <Text style={styles.sub}>
                   {mode === 'register'
                     ? done.bonus
-                      ? t('auth.welcomePointsBonus', { n: MONTHLY_POINTS, bonus: done.bonus })
-                      : t('auth.welcomePoints', { n: MONTHLY_POINTS })
+                      ? t('auth.welcomePointsBonus', { n: plan.monthlyPoints, bonus: done.bonus })
+                      : t('auth.welcomePoints', { n: plan.monthlyPoints })
                     : t('auth.continueAi')}
                 </Text>
                 <Pressable onPress={onClose} style={({ pressed }) => [{ alignSelf: 'stretch' }, pressed && { opacity: 0.85 }]}>
@@ -112,7 +113,7 @@ function AuthSheet({ reason, initialMode, onClose }: { reason?: string; initialM
                 ) : null}
 
                 <View style={styles.perks}>
-                  <Perk icon="gift-outline" text={t('auth.perkPoints', { n: MONTHLY_POINTS })} />
+                  <Perk icon="gift-outline" text={t('auth.perkPoints', { n: plan.monthlyPoints })} />
                   <Perk icon="hardware-chip-outline" text={t('auth.perkCost', { list: perPoints })} />
                   <Perk icon="color-palette-outline" text={t('auth.perkFree')} />
                 </View>
@@ -159,7 +160,7 @@ function AuthSheet({ reason, initialMode, onClose }: { reason?: string; initialM
                   <TextInput
                     value={ref}
                     onChangeText={(v) => setRef(v.toUpperCase())}
-                    placeholder={t('auth.refPlaceholder', { n: REFERRAL_FRIEND_POINTS })}
+                    placeholder={t('auth.refPlaceholder', { n: accountState().rewardPoints.friend })}
                     placeholderTextColor={colors.textMute}
                     autoCapitalize="characters"
                     maxLength={16}
@@ -175,7 +176,7 @@ function AuthSheet({ reason, initialMode, onClose }: { reason?: string; initialM
                 </Pressable>
                 <Text style={styles.foot}>
                   {mode === 'register'
-                    ? t('auth.guestTries', { n: GUEST_FREE_TRIES })
+                    ? t('auth.guestTries', { n: plan.guestFreeTries })
                     : t('auth.forgot')}
                 </Text>
               </ScrollView>

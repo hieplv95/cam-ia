@@ -23,6 +23,12 @@ export type StudioTool = {
 export type StudioToolId = 'restore' | 'style' | 'product' | 'logo';
 
 const KEEP = 'keep';
+/** Palette option "like the reference image" (logo maker). */
+export const REFERENCE_PALETTE = 'ref';
+/** Logo maker: let the AI decide (or keep the sketch's own style / colors). */
+export const AUTO = 'auto';
+/** Logo maker group "use the reference image to": follow = redraw the sketch, inspire = only take ideas. */
+export const REFERENCE_GROUP = 'use';
 
 export const studioTools: StudioTool[] = [
   {
@@ -104,6 +110,17 @@ export const studioTools: StudioTool[] = [
           { id: 'pastel', prompt: 'a playful pastel backdrop with simple geometric podiums' },
         ],
       },
+      {
+        // One picture with everything, or one picture per product (one AI request each, left to right).
+        id: 'split',
+        defaults: ['one'],
+        options: [
+          { id: 'one', prompt: '' },
+          { id: '2', prompt: '' },
+          { id: '3', prompt: '' },
+          { id: '4', prompt: '' },
+        ],
+      },
     ],
   },
   {
@@ -111,9 +128,19 @@ export const studioTools: StudioTool[] = [
     needsPhoto: false,
     groups: [
       {
-        id: 'look',
-        defaults: ['minimal'],
+        // Only offered when a reference image was added.
+        id: REFERENCE_GROUP,
+        defaults: ['follow'],
         options: [
+          { id: 'follow', prompt: '' },
+          { id: 'inspire', prompt: '' },
+        ],
+      },
+      {
+        id: 'look',
+        defaults: [AUTO],
+        options: [
+          { id: AUTO, prompt: '' },
           { id: 'minimal', prompt: 'minimalist, clean line icon with generous white space' },
           { id: 'luxury', prompt: 'elegant luxury style with a refined serif wordmark and a delicate emblem' },
           { id: 'cute', prompt: 'cute, friendly rounded style with a playful mascot-like icon' },
@@ -124,14 +151,17 @@ export const studioTools: StudioTool[] = [
       },
       {
         id: 'palette',
-        defaults: ['gold'],
+        defaults: [AUTO],
         options: [
+          { id: AUTO, prompt: '' },
           { id: 'gold', prompt: 'warm metallic gold and soft cream' },
           { id: 'black', prompt: 'black on white' },
           { id: 'pink', prompt: 'blush pink and rose gold' },
           { id: 'green', prompt: 'sage green and natural tones' },
           { id: 'blue', prompt: 'navy and sky blue' },
           { id: 'colorful', prompt: 'a cheerful harmonious multicolor palette' },
+          // Only offered when a reference image was added.
+          { id: REFERENCE_PALETTE, prompt: 'the main colors of the reference image' },
         ],
       },
     ],
@@ -139,6 +169,9 @@ export const studioTools: StudioTool[] = [
 ];
 
 export const studioTool = (id: unknown) => studioTools.find((t) => t.id === id);
+
+/** Tools that may take an optional reference image as inspiration (the logo maker). */
+export const takesReference = (tool: StudioTool) => tool.id === 'logo';
 
 /** Translation keys for a tool's texts, a group's label and an option's label. */
 export const studioText = {
@@ -168,25 +201,54 @@ const picked = (tool: StudioTool, choices: StudioChoices, groupId: string) => {
 };
 
 /** Why the request can't run yet (shown under the button), or null when it can. */
-export function studioProblem(tool: StudioTool, choices: StudioChoices, brand: string): MessageKey | null {
-  if (tool.id === 'restore' && !picked(tool, choices, 'fix').length) return 'studio.problem.restore';
-  if (tool.id === 'style' && !['hair', 'color', 'makeup'].some((g) => picked(tool, choices, g).length)) return 'studio.problem.style';
-  if (tool.id === 'logo' && !brand.trim()) return 'studio.problem.logo';
+export function studioProblem(tool: StudioTool, choices: StudioChoices, brand: string, hasReference = false, hasExtra = false): MessageKey | null {
+  // A written request is enough on its own for the photo tools.
+  if (tool.id === 'restore' && !hasExtra && !picked(tool, choices, 'fix').length) return 'studio.problem.restore';
+  if (tool.id === 'style' && !hasExtra && !['hair', 'color', 'makeup'].some((g) => picked(tool, choices, g).length)) return 'studio.problem.style';
+  // A reference image (e.g. the client's sketch) can carry the name itself.
+  if (tool.id === 'logo' && !brand.trim() && !hasReference) return 'studio.problem.logo';
   return null;
 }
 
+/** Product studio: how many separate pictures to make (1 = everything together). */
+export const productSplit = (choices: StudioChoices) => Math.min(4, Math.max(1, Number(choices.split?.[0]) || 1));
+
+/** Which product of a photo with several (0-based, counted from the left). */
+export type ProductPart = { index: number; count: number };
+
+export const cleanPart = (v: unknown): ProductPart | undefined => {
+  const o = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
+  const index = Number(o.index);
+  const count = Number(o.count);
+  return Number.isInteger(count) && count >= 2 && count <= 4 && Number.isInteger(index) && index >= 0 && index < count ? { index, count } : undefined;
+};
+
+const ORDINALS = ['first', 'second', 'third', 'fourth'];
+
 export const MAX_BRAND = 30;
+/** Free-text extra request for the logo maker. */
+export const MAX_EXTRA = 200;
 export const MAX_TAGLINE = 40;
 
-/** The English instruction sent to the image model. */
-export function studioPrompt(tool: StudioTool, choices: StudioChoices, text: { brand?: string; tagline?: string } = {}) {
+/**
+ * The English instruction sent to the image model.
+ * `reference`: an inspiration image is attached (logo maker): its style may guide the design, but nothing is copied.
+ */
+export function studioPrompt(
+  tool: StudioTool,
+  choices: StudioChoices,
+  text: { brand?: string; tagline?: string; reference?: boolean; extra?: string; part?: ProductPart } = {},
+) {
   const p = (g: string) => picked(tool, choices, g).map((o) => o.prompt);
+  // What the client typed (any language), checked against the content filter on the server.
+  const request = text.extra?.trim() ? `\nAlso follow this request from the client (it may be in any language; it takes priority over the instructions above): "${text.extra.trim()}".` : '';
   switch (tool.id) {
     case 'restore':
       return (
         'Restore this old photograph:\n' +
         p('fix').map((s) => `- ${s}`).join('\n') +
-        '\nKeep the composition, people, poses, clothing and background exactly the same, and keep it looking like a real photo (not a painting or illustration).'
+        '\nKeep the composition, people, poses, clothing and background exactly the same, and keep it looking like a real photo (not a painting or illustration).' +
+        request
       );
     case 'style': {
       const [hair] = p('hair');
@@ -200,26 +262,66 @@ export function studioPrompt(tool: StudioTool, choices: StudioChoices, text: { b
       return (
         'Give the person in this photo a new look:\n' +
         steps.join('\n') +
-        '\nKeep the same person: identical face, facial features, expression, age, skin tone, body, clothing, pose, background and framing. Photorealistic, natural result.'
+        '\nKeep the same person: identical face, facial features, expression, age, skin tone, body, clothing, pose, background and framing. Photorealistic, natural result.' +
+        request
       );
     }
     case 'product': {
       const [scene] = p('scene');
+      const part = text.part;
       return (
-        `Turn this into a professional product photo: place the main product on ${scene}. ` +
+        (part
+          ? `This photo shows ${part.count} separate products. Keep ONLY the ${ORDINALS[part.index]} product counting from the left ` +
+            `(product ${part.index + 1} of ${part.count}) and completely remove all the other products, with no leftover parts, shadows or reflections. ` +
+            `Then turn it into a professional product photo: place this single product alone and centered on ${scene}. `
+          : `Turn this into a professional product photo: place the main product on ${scene}. `) +
         'Keep the product itself exactly the same — shape, colors, materials, labels, logos and any printed text must not change. ' +
-        'Realistic lighting, shadows and reflections that match the scene, sharp focus on the product, commercial advertising quality, no added text or watermark.'
+        'Realistic lighting, shadows and reflections that match the scene, sharp focus on the product, commercial advertising quality, no added text or watermark.' +
+        request
       );
     }
     case 'logo': {
-      const [look] = p('look');
-      const [palette] = p('palette');
+      // "Auto" has no prompt: the model decides (or keeps the sketch's own look).
+      const look = p('look').find(Boolean);
+      const brand = text.brand?.trim();
       const tagline = text.tagline?.trim();
+      const fromReference = choices.palette?.includes(REFERENCE_PALETTE);
+      // "Like the reference" without a reference: let the model choose colors that suit the brand.
+      const palette = fromReference && !text.reference ? undefined : p('palette').find(Boolean);
+      const extra = text.extra?.trim() ? `Also follow this extra request from the client (may be in any language): "${text.extra.trim()}". ` : '';
+      const business = tagline ? ` (business: "${tagline}", may be in any language)` : '';
+      const about = brand ? `a brand named "${brand}"${business}` : `a business${business}`;
+      const finish = 'Centered on a plain light background, flat vector look, high contrast, no mockup, no watermark.';
+      // Never recreate someone else's trademark, whatever the mode.
+      const notOthers = "If the attached image is a well-known company's logo, do not reproduce it; only borrow its general style.";
+
+      // The client's own sketch or draft: keep the idea, redraw it professionally.
+      if (text.reference && !choices[REFERENCE_GROUP]?.includes('inspire')) {
+        return (
+          `The attached image is the client's own sketch or draft of the logo for ${about}. ` +
+          'Redraw it as a polished, professional logo that clearly keeps its concept: the same main subject or character, ' +
+          'its pose and expression, the key symbols and props, and the overall layout. ' +
+          'Clean up the lines and proportions and make it work as a logo (bold, simple, readable at small sizes). ' +
+          (look ? `Finish: ${look}, applied only where it suits the sketch. ` : "Keep the sketch's own character and drawing style. ") +
+          `Colors: ${palette ?? 'a harmonious palette that suits the concept'}. ` +
+          (brand
+            ? `The brand name must read "${brand}", spelled exactly like that. Keep any other text written in the sketch (such as a slogan), spelled exactly as written; add no other words. `
+            : 'Keep the brand name and any other text written in the sketch (such as a slogan) exactly as written, letter by letter; add no other words. If the sketch has no text, make a symbol-only logo without words. ') +
+          `${extra}${notOthers} ${finish}`
+        );
+      }
       return (
-        `Design a professional logo for a brand named "${text.brand?.trim()}"${tagline ? ` (business: "${tagline}", may be in any language)` : ''}. ` +
-        `Style: ${look}. Colors: ${palette}. ` +
-        `Show the brand name "${text.brand?.trim()}" spelled exactly like that as the wordmark, with a simple memorable icon. ` +
-        'Centered on a plain light background, flat vector look, high contrast, no mockup, no extra words or watermark.'
+        (text.reference
+          ? 'The attached image is a reference for inspiration: take ideas from its overall style, shapes' +
+            (fromReference ? ', mood and colors' : ' and mood') +
+            `, but create a new, original logo rather than a copy of it. ${notOthers} `
+          : '') +
+        `Design a professional logo for ${about}. ` +
+        `Style: ${look ?? 'whatever suits the brand best'}. Colors: ${palette ?? 'colors that suit the brand'}. ` +
+        (brand
+          ? `Show the brand name "${brand}" spelled exactly like that as the wordmark, with a simple memorable icon. `
+          : 'Use the brand name written in the reference image, spelled exactly, as the wordmark, with a simple memorable icon; if it shows no name, make a symbol-only logo without words. ') +
+        `${extra}${finish} No extra words.`
       );
     }
   }

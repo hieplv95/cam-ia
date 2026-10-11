@@ -1,23 +1,26 @@
 import { createHash, randomBytes } from 'node:crypto';
 
-import { GUEST_FREE_TRIES, MONTHLY_POINTS, pointsFor, type AccountUser, type Credits } from '../ai/credits';
+import { pointsFor, type AccountUser, type Credits } from '../ai/credits';
+import { DEFAULT_IMAGE_MODEL } from '../ai/models';
 import type { MessageKey, Params } from '../i18n/core';
 import { db } from './db';
 import { hashPassword, verifyPassword } from './password';
+import { allowanceFor, getPlan, rememberAllowance } from './plan';
 import { applyReferral, normalizeCode, refCodeOf } from './rewards';
 import { dayLabel, monthWindow, periodOf } from './time';
 
 /**
  * Accounts and AI credits, enforced on the server (the app only displays them).
  * - The app sends a session token (Authorization: Bearer …) once signed in, and always a random device id.
- * - Guests get GUEST_FREE_TRIES results per device; a hashed IP caps how often clearing app data can reset that.
- * - Members get MONTHLY_POINTS points per calendar month (CAMI_TIMEZONE, Argentina/Brazil by default); Pro costs more points than Flash.
+ * - Guests get a few free results per device; a hashed IP caps how often clearing app data can reset that.
+ * - Members get monthly points per calendar month (CAMI_TIMEZONE, Argentina/Brazil by default); Pro costs more points than Flash.
+ * The numbers come from the plan set on the admin page (plan.ts).
  * Only hashes of session tokens and IPs are stored, so a leaked database file can't be replayed.
  */
 
 const SESSION_DAYS = 90;
-/** Clearing app data gives a new device id; past this many free tries per IP in 30 days, guests must sign up. */
-const GUEST_IP_CAP = GUEST_FREE_TRIES * 3;
+/** Clearing app data gives a new device id; past this many times the free tries per IP in 30 days, guests must sign up. */
+const GUEST_IP_FACTOR = 3;
 const GUEST_IP_WINDOW = 30 * 86_400_000;
 /** New accounts per IP per day (each account brings a fresh monthly allowance). */
 const SIGNUPS_PER_IP_PER_DAY = 3;
@@ -82,38 +85,39 @@ export function endSession(request: Request) {
 
 /* ---------- Credits ---------- */
 
-function guestUsed(device: string | null, ip: string) {
+function guestUsed(device: string | null, ip: string, tries: number) {
   const d = db();
   const byIp = (d.prepare('SELECT COUNT(*) AS n FROM usage WHERE user_id IS NULL AND ip = ? AND created_at >= ?').get(ip, Date.now() - GUEST_IP_WINDOW) as { n: number }).n;
-  if (byIp >= GUEST_IP_CAP) return GUEST_FREE_TRIES;
+  if (byIp >= tries * GUEST_IP_FACTOR) return tries;
   // Without a device id (old app / blocked storage) the IP stands in for it.
   const byDevice = device
     ? (d.prepare('SELECT COUNT(*) AS n FROM usage WHERE user_id IS NULL AND device = ?').get(device) as { n: number }).n
     : byIp;
-  return Math.min(GUEST_FREE_TRIES, byDevice);
+  return Math.min(tries, byDevice);
 }
 
 /**
  * A member's points: what is left of this month's allowance, plus bonus points not yet used.
- * Each month the allowance is spent first; anything beyond it in that month came out of the bonus.
+ * Each month the allowance (as it was that month) is spent first; anything beyond it came out of the bonus.
  */
 export function memberPoints(userId: number) {
   const d = db();
-  const spentNow = (d.prepare('SELECT COALESCE(SUM(points), 0) AS n FROM usage WHERE user_id = ? AND period = ?').get(userId, periodOf()) as { n: number }).n;
-  const overage = (
-    d
-      .prepare('SELECT COALESCE(SUM(over), 0) AS n FROM (SELECT MAX(0, SUM(points) - ?) AS over FROM usage WHERE user_id = ? GROUP BY period)')
-      .get(MONTHLY_POINTS, userId) as { n: number }
-  ).n;
+  const now = periodOf();
+  const months = d.prepare('SELECT period, SUM(points) AS n FROM usage WHERE user_id = ? GROUP BY period').all(userId) as { period: string; n: number }[];
+  const spentNow = months.find((m) => m.period === now)?.n ?? 0;
+  const overage = months.reduce((sum, m) => sum + Math.max(0, m.n - allowanceFor(m.period)), 0);
   const earned = (d.prepare('SELECT COALESCE(SUM(points), 0) AS n FROM bonus WHERE user_id = ?').get(userId) as { n: number }).n;
-  return { monthly: Math.max(0, MONTHLY_POINTS - spentNow), bonus: Math.max(0, earned - overage) };
+  return { monthly: Math.max(0, allowanceFor(now) - spentNow), bonus: Math.max(0, earned - overage) };
 }
 
 export function creditsOf(c: Caller): Credits {
-  if (!c.user) return { kind: 'guest', left: GUEST_FREE_TRIES - guestUsed(c.device, c.ip), limit: GUEST_FREE_TRIES };
+  if (!c.user) {
+    const tries = getPlan().guestFreeTries;
+    return { kind: 'guest', left: Math.max(0, tries - guestUsed(c.device, c.ip, tries)), limit: tries };
+  }
   const { end } = monthWindow();
   const { monthly, bonus } = memberPoints(c.user.id);
-  return { kind: 'member', left: monthly + bonus, limit: MONTHLY_POINTS, bonus, resetAt: end, resetLabel: dayLabel(end) };
+  return { kind: 'member', left: monthly + bonus, limit: allowanceFor(periodOf()), bonus, resetAt: end, resetLabel: dayLabel(end) };
 }
 
 /** `key`/`params`: the message, translated by the API route. */
@@ -125,15 +129,18 @@ export type Denied = { status: number; code: 'login_required' | 'no_points'; key
  * Call `settle` after success (the model actually used may be cheaper) or `refund` after a failure.
  */
 export function charge(c: Caller, model: string): { usageId: number } | Denied {
+  const plan = getPlan();
+  // This month's allowance is fixed the first time it is used.
+  if (c.user) rememberAllowance();
   const credits = creditsOf(c);
-  const cost = c.user ? pointsFor(model) : 1;
+  const cost = c.user ? pointsFor(plan, model) : 1;
   if (credits.left < cost) {
     if (credits.kind === 'guest') {
-      return { status: 401, code: 'login_required', key: 'server.guestOut', params: { tries: GUEST_FREE_TRIES, points: MONTHLY_POINTS } };
+      return { status: 401, code: 'login_required', key: 'server.guestOut', params: { tries: plan.guestFreeTries, points: plan.monthlyPoints } };
     }
     const day = credits.resetLabel;
     return credits.left > 0
-      ? { status: 402, code: 'no_points', key: 'server.notEnoughPoints', params: { left: credits.left, cost, day } }
+      ? { status: 402, code: 'no_points', key: 'server.notEnoughPoints', params: { left: credits.left, cost, day, flash: pointsFor(plan, DEFAULT_IMAGE_MODEL) } }
       : { status: 402, code: 'no_points', key: 'server.outOfPoints', params: { day } };
   }
   const id = db()
@@ -146,7 +153,7 @@ export const isDenied = (r: { usageId: number } | Denied): r is Denied => 'code'
 
 /** Records the model that actually answered (a busy Pro falls back to Flash, which costs members fewer points). */
 export function settle(usageId: number, model: string, isMember: boolean) {
-  db().prepare('UPDATE usage SET model = ?, points = ? WHERE id = ?').run(model, isMember ? pointsFor(model) : 1, usageId);
+  db().prepare('UPDATE usage SET model = ?, points = ? WHERE id = ?').run(model, isMember ? pointsFor(getPlan(), model) : 1, usageId);
 }
 
 export function refund(usageId: number) {

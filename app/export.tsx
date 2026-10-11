@@ -1,9 +1,9 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Canvas, Group, Image as SkImageNode, ImageFormat, Text as SkText, useFont, type SkFont, type SkImage } from '@shopify/react-native-skia';
+import { Canvas, Group, Image as SkImageNode, ImageFormat, Shadow, useImage, type SkImage } from '@shopify/react-native-skia';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState, type ComponentProps } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { encodeBase64, renderImage, resizeImage } from '@/src/editor/imageOps';
@@ -23,25 +23,27 @@ const qualityValue: Record<Quality, number> = { standard: 80, high: 92, max: 100
 /** "original" keeps the photo's own full resolution (up to FULL_MAX_SIDE). */
 const resolutionSide: Record<Resolution, number> = { web: 1080, high: 2048, original: Infinity };
 
-const WATERMARK = 'Cami';
-const BASE_FONT = 100;
+/** White "Camia.app" script signature on a transparent background. */
+const SIGNATURE_ASSET = require('@/assets/images/brand/camia-signature.png');
+// Web bundles an image as { uri }, which Skia's loader does not read: hand it the address instead.
+const SIGNATURE: number | string = Platform.OS === 'web' ? SIGNATURE_ASSET.uri : SIGNATURE_ASSET;
 
-/** The picture with an optional "Cami" signature in the bottom-right corner, in image pixels. */
-function Signed({ image, font: f, watermark }: { image: SkImage; font: SkFont | null; watermark: boolean }) {
+/** The picture with the optional Camia.app signature in the bottom-right corner, in image pixels. */
+function Signed({ image, logo, watermark }: { image: SkImage; logo: SkImage | null; watermark: boolean }) {
   const w = image.width();
   const h = image.height();
-  const size = Math.max(16, w * 0.045);
-  const k = size / BASE_FONT;
-  const tw = f ? f.getTextWidth(WATERMARK) * k : 0;
-  const margin = w * 0.035;
+  const side = Math.min(w, h);
+  const lw = side * 0.34;
+  const lh = logo ? (lw * logo.height()) / logo.width() : 0;
+  const margin = side * 0.035;
   return (
     <Group>
       <SkImageNode image={image} x={0} y={0} width={w} height={h} fit="fill" />
-      {watermark && f && (
-        <Group transform={[{ translateX: w - tw - margin }, { translateY: h - margin }, { scale: k }]}>
-          <SkText x={4} y={4} text={WATERMARK} font={f} color="rgba(0,0,0,0.35)" />
-          <SkText x={0} y={0} text={WATERMARK} font={f} color="rgba(255,255,255,0.92)" />
-        </Group>
+      {watermark && logo && (
+        <SkImageNode image={logo} x={w - lw - margin} y={h - lh - margin * 0.6} width={lw} height={lh} fit="contain" opacity={0.95}>
+          {/* A soft shadow keeps the white script readable on light photos. */}
+          <Shadow dx={0} dy={side * 0.002} blur={side * 0.006} color="rgba(0,0,0,0.45)" />
+        </SkImageNode>
       )}
     </Group>
   );
@@ -50,9 +52,9 @@ function Signed({ image, font: f, watermark }: { image: SkImage; font: SkFont | 
 type Options = { format: ImageFormatId; quality: Quality; resolution: Resolution; watermark: boolean };
 type Output = { key: string; bytes: Uint8Array; width: number; height: number; image: SkImage };
 
-async function produce(source: SkImage, o: Options, f: SkFont | null): Promise<Omit<Output, 'key'>> {
+async function produce(source: SkImage, o: Options, logo: SkImage | null): Promise<Omit<Output, 'key'>> {
   let img = await resizeImage(source, resolutionSide[o.resolution]);
-  if (o.watermark && f) img = await renderImage(<Signed image={img} font={f} watermark />, img.width(), img.height());
+  if (o.watermark && logo) img = await renderImage(<Signed image={img} logo={logo} watermark />, img.width(), img.height());
   const bytes = img.encodeToBytes(o.format === 'png' ? ImageFormat.PNG : ImageFormat.JPEG, o.format === 'png' ? 100 : qualityValue[o.quality]);
   return { bytes, width: img.width(), height: img.height(), image: img };
 }
@@ -113,9 +115,9 @@ type IonName = ComponentProps<typeof Ionicons>['name'];
 export default function Export() {
   const t = useT();
   const router = useRouter();
-  const signatureFont = useFont(require('@expo-google-fonts/playfair-display/600SemiBold/PlayfairDisplay_600SemiBold.ttf'), BASE_FONT);
+  const signature = useImage(SIGNATURE);
   const [source] = useState<SkImage | null>(() => takePendingExport());
-  const [opts, setOpts] = useState<Options>({ format: 'jpg', quality: 'high', resolution: 'original', watermark: false });
+  const [opts, setOpts] = useState<Options>({ format: 'jpg', quality: 'high', resolution: 'original', watermark: true });
   const [output, setOutput] = useState<Output | null>(null);
   const [destination, setDestination] = useState<Destination>('save');
   const [busy, setBusy] = useState(false);
@@ -123,7 +125,9 @@ export default function Export() {
   const [box, setBox] = useState({ w: 0, h: 0 });
   const latest = useRef('');
 
-  const key = JSON.stringify(opts);
+  // The signature loads asynchronously: until it is there, a "with logo" file is not ready (nor its size).
+  const logoPending = opts.watermark && !signature;
+  const key = JSON.stringify({ ...opts, logo: opts.watermark && !!signature });
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
@@ -139,12 +143,12 @@ export default function Export() {
     if (!source) return;
     latest.current = key;
     const timer = setTimeout(async () => {
-      const out = await produce(source, opts, signatureFont);
+      const out = await produce(source, opts, signature);
       if (latest.current === key) setOutput({ key, ...out });
     }, 250);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, source, signatureFont]);
+  }, [key, source, signature]);
 
   const destinations: { id: Destination; label: string; icon: IonName; color: string }[] = [
     { id: 'save', label: Platform.OS === 'web' ? t('export.download') : t('common.save'), icon: 'download-outline', color: colors.text },
@@ -164,7 +168,7 @@ export default function Export() {
     if (!source) return;
     setBusy(true);
     try {
-      const out = output?.key === key ? output : { key, ...(await produce(source, opts, signatureFont)) };
+      const out = output?.key === key ? output : { key, ...(await produce(source, opts, signature)) };
       let msg: string | null = null;
       if (destination === 'save') msg = await saveImage(out.bytes, opts.format);
       else if (destination === 'share') await shareImage(out.bytes, opts.format);
@@ -205,7 +209,7 @@ export default function Export() {
             <View style={[styles.photo, { width: iw * scale, height: ih * scale }]}>
               <Canvas style={{ width: iw * scale, height: ih * scale }}>
                 <Group transform={[{ scale }]}>
-                  <Signed image={source} font={signatureFont} watermark={opts.watermark} />
+                  <Signed image={source} logo={signature} watermark={opts.watermark} />
                 </Group>
               </Canvas>
               <View style={styles.readyPill}>
@@ -257,13 +261,14 @@ export default function Export() {
             onChange={(resolution) => setOpts((o) => ({ ...o, resolution }))}
           />
         </OptionRow>
-        <OptionRow icon={<Ionicons name="water-outline" size={20} color={colors.text} />} title={t('export.watermark')} sub={t('export.watermarkSub')}>
-          <Switch
-            value={opts.watermark}
-            onValueChange={(watermark) => setOpts((o) => ({ ...o, watermark }))}
-            trackColor={{ false: colors.border, true: colors.goldDeep }}
-            thumbColor={opts.watermark ? colors.gold : '#FFFFFF'}
-            {...(Platform.OS === 'web' ? { activeThumbColor: colors.gold } : {})}
+        <OptionRow icon={<Ionicons name="sparkles-outline" size={20} color={colors.text} />} title={t('export.watermark')} sub={t('export.watermarkSub')}>
+          <Segmented
+            options={[
+              { id: 'none', label: t('export.logo.none') },
+              { id: 'logo', label: t('export.logo.with') },
+            ]}
+            value={opts.watermark ? 'logo' : 'none'}
+            onChange={(v) => setOpts((o) => ({ ...o, watermark: v === 'logo' }))}
           />
         </OptionRow>
 
@@ -281,7 +286,7 @@ export default function Export() {
           })}
         </View>
 
-        <Pressable disabled={busy} onPress={exportNow} style={({ pressed }) => [(pressed || busy) && { opacity: 0.8 }]}>
+        <Pressable disabled={busy || logoPending} onPress={exportNow} style={({ pressed }) => [(pressed || busy || logoPending) && { opacity: 0.8 }]}>
           <LinearGradient colors={goldGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.exportBtn}>
             {busy ? <ActivityIndicator color={colors.onGold} /> : <Text style={styles.exportText}>{t('export.now')}</Text>}
             {!busy && <Ionicons name="arrow-forward" size={18} color={colors.onGold} />}

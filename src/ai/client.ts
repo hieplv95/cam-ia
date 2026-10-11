@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
-import { apiFetch, openAuth } from '../account';
+import { accountState, apiFetch, openAuth } from '../account';
+import { pointsFor } from './credits';
 import { DEFAULT_IMAGE_MODEL, isImageModel, modelInfo, type ImageModelId } from './models';
 import type { GenerateRatio, GenerateStyleId } from './generate';
 import type { AiPresetId } from './presets';
@@ -41,7 +42,12 @@ export function useAiModel() {
 
 /* ---------- Requests ---------- */
 
-export type AiRequest = { preset: AiPresetId; options?: RetouchOptionId[] } | { prompt: string };
+/** target 'logo': the picture is a logo from the studio, edited as a logo (same design, only the asked change). */
+export type AiRequest =
+  | { preset: AiPresetId; options?: RetouchOptionId[] }
+  | { prompt: string; target?: 'logo' }
+  /** "Xóa vật thể": marked = the photo carries red brush marks over what to remove; prompt = a description. */
+  | { erase: true; marked: boolean; prompt?: string };
 
 export type AiResult = {
   image: string;
@@ -65,7 +71,7 @@ async function callAi(payload: Record<string, unknown>): Promise<AiResult> {
   const name = used?.name ?? data.model;
   const fallback = data.model && data.model !== requested ? t('credits.summaryBusy', { model: modelInfo(requested)?.name ?? requested }) : '';
   const c = data.credits;
-  const left = !c ? '' : c.kind === 'guest' ? t('credits.summaryGuest', { n: c.left }) : t('credits.summaryMember', { cost: used?.points ?? 1, n: c.left });
+  const left = !c ? '' : c.kind === 'guest' ? t('credits.summaryGuest', { n: c.left }) : t('credits.summaryMember', { cost: pointsFor(accountState().plan, data.model ?? requested), n: c.left });
   return { image: data.image, model: data.model ?? requested, summary: `${fallback}${name}${left}` };
 }
 
@@ -75,7 +81,12 @@ export function aiEdit(imageBase64: string, req: AiRequest): Promise<AiResult> {
 }
 
 /** Runs a featured tool: edits the photo (restore, hairstyle, product) or draws a logo when there is none. */
-export function aiStudio(tool: StudioToolId, choices: StudioChoices, imageBase64: string | null, text: { brand?: string; tagline?: string } = {}) {
+export function aiStudio(
+  tool: StudioToolId,
+  choices: StudioChoices,
+  imageBase64: string | null,
+  text: { brand?: string; tagline?: string; extra?: string; part?: { index: number; count: number } } = {},
+) {
   return callAi({ mode: 'studio', tool, choices, image: imageBase64 ?? undefined, ...text });
 }
 

@@ -56,7 +56,7 @@ export function SystemTab({ refresh }: { refresh: number }) {
       </Card>
 
       <Grid min={340}>
-        <Card title="Quy tắc điểm & thưởng" subtitle="Sửa trong src/ai/credits.ts và src/ai/models.ts">
+        <Card title="Quy tắc điểm & thưởng" subtitle="Sửa ở tab Cài đặt (Điểm AI, Điểm thưởng)">
           {c.models.map((m) => (
             <Row key={m.id} label={`Model ${m.name}${m.isDefault ? ' (mặc định)' : ''}`} sub={m.id} value={`$${m.usd}/ảnh · ${m.points} điểm`} />
           ))}

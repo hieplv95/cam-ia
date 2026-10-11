@@ -5,15 +5,19 @@ import { openAuth, signOut, useAccount } from '@/src/account';
 import { OverviewTab } from '@/src/admin/OverviewTab';
 import { Loading, Shell } from '@/src/admin/Shell';
 import { SystemTab } from '@/src/admin/SystemTab';
+import { SettingsTab } from '@/src/admin/SettingsTab';
+import { TrafficTab } from '@/src/admin/TrafficTab';
 import { Button, Card, Segmented } from '@/src/admin/ui';
 import { UsersTab } from '@/src/admin/UsersTab';
 import { colors, font } from '@/src/theme';
 
-type Tab = 'overview' | 'users' | 'system';
+type Tab = 'overview' | 'traffic' | 'users' | 'system' | 'settings';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Tổng quan' },
+  { id: 'traffic', label: 'Truy cập' },
   { id: 'users', label: 'Khách hàng' },
   { id: 'system', label: 'Hệ thống' },
+  { id: 'settings', label: 'Cài đặt' },
 ];
 
 /**
@@ -58,8 +62,10 @@ export default function Admin() {
     <Shell title="Quản trị Cami" subtitle={user.email} onRefresh={() => setRefresh((n) => n + 1)}>
       <Segmented options={TABS} value={tab} onChange={setTab} />
       {tab === 'overview' && <OverviewTab refresh={refresh} />}
+      {tab === 'traffic' && <TrafficTab refresh={refresh} />}
       {tab === 'users' && <UsersTab refresh={refresh} />}
       {tab === 'system' && <SystemTab refresh={refresh} />}
+      {tab === 'settings' && <SettingsTab refresh={refresh} />}
     </Shell>
   );
 }

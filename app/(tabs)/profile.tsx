@@ -7,7 +7,7 @@ import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native
 
 import { deleteAccount, openAuth, refreshAccount, signOut, useAccount } from '@/src/account';
 import { useAiModel } from '@/src/ai/client';
-import { MONTHLY_POINTS } from '@/src/ai/credits';
+import { pointsFor } from '@/src/ai/credits';
 import { modelInfo } from '@/src/ai/models';
 import { Dialog } from '@/src/Dialog';
 import { getLanguage, languageName, t, useT } from '@/src/i18n';
@@ -55,13 +55,13 @@ export default function Profile() {
   useT();
   const { recents, reload } = useRecents();
   const router = useRouter();
-  const { user, credits, admin } = useAccount();
+  const { user, credits, admin, plan } = useAccount();
   const [model] = useAiModel();
   const [picker, setPicker] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [removing, setRemoving] = useState<{ password: string; error?: string } | null>(null);
   const info = modelInfo(model);
-  const modelLabel = info ? `${info.name} · ${t('common.points', { n: info.points })} · ~${formatCost(info.usd)}` : model;
+  const modelLabel = info ? `${info.name} · ${t('common.points', { n: pointsFor(plan, info.id) })} · ~${formatCost(info.usd)}` : model;
   const resetDay = credits?.kind === 'member' ? credits.resetLabel : '';
 
   // Credits change when AI is used on other screens; refresh when coming back.
@@ -93,7 +93,7 @@ export default function Profile() {
           <Pressable onPress={() => openAuth({ mode: 'register' })} style={({ pressed }) => [{ marginTop: 10 }, pressed && { opacity: 0.85 }]}>
             <LinearGradient colors={goldGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.signUp}>
               <Ionicons name="person-add-outline" size={16} color={colors.onGold} />
-              <Text style={styles.signUpText}>{t('profile.signUpCta', { n: MONTHLY_POINTS })}</Text>
+              <Text style={styles.signUpText}>{t('profile.signUpCta', { n: plan.monthlyPoints })}</Text>
             </LinearGradient>
           </Pressable>
         )}
@@ -118,7 +118,7 @@ export default function Profile() {
         <Row icon="hardware-chip-outline" title={t('profile.model')} value={modelLabel} onPress={() => setPicker(true)} />
         <Row
           icon="sparkles-outline"
-          title={credits?.kind === 'member' ? t('profile.pointsRow', { n: MONTHLY_POINTS }) : t('profile.trialRow')}
+          title={credits?.kind === 'member' ? t('profile.pointsRow', { n: plan.monthlyPoints }) : t('profile.trialRow')}
           value={
             credits
               ? credits.kind === 'member'

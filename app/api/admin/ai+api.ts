@@ -56,7 +56,10 @@ export async function POST(request: Request) {
         return reply({ tests: sources.length ? await testConnection(sources) : [], ok: sources.length ? undefined : 'Chưa có nguồn nào.' });
       }
       case 'add': {
-        const name = addSource(b.source ?? ({} as NewSource));
+        const source = b.source ?? ({} as NewSource);
+        const tests = await testConnection([newToRuntime(source)]);
+        if (tests.some((t) => !t.ok)) return reply({ tests });
+        const name = addSource(source);
         log(`Thêm nguồn AI "${name}"`);
         return reply({ ok: `Đã thêm nguồn "${name}" vào cuối danh sách.` });
       }

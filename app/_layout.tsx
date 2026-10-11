@@ -14,6 +14,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AuthProvider } from '@/src/AuthSheet';
 import { PhotoSourceProvider } from '@/src/photoSource';
+import { PresencePing } from '@/src/presence';
 import { colors } from '@/src/theme';
 import { languageReady } from '@/src/i18n';
 import { track } from '@/src/track';
@@ -67,6 +68,7 @@ export default function RootLayout() {
               <Stack.Screen name="generate" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="studio" options={{ animation: 'slide_from_right' }} />
             </Stack>
+            <PresencePing />
           </PhotoSourceProvider>
         </AuthProvider>
       ) : (

@@ -46,6 +46,12 @@ export function HistorySheet({
               <Text style={styles.title}>{t('editor.history')}</Text>
               <Text style={styles.status}>{draftStatus}</Text>
             </View>
+            {position > 0 && (
+              <Pressable onPress={() => onJump(0)} style={({ pressed }) => [styles.originalBtn, pressed && { opacity: 0.7 }]}>
+                <Ionicons name="play-skip-back-outline" size={15} color={ec.gold} />
+                <Text style={styles.originalText}>{t('editor.toOriginal')}</Text>
+              </Pressable>
+            )}
             <Pressable hitSlop={10} onPress={onClose} accessibilityLabel={t('common.close')}>
               <Ionicons name="close" size={22} color={ec.text} />
             </Pressable>
@@ -72,7 +78,7 @@ export function HistorySheet({
           </ScrollView>
 
           <Pressable onPress={onSaveDraft} style={({ pressed }) => [styles.saveBtn, pressed && { opacity: 0.85 }]}>
-            <Ionicons name="bookmark-outline" size={18} color={ec.onGold} />
+            <Ionicons name="bookmark-outline" size={18} color="#FFFFFF" />
             <Text style={styles.saveText}>{t('editor.saveDraft')}</Text>
           </Pressable>
           <Text style={styles.hint}>{t('editor.draftHint')}</Text>
@@ -83,6 +89,18 @@ export function HistorySheet({
 }
 
 const styles = StyleSheet.create({
+  originalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderWidth: 1,
+    borderColor: ec.gold,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    marginRight: 10,
+  },
+  originalText: { fontFamily: font.semi, fontSize: 13, color: ec.gold },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   sheet: {
     width: '100%',
@@ -110,6 +128,6 @@ const styles = StyleSheet.create({
   badge: { fontFamily: font.semi, fontSize: 11, color: ec.gold },
   badgeMute: { fontFamily: font.regular, fontSize: 11, color: ec.textMute },
   saveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: ec.gold, borderRadius: 14, paddingVertical: 13, marginTop: 12 },
-  saveText: { fontFamily: font.semi, fontSize: 15, color: ec.onGold },
+  saveText: { fontFamily: font.semi, fontSize: 15, color: '#FFFFFF' },
   hint: { fontFamily: font.regular, fontSize: 12, color: ec.textSoft, textAlign: 'center', marginTop: 8 },
 });

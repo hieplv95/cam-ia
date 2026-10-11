@@ -3,20 +3,16 @@ import type { SQLInputValue } from 'node:sqlite';
 
 import type { AiSettings, AiStatus, Check, Overview, SystemInfo, ToolStat, UserDetail, UserList, UserRow, UserSort } from '../admin/types';
 import {
-  GUEST_FREE_TRIES,
-  MAX_REFERRALS_PER_MONTH,
-  MONTHLY_POINTS,
-  REFERRAL_FRIEND_POINTS,
-  REFERRAL_INVITER_POINTS,
-  SHARE_POINTS,
   type AccountUser,
 } from '../ai/credits';
 import { DEFAULT_IMAGE_MODEL, imageModels } from '../ai/models';
 import { caller, memberPoints } from './account';
+import { getPlan } from './plan';
+import { getRewardPoints } from './rewards';
 import { db, dbFile, SCHEMA } from './db';
 import { creditState, getAiSources, storedView } from './aiSources';
 import { aiSourceSummary, retryIn } from './gemini';
-import { dayLabel, dayOf, lastDays, monthWindow, periodOf, timeZone } from './time';
+import { dayLabel, dayOf, lastDays, monthWindow, periodOf, startOfDay, timeZone } from './time';
 
 /**
  * The admin dashboard: statistics, customer accounts and server health.
@@ -47,17 +43,18 @@ const round2 = (x: number) => Math.round(x * 100) / 100;
 /* ---------- Dashboard ---------- */
 
 export function overview(days: number): Overview {
-  const range = lastDays(days);
+  const now = Date.now();
+  const range = days === -1 ? [lastDays(2, now)[0]] : lastDays(days, now);
   const from = range[0];
   const today = range[range.length - 1];
-  const now = Date.now();
-  // Created-at lower bound a little before `from`; rows are then bucketed by their day in the app's time zone.
-  const since = now - (days + 1) * 86_400_000;
+  const since = startOfDay(from);
+  const nextDay = new Date(Date.parse(`${today}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+  const until = startOfDay(nextDay);
   const month = monthWindow(now);
 
-  const signups = all<{ created_at: number; referred_by: number | null }>('SELECT created_at, referred_by FROM users WHERE created_at >= ?', since)
+  const signups = all<{ created_at: number; referred_by: number | null }>('SELECT created_at, referred_by FROM users WHERE created_at >= ? AND created_at < ?', since, until)
     .map((u) => ({ day: dayOf(u.created_at), referred: u.referred_by !== null }))
-    .filter((u) => u.day >= from);
+    .filter((u) => u.day >= from && u.day <= today);
 
   const ai = get<{ ok: number; error: number; denied: number; guestDenied: number; blocked: number; usd: number; points: number; avgMs: number; okToday: number }>(
     `SELECT COALESCE(SUM(status = 'ok'), 0) AS ok, COALESCE(SUM(status = 'error'), 0) AS error,
@@ -66,9 +63,10 @@ export function overview(days: number): Overview {
             COALESCE(SUM(CASE WHEN status = 'ok' THEN points END), 0) AS points,
             COALESCE(AVG(CASE WHEN status = 'ok' AND ms > 0 THEN ms END), 0) AS avgMs,
             COALESCE(SUM(status = 'ok' AND day = ?), 0) AS okToday
-     FROM ai_log WHERE day >= ?`,
+     FROM ai_log WHERE day >= ? AND day <= ?`,
     today,
     from,
+    today,
   );
   const monthAi = get<{ ok: number; usd: number }>(
     "SELECT COALESCE(SUM(status = 'ok'), 0) AS ok, COALESCE(SUM(usd), 0) AS usd FROM ai_log WHERE created_at >= ?",
@@ -77,13 +75,14 @@ export function overview(days: number): Overview {
 
   const perDay = new Map(range.map((day): [string, Overview['series'][number]] => [day, { day, ai: 0, errors: 0, signups: 0, actives: 0 }]));
   for (const r of all<{ day: string; ok: number; errors: number }>(
-    "SELECT day, SUM(status = 'ok') AS ok, SUM(status = 'error') AS errors FROM ai_log WHERE day >= ? GROUP BY day",
+    "SELECT day, SUM(status = 'ok') AS ok, SUM(status = 'error') AS errors FROM ai_log WHERE day >= ? AND day <= ? GROUP BY day",
     from,
+    today,
   )) {
     const p = perDay.get(r.day);
     if (p) Object.assign(p, { ai: r.ok, errors: r.errors });
   }
-  for (const r of all<{ day: string; n: number }>('SELECT day, COUNT(*) AS n FROM actives WHERE day >= ? GROUP BY day', from)) {
+  for (const r of all<{ day: string; n: number }>('SELECT day, COUNT(*) AS n FROM actives WHERE day >= ? AND day <= ? GROUP BY day', from, today)) {
     const p = perDay.get(r.day);
     if (p) p.actives = r.n;
   }
@@ -95,8 +94,9 @@ export function overview(days: number): Overview {
   const tools = new Map<string, ToolStat>();
   for (const r of all<{ tool: string; model: string; status: AiStatus; member: number; n: number; ms: number; usd: number }>(
     `SELECT tool, model, status, member, COUNT(*) AS n, SUM(CASE WHEN ms > 0 THEN ms ELSE 0 END) AS ms, SUM(usd) AS usd
-     FROM ai_log WHERE day >= ? GROUP BY tool, model, status, member`,
+     FROM ai_log WHERE day >= ? AND day <= ? GROUP BY tool, model, status, member`,
     from,
+    today,
   )) {
     const t = tools.get(r.tool) ?? { tool: r.tool, ok: 0, error: 0, denied: 0, blocked: 0, members: 0, guests: 0, avgMs: 0, usd: 0, byModel: {} };
     t[r.status] += r.n;
@@ -129,34 +129,39 @@ export function overview(days: number): Overview {
     },
     active: {
       today: count('SELECT COUNT(*) AS n FROM actives WHERE day = ?', today),
-      inRange: count('SELECT COUNT(DISTINCT visitor) AS n FROM actives WHERE day >= ?', from),
-      members: count('SELECT COUNT(DISTINCT user_id) AS n FROM actives WHERE day >= ? AND user_id IS NOT NULL', from),
+      inRange: count('SELECT COUNT(DISTINCT visitor) AS n FROM actives WHERE day >= ? AND day <= ?', from, today),
+      members: count('SELECT COUNT(DISTINCT user_id) AS n FROM actives WHERE day >= ? AND day <= ? AND user_id IS NOT NULL', from, today),
     },
     ai: { ...ai, usd: round2(ai.usd), avgMs: Math.round(ai.avgMs), okMonth: monthAi.ok, usdMonth: round2(monthAi.usd) },
     series: [...perDay.values()],
     tools: toolList,
     models: all<{ model: string; ok: number; usd: number }>(
-      "SELECT model, COUNT(*) AS ok, ROUND(SUM(usd), 2) AS usd FROM ai_log WHERE day >= ? AND status = 'ok' GROUP BY model ORDER BY ok DESC",
+      "SELECT model, COUNT(*) AS ok, ROUND(SUM(usd), 2) AS usd FROM ai_log WHERE day >= ? AND day <= ? AND status = 'ok' GROUP BY model ORDER BY ok DESC",
       from,
+      today,
     ),
     events: all<{ name: string; detail: string; n: number }>(
-      'SELECT name, detail, SUM(n) AS n FROM events WHERE day >= ? GROUP BY name, detail ORDER BY n DESC',
+      'SELECT name, detail, SUM(n) AS n FROM events WHERE day >= ? AND day <= ? GROUP BY name, detail ORDER BY n DESC',
       from,
+      today,
     ),
     errors: all<{ error: string; n: number; last: number }>(
-      "SELECT error, COUNT(*) AS n, MAX(created_at) AS last FROM ai_log WHERE day >= ? AND status = 'error' GROUP BY error ORDER BY n DESC LIMIT 20",
+      "SELECT error, COUNT(*) AS n, MAX(created_at) AS last FROM ai_log WHERE day >= ? AND day <= ? AND status = 'error' GROUP BY error ORDER BY n DESC LIMIT 20",
       from,
+      today,
     ),
     rewards: all<{ reason: string; count: number; points: number }>(
-      'SELECT reason, COUNT(*) AS count, SUM(points) AS points FROM bonus WHERE created_at >= ? GROUP BY reason ORDER BY points DESC',
+      'SELECT reason, COUNT(*) AS count, SUM(points) AS points FROM bonus WHERE created_at >= ? AND created_at < ? GROUP BY reason ORDER BY points DESC',
       since,
+      until,
     ),
-    visits: all<{ source: string; n: number }>('SELECT source, COUNT(*) AS n FROM visits WHERE created_at >= ? GROUP BY source', since),
+    visits: all<{ source: string; n: number }>('SELECT source, COUNT(*) AS n FROM visits WHERE created_at >= ? AND created_at < ? GROUP BY source', since, until),
     topUsers: all<{ id: number; email: string; name: string; ai: number; usd: number }>(
       `SELECT u.id, u.email, u.name, COUNT(*) AS ai, ROUND(SUM(a.usd), 2) AS usd
        FROM ai_log a JOIN users u ON u.id = a.user_id
-       WHERE a.day >= ? AND a.status = 'ok' GROUP BY u.id ORDER BY ai DESC LIMIT 10`,
+       WHERE a.day >= ? AND a.day <= ? AND a.status = 'ok' GROUP BY u.id ORDER BY ai DESC LIMIT 10`,
       from,
+      today,
     ),
   };
 }
@@ -338,6 +343,8 @@ export function systemInfo(): SystemInfo {
     },
   ];
   const month = monthWindow();
+  const rewardPoints = getRewardPoints();
+  const plan = getPlan();
   return {
     now: Date.now(),
     node: process.version,
@@ -347,13 +354,13 @@ export function systemInfo(): SystemInfo {
     schema: SCHEMA,
     db: { file, sizeMb: round2(fileMb(file) + fileMb(`${file}-wal`)), tables },
     config: {
-      models: imageModels.map((m) => ({ id: m.id, name: m.name, usd: m.usd, points: m.points, isDefault: m.id === defaultModel })),
-      guestFreeTries: GUEST_FREE_TRIES,
-      monthlyPoints: MONTHLY_POINTS,
-      referralInviter: REFERRAL_INVITER_POINTS,
-      referralFriend: REFERRAL_FRIEND_POINTS,
-      maxReferralsPerMonth: MAX_REFERRALS_PER_MONTH,
-      sharePoints: SHARE_POINTS,
+      models: imageModels.map((m) => ({ id: m.id, name: m.name, usd: m.usd, points: plan.modelPoints[m.id] ?? m.points, isDefault: m.id === defaultModel })),
+      guestFreeTries: plan.guestFreeTries,
+      monthlyPoints: plan.monthlyPoints,
+      referralInviter: rewardPoints.inviter,
+      referralFriend: rewardPoints.friend,
+      maxReferralsPerMonth: rewardPoints.maxPerMonth,
+      sharePoints: rewardPoints.share,
       timeZone: timeZone(),
       period: periodOf(),
       resetLabel: dayLabel(month.end),

@@ -8,6 +8,7 @@ export const trackedEvents = {
   photo_library: 'Chọn ảnh từ thư viện',
   photo_camera: 'Chụp ảnh mới',
   canvas_create: 'Tạo canvas trống',
+  erase_quick: 'Xóa vật thể nhanh (không AI)',
   draft_resume: 'Mở lại bản nháp',
   preset_apply: 'Áp dụng preset màu',
   recipe_save: 'Lưu công thức màu',

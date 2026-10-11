@@ -161,3 +161,63 @@ export type NewSource = {
   apiKey?: string;
   credit?: Omit<Credit, 'since'>;
 };
+
+/* ---------- Visits & online (Truy cập tab) ---------- */
+
+export type TrafficPeriod = 'today' | 'yesterday' | 'week' | 'month' | 'custom';
+
+/** Numbers for one time window. `seconds` = time spent in the app. */
+export type TrafficSummary = {
+  users: number;
+  members: number;
+  guests: number;
+  newUsers: number;
+  visits: number;
+  seconds: number;
+  peak: number;
+  peakAt: number | null;
+};
+
+export type OnlinePerson = {
+  visitor: string;
+  userId: number | null;
+  email: string | null;
+  platform: string;
+  screen: string;
+  since: number;
+  lastSeen: number;
+};
+
+export type OnlineNow = {
+  now: number;
+  total: number;
+  members: number;
+  guests: number;
+  platforms: Record<string, number>;
+  people: OnlinePerson[];
+};
+
+export type TrafficPoint = { label: string; users: number; visits: number; peak: number; future: boolean };
+
+export type Traffic = {
+  period: TrafficPeriod;
+  from: string;
+  to: string;
+  /** Today in the server's zone (the latest day a custom range can end on). */
+  today: string;
+  timeZone: string;
+  /** When recording started (first heartbeat ever), null when nothing yet. */
+  since: number | null;
+  current: TrafficSummary;
+  previous: TrafficSummary;
+  /** e.g. "hôm qua cùng giờ": what `previous` is. */
+  compareLabel: string;
+  /** Per hour for a day, per day for a week or month. */
+  series: TrafficPoint[];
+  /** People online in each hour of the day, added up over the period (busiest hours). */
+  hours: number[];
+  platforms: { platform: string; users: number }[];
+  screens: { screen: string; seconds: number }[];
+  topMembers: { id: number; email: string; seconds: number; visits: number }[];
+  online: OnlineNow;
+};

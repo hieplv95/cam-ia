@@ -56,7 +56,7 @@ export function textWidth(font: SkFont, layer: TextLayer) {
   return (font.getTextWidth(layer.text) * layer.size) / BASE_FONT_SIZE;
 }
 
-function Stroke({ layer }: { layer: StrokeLayer }) {
+export function Stroke({ layer }: { layer: StrokeLayer }) {
   const path = buildStrokePath(layer.points);
   const common = {
     path,

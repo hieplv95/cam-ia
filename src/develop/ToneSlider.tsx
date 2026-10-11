@@ -12,12 +12,14 @@ type Props = {
   max: number;
   gradient?: readonly string[];
   onChange: (v: number) => void;
+  /** A drag or tap begins (the editor records one undo step per gesture). */
+  onStart?: () => void;
 };
 
 const THUMB = 18;
 
 /** Slider with a colored track; centered sliders show a signed value. Double-tap resets to 0. */
-export function ToneSlider({ label, value, min, max, gradient, onChange }: Props) {
+export function ToneSlider({ label, value, min, max, gradient, onChange, onStart }: Props) {
   const [width, setWidth] = useState(0);
   const centered = min < 0;
   const frac = (value - min) / (max - min);
@@ -31,15 +33,26 @@ export function ToneSlider({ label, value, min, max, gradient, onChange }: Props
     .runOnJS(true)
     .activeOffsetX([-4, 4])
     .failOffsetY([-12, 12])
-    .onBegin((e) => onChange(toValue(e.x)))
+    .onBegin((e) => {
+      onStart?.();
+      onChange(toValue(e.x));
+    })
     .onUpdate((e) => onChange(toValue(e.x)));
   const tap = Gesture.Tap()
     .runOnJS(true)
-    .onEnd((e, ok) => ok && onChange(toValue(e.x)));
+    .onEnd((e, ok) => {
+      if (!ok) return;
+      onStart?.();
+      onChange(toValue(e.x));
+    });
   const reset = Gesture.Tap()
     .runOnJS(true)
     .numberOfTaps(2)
-    .onEnd((_, ok) => ok && onChange(0));
+    .onEnd((_, ok) => {
+      if (!ok) return;
+      onStart?.();
+      onChange(0);
+    });
 
   const shown = centered && value > 0 ? `+${value}` : `${value}`;
 

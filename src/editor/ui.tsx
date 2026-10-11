@@ -3,21 +3,21 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { Icon, type IconSpec } from '../icons';
-import { font } from '../theme';
+import { cardShadow, colors, font } from '../theme';
 import { HScroll } from '../HScroll';
 
-/** The editor uses a dark palette so photo colors read accurately; the gold accent matches the rest of Cami. */
+/** Editor colors: the same light ivory theme as the rest of Cami (cream background, white cards, bronze-gold accent). */
 export const ec = {
-  bg: '#0F0E0D',
-  surface: '#1A1816',
-  surface2: '#24211E',
-  border: '#36312B',
-  text: '#F4EFE7',
-  textSoft: '#A8A097',
-  textMute: '#6E675F',
-  gold: '#D8B98C',
-  goldSoft: 'rgba(216,185,140,0.16)',
-  onGold: '#1A1408',
+  bg: colors.bg,
+  surface: colors.surface,
+  surface2: colors.surface2,
+  border: colors.border,
+  text: colors.text,
+  textSoft: colors.textSoft,
+  textMute: colors.textMute,
+  gold: colors.gold,
+  goldSoft: colors.goldSoft,
+  onGold: colors.onGold,
 };
 
 /** Text tabs with an underline under the active one (Cơ bản · Làm đẹp · …). */
@@ -31,7 +31,7 @@ export function CategoryTabs<T extends string>({
   onChange: (id: T) => void;
 }) {
   return (
-    <HScroll tone="dark" contentContainerStyle={styles.tabs}>
+    <HScroll contentContainerStyle={styles.tabs}>
       {tabs.map((t) => {
         const active = t.id === value;
         return (
@@ -45,7 +45,7 @@ export function CategoryTabs<T extends string>({
   );
 }
 
-/** Round icon button with a label under it. */
+/** Rounded-square icon button with a label under it. */
 export function ToolCircle({ icon, label, active, onPress }: { icon: IconSpec; label: string; active?: boolean; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.tool, pressed && { opacity: 0.7 }]}>
@@ -61,7 +61,7 @@ export function ToolCircle({ icon, label, active, onPress }: { icon: IconSpec; l
 
 export function ToolRow({ children }: { children: ReactNode }) {
   return (
-    <HScroll tone="dark" contentContainerStyle={styles.toolRow}>
+    <HScroll contentContainerStyle={styles.toolRow}>
       {children}
     </HScroll>
   );
@@ -140,8 +140,8 @@ export function EditorSlider({
 export function Pill({ label, active, onPress, icon }: { label: string; active?: boolean; onPress: () => void; icon?: IconSpec }) {
   return (
     <Pressable onPress={onPress} style={[styles.pill, active && styles.pillActive]}>
-      {icon ? <Icon icon={icon} size={15} color={active ? ec.onGold : ec.textSoft} /> : null}
-      <Text style={[styles.pillText, active && { color: ec.onGold }]}>{label}</Text>
+      {icon ? <Icon icon={icon} size={15} color={active ? '#FFFFFF' : ec.textSoft} /> : null}
+      <Text style={[styles.pillText, active && { color: '#FFFFFF' }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -150,17 +150,17 @@ const styles = StyleSheet.create({
   tabs: { paddingHorizontal: 12, gap: 18 },
   tab: { alignItems: 'center', paddingTop: 4 },
   tabText: { fontFamily: font.medium, fontSize: 14, color: ec.textSoft },
-  tabTextActive: { color: ec.text, fontFamily: font.semi },
+  tabTextActive: { color: ec.gold, fontFamily: font.semi },
   underline: { width: 22, height: 2.5, borderRadius: 2, marginTop: 6, backgroundColor: 'transparent' },
   toolRow: { paddingHorizontal: 10, gap: 4 },
-  tool: { width: 68, alignItems: 'center', gap: 6 },
+  tool: { width: 66, alignItems: 'center', gap: 6 },
   circle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 46,
+    height: 46,
+    borderRadius: 14,
     backgroundColor: ec.surface2,
     borderWidth: 1,
-    borderColor: ec.border,
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
   sliderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16 },
   sliderLabel: { fontFamily: font.regular, fontSize: 12, color: ec.textSoft, width: 66 },
   sliderHit: { flex: 1, height: 30, justifyContent: 'center' },
-  track: { height: 3, borderRadius: 2, marginHorizontal: THUMB / 2, backgroundColor: ec.border, overflow: 'hidden' },
+  track: { height: 4, borderRadius: 2, marginHorizontal: THUMB / 2, backgroundColor: ec.border, overflow: 'hidden' },
   fill: { position: 'absolute', top: 0, bottom: 0, backgroundColor: ec.gold },
   tick: { position: 'absolute', left: '50%', width: 1, height: 10, marginLeft: -0.5, backgroundColor: ec.textMute },
   thumb: {
@@ -177,9 +177,11 @@ const styles = StyleSheet.create({
     width: THUMB,
     height: THUMB,
     borderRadius: THUMB / 2,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.5,
+    backgroundColor: ec.gold,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    ...cardShadow,
+    shadowOpacity: 0.25,
     shadowRadius: 3,
     shadowOffset: { width: 0, height: 1 },
     elevation: 3,
@@ -192,7 +194,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     paddingVertical: 7,
     borderRadius: 999,
-    backgroundColor: ec.surface2,
+    backgroundColor: ec.surface,
     borderWidth: 1,
     borderColor: ec.border,
   },

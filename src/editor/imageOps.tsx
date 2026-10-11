@@ -248,6 +248,13 @@ export function transformImage(img: SkImage, op: TransformOp): Promise<SkImage> 
   }
 }
 
+/** Free crop: keeps the given area (image pixels) of the picture. */
+export function cropImage(img: SkImage, r: { x: number; y: number; w: number; h: number }): Promise<SkImage> {
+  const w = Math.max(1, Math.round(r.w));
+  const h = Math.max(1, Math.round(r.h));
+  return renderImage(<Image image={img} x={-r.x} y={-r.y} width={img.width()} height={img.height()} fit="fill" />, w, h);
+}
+
 /** Fraction of each side added as white border for the "expand" AI tool. */
 export const EXPAND_PADDING = 0.2;
 

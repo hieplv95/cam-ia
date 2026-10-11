@@ -31,9 +31,9 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
           const item = items[route.name];
           if (!item) return null;
           const focused = state.index === index;
-          // The middle tab is an action, not a screen: it starts a new edit.
+          // The middle tab is an action, not a screen: it starts a new edit in the full editor (like "Chỉnh ngay").
           const onPress = () => {
-            if (route.name === 'create') return choose({ type: 'adjust' });
+            if (route.name === 'create') return choose();
             if (!focused) navigation.navigate(route.name);
           };
           const isCreate = route.name === 'create';

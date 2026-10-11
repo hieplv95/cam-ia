@@ -2,13 +2,17 @@ import { useCallback, useRef, useState } from 'react';
 
 import type { Doc } from './types';
 
-const MAX_HISTORY = 30;
-/** Full-resolution originals are large; only the most recent undo steps keep their own. */
+/** Undo steps kept; the very first state (the photo as opened) is always kept on top of these, so "back to the start" always works. */
+const MAX_HISTORY = 60;
+/** Full-resolution originals are large; only the first state and the most recent undo steps keep their own. */
 const KEEP_FULL_STEPS = 3;
+
+/** Drops the oldest steps beyond MAX_HISTORY, except the first one. */
+const capped = (past: Doc[]) => (past.length > MAX_HISTORY ? [past[0], ...past.slice(-(MAX_HISTORY - 1))] : past);
 
 function trimFull(past: Doc[], present: Doc | null) {
   const cut = past.length - KEEP_FULL_STEPS;
-  return past.map((d, i) => (i < cut && d.full && d.full !== present?.full ? { ...d, full: undefined } : d));
+  return past.map((d, i) => (i > 0 && i < cut && d.full && d.full !== present?.full ? { ...d, full: undefined } : d));
 }
 /** Gestures that start together (pan + pinch + rotate) share a single undo step. */
 const MERGE_WINDOW_MS = 400;
@@ -27,7 +31,7 @@ export function useDocHistory(initial: Doc | null) {
     if (now - lastCheckpoint.current < MERGE_WINDOW_MS) return;
     lastCheckpoint.current = now;
     setState((s) =>
-      s.present ? { past: trimFull([...s.past, s.present].slice(-MAX_HISTORY), s.present), present: s.present, future: [] } : s,
+      s.present ? { past: trimFull(capped([...s.past, s.present]), s.present), present: s.present, future: [] } : s,
     );
   }, []);
 
@@ -40,7 +44,7 @@ export function useDocHistory(initial: Doc | null) {
   const commit = useCallback((doc: Doc) => {
     lastCheckpoint.current = 0;
     setState((s) => ({
-      past: trimFull(s.present ? [...s.past, s.present].slice(-MAX_HISTORY) : s.past, doc),
+      past: trimFull(s.present ? capped([...s.past, s.present]) : s.past, doc),
       present: doc,
       future: [],
     }));

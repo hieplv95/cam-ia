@@ -1,11 +1,13 @@
 import { AccountError, caller, creditsOf, deleteAccount } from '@/src/server/account';
 import { isAdmin } from '@/src/server/admin';
+import { getPlan } from '@/src/server/plan';
+import { getRewardPoints } from '@/src/server/rewards';
 import { tr } from '@/src/server/i18n';
 
-/** Who is signed in (or null for a guest), how much AI use is left, and whether they may open the admin page. */
+/** Who is signed in (or null for a guest), how much AI use is left, the points plan and reward amounts, and whether they may open the admin page. */
 export function GET(request: Request) {
   const c = caller(request);
-  return Response.json({ user: c.user, credits: creditsOf(c), admin: isAdmin(c.user) });
+  return Response.json({ user: c.user, credits: creditsOf(c), admin: isAdmin(c.user), rewardPoints: getRewardPoints(), plan: getPlan() });
 }
 
 /** Deletes the signed-in account after re-entering the password. */

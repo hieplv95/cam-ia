@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon, type IconSpec } from './icons';
@@ -108,23 +108,14 @@ export function Swatches({ colorsList, value, onChange }: { colorsList: string[]
   );
 }
 
-/** Gold circle with a crescent cut-out: the Cami "C" mark. */
+const LOGO_MARK = require('@/assets/images/brand/camia-mark.png');
+const LOGO_RATIO = 650 / 515;
+/** Brown of the CamIA wordmark. */
+export const BRAND_BROWN = '#5B3B22';
+
+/** The CamIA mark: stacked photo frames with a sparkle. `size` is its height. */
 export function CamiLogo({ size = 42 }: { size?: number }) {
-  return (
-    <LinearGradient colors={goldGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden' }}>
-      <View
-        style={{
-          position: 'absolute',
-          width: size * 0.62,
-          height: size * 0.62,
-          borderRadius: size * 0.31,
-          backgroundColor: colors.text,
-          right: size * 0.08,
-          top: size * 0.12,
-        }}
-      />
-    </LinearGradient>
-  );
+  return <Image source={LOGO_MARK} style={{ width: size * LOGO_RATIO, height: size }} resizeMode="contain" accessibilityIgnoresInvertColors />;
 }
 
 /** Bump when there is something new to announce; the bell shows a dot until the user opens it. */
@@ -150,7 +141,7 @@ export function AppHeader() {
     <View style={styles.header}>
       <CamiLogo />
       <View style={{ flex: 1 }}>
-        <Text style={styles.brand}>CAMI</Text>
+        <Text style={styles.brand}>CamIA</Text>
         <Text style={styles.brandSub}>{t('common.tagline')}</Text>
       </View>
       <Pressable hitSlop={8} onPress={openWhatsNew} accessibilityLabel={t('common.notifications')}>
@@ -169,7 +160,7 @@ export function AppHeader() {
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 8 },
-  brand: { fontFamily: font.semi, fontSize: 24, letterSpacing: 6, color: colors.text, lineHeight: 28 },
+  brand: { fontFamily: font.bold, fontSize: 24, letterSpacing: 0.5, color: BRAND_BROWN, lineHeight: 28 },
   brandSub: { fontFamily: font.regular, fontSize: 12, color: colors.textSoft },
   proPill: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 },
   proText: { fontFamily: font.bold, fontSize: 12, color: '#FFFFFF', letterSpacing: 1 },

@@ -9,7 +9,7 @@ import { dayOf, periodOf } from './time';
  * The API routes run in one Node process, so a single connection kept on globalThis is enough
  * (it survives dev reloads). Bump SCHEMA when the tables change.
  */
-export const SCHEMA = 5;
+export const SCHEMA = 7;
 const g = globalThis as unknown as { __camiDb?: DatabaseSync; __camiDbSchema?: number };
 
 function migrate(db: DatabaseSync) {
@@ -92,6 +92,48 @@ function migrate(db: DatabaseSync) {
   db.exec(`
     CREATE INDEX IF NOT EXISTS ai_log_source ON ai_log (source, created_at);
     CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+  `);
+  // Schema 6: monthly points as they were each month, so changing them on the admin page
+  // doesn't rewrite how much bonus was used in earlier months.
+  db.exec('CREATE TABLE IF NOT EXISTS monthly_allowance (period TEXT PRIMARY KEY, points INTEGER NOT NULL)');
+  // Schema 7: who is online, from a heartbeat the app sends while it is on screen (see src/server/presence.ts).
+  // - presence: one row per visitor (device id, or hashed IP), with its current visit;
+  // - app_visits: each visit (heartbeats with no long gap), for visits, users and time spent per period;
+  // - online_hours: most people online at once, and heartbeats, per hour;
+  // - screen_time: heartbeats per screen and day (each one ≈ HEARTBEAT seconds spent there).
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS app_visits (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      visitor TEXT NOT NULL,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      platform TEXT NOT NULL DEFAULT '',
+      started_at INTEGER NOT NULL,
+      last_seen INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS app_visits_time ON app_visits (started_at, last_seen);
+    CREATE TABLE IF NOT EXISTS presence (
+      visitor TEXT PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      platform TEXT NOT NULL DEFAULT '',
+      screen TEXT NOT NULL DEFAULT '',
+      first_seen INTEGER NOT NULL,
+      last_seen INTEGER NOT NULL,
+      visit_id INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS presence_seen ON presence (last_seen);
+    CREATE TABLE IF NOT EXISTS online_hours (
+      day TEXT NOT NULL,
+      hour INTEGER NOT NULL,
+      peak INTEGER NOT NULL,
+      peak_at INTEGER NOT NULL,
+      PRIMARY KEY (day, hour)
+    );
+    CREATE TABLE IF NOT EXISTS screen_time (
+      day TEXT NOT NULL,
+      screen TEXT NOT NULL,
+      beats INTEGER NOT NULL,
+      PRIMARY KEY (day, screen)
+    );
   `);
 }
 

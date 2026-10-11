@@ -3,7 +3,9 @@ import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAccount } from './account';
 import { useAiModel } from './ai/client';
+import { pointsFor } from './ai/credits';
 import { formatVnd, imageModels, modelInfo, type ImageModelId } from './ai/models';
 import { getLanguage, useT, type MessageKey } from './i18n';
 import { colors, font, MAX_CONTENT_WIDTH } from './theme';
@@ -18,13 +20,14 @@ export function ModelSheet({ visible, onClose }: { visible: boolean; onClose: ()
   const t = useT();
   const insets = useSafeAreaInsets();
   const [model, setModel] = useAiModel();
+  const { plan } = useAccount();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={[styles.sheet, { paddingBottom: 20 + insets.bottom }]} onPress={(e) => e.stopPropagation()}>
           <View style={styles.handle} />
           <Text style={styles.title}>{t('model.title')}</Text>
-          <Text style={styles.sub}>{t('model.sub')}</Text>
+          <Text style={styles.sub}>{t('model.sub', { n: plan.monthlyPoints })}</Text>
           {imageModels.map((m) => {
             const active = m.id === model;
             return (
@@ -45,7 +48,7 @@ export function ModelSheet({ visible, onClose }: { visible: boolean; onClose: ()
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={styles.price}>~{formatCost(m.usd)}</Text>
-                  <Text style={styles.usd}>{t('common.points', { n: m.points })}{getLanguage() === 'vi' ? ` · ${m.usd.toFixed(3)}` : ''}</Text>
+                  <Text style={styles.usd}>{t('common.points', { n: pointsFor(plan, m.id) })}{getLanguage() === 'vi' ? ` · ${m.usd.toFixed(3)}` : ''}</Text>
                 </View>
                 <Ionicons name={active ? 'checkmark-circle' : 'ellipse-outline'} size={22} color={active ? colors.gold : colors.textMute} />
               </Pressable>
@@ -63,6 +66,7 @@ export function ModelChip({ style, dark }: { style?: StyleProp<ViewStyle>; /** F
   const t = useT();
   const [model] = useAiModel();
   const [open, setOpen] = useState(false);
+  const { plan } = useAccount();
   const info = modelInfo(model);
   return (
     <>
@@ -70,7 +74,7 @@ export function ModelChip({ style, dark }: { style?: StyleProp<ViewStyle>; /** F
         <Ionicons name="hardware-chip-outline" size={14} color={colors.gold} />
         <Text style={[styles.chipText, dark && { color: '#A8A097' }]}>
           {t('model.chip')} <Text style={[styles.chipStrong, dark && { color: '#F4EFE7' }]}>{info?.name ?? model}</Text>
-          {info ? ` · ${t('common.points', { n: info.points })}` : ''}
+          {info ? ` · ${t('common.points', { n: pointsFor(plan, info.id) })}` : ''}
         </Text>
         <Ionicons name="chevron-down" size={14} color={colors.textSoft} />
       </Pressable>

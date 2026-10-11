@@ -1,26 +1,43 @@
 import { randomInt } from 'node:crypto';
 
-import {
-  MAX_REFERRALS_PER_MONTH,
-  REFERRAL_FRIEND_POINTS,
-  REFERRAL_INVITER_POINTS,
-  SHARE_POINTS,
-  sharePlatforms,
-  type Rewards,
-  type SharePlatform,
-} from '../ai/credits';
-import { db } from './db';
+import { DEFAULT_REWARD_POINTS, MAX_REWARD_POINTS, sharePlatforms, type RewardPoints, type Rewards, type SharePlatform } from '../ai/credits';
+import { db, getSetting, setSetting } from './db';
 import { periodOf } from './time';
 
 /**
  * Bonus points for inviting friends and for sharing Cami.
- * - Invites: a friend who signs up with your code gives you REFERRAL_INVITER_POINTS (up to MAX_REFERRALS_PER_MONTH a
- *   month) and the friend REFERRAL_FRIEND_POINTS. Nothing is given when both sign up from the same network, so people
+ * - Invites: a friend who signs up with your code gives you `inviter` points (up to `maxPerMonth` invites a
+ *   month) and the friend `friend` points. Nothing is given when both sign up from the same network, so people
  *   can't invite themselves.
  * - Shares: Facebook never tells an app whether a post was really made, so the bonus comes from the result
- *   instead: SHARE_POINTS (once a month) when someone else opens the link the user shared on Facebook
+ *   instead: `share` points (once a month) when someone else opens the link the user shared on Facebook
  *   (tagged &s=fb). A visit from the owner's own networks or devices, or while signed in as the owner, doesn't count.
+ * The amounts are set on the admin page (getRewardPoints); 0 turns that reward off.
  */
+
+const REWARDS_KEY = 'reward_points';
+
+export function getRewardPoints(): RewardPoints {
+  const raw = getSetting(REWARDS_KEY);
+  return raw ? { ...DEFAULT_REWARD_POINTS, ...(JSON.parse(raw) as Partial<RewardPoints>) } : DEFAULT_REWARD_POINTS;
+}
+
+export class RewardSettingsError extends Error {}
+
+/** Saves the amounts typed on the admin page (whole numbers from 0 to MAX_REWARD_POINTS). */
+export function setRewardPoints(input: unknown): RewardPoints {
+  const o = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
+  const next = { ...getRewardPoints() };
+  for (const k of Object.keys(DEFAULT_REWARD_POINTS) as (keyof RewardPoints)[]) {
+    if (o[k] === undefined) continue;
+    const n = Number(o[k]);
+    const max = k === 'maxPerMonth' ? 100 : MAX_REWARD_POINTS;
+    if (!Number.isInteger(n) || n < 0 || n > max) throw new RewardSettingsError(`Giá trị phải là số nguyên từ 0 đến ${max}.`);
+    next[k] = n;
+  }
+  setSetting(REWARDS_KEY, JSON.stringify(next));
+  return next;
+}
 
 // No 0/O or 1/I/L, so a code read out loud or typed by hand is unambiguous.
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -67,14 +84,16 @@ export function applyReferral(newUserId: number, code: string, ip: string) {
   d.prepare('UPDATE users SET referred_by = ? WHERE id = ?').run(inviter.id, newUserId);
   if (inviter.ip === ip) return 0;
 
+  const points = getRewardPoints();
   const thisMonth = (d.prepare("SELECT COUNT(*) AS n FROM bonus WHERE user_id = ? AND reason = 'referral' AND period = ?").get(inviter.id, periodOf()) as { n: number }).n;
-  if (thisMonth < MAX_REFERRALS_PER_MONTH) addBonus(inviter.id, REFERRAL_INVITER_POINTS, 'referral', String(newUserId));
-  addBonus(newUserId, REFERRAL_FRIEND_POINTS, 'referred', String(inviter.id));
-  return REFERRAL_FRIEND_POINTS;
+  if (points.inviter > 0 && thisMonth < points.maxPerMonth) addBonus(inviter.id, points.inviter, 'referral', String(newUserId));
+  if (points.friend > 0) addBonus(newUserId, points.friend, 'referred', String(inviter.id));
+  return points.friend;
 }
 
 export function rewardsOf(userId: number): Rewards {
   const d = db();
+  const points = getRewardPoints();
   const period = periodOf();
   const invited = (d.prepare('SELECT COUNT(*) AS n FROM users WHERE referred_by = ?').get(userId) as { n: number }).n;
   const referral = d
@@ -88,9 +107,10 @@ export function rewardsOf(userId: number): Rewards {
     code: refCodeOf(userId),
     invited,
     referralPoints: referral.points,
-    invitesLeftThisMonth: Math.max(0, MAX_REFERRALS_PER_MONTH - referral.thisMonth),
+    invitesLeftThisMonth: Math.max(0, points.maxPerMonth - referral.thisMonth),
     shared: Object.fromEntries(sharePlatforms.map((p) => [p, shared.has(p)])) as Record<SharePlatform, boolean>,
     shareVisits,
+    points,
   };
 }
 
@@ -132,5 +152,6 @@ export function recordVisit(code: string, source: string, visitor: { userId: num
   const platform = SOURCES[src];
   if (!platform) return;
   const rewarded = d.prepare("SELECT 1 FROM bonus WHERE user_id = ? AND reason = 'share' AND ref = ? AND period = ?").get(owner.id, platform, period);
-  if (!rewarded) addBonus(owner.id, SHARE_POINTS, 'share', platform);
+  const share = getRewardPoints().share;
+  if (!rewarded && share > 0) addBonus(owner.id, share, 'share', platform);
 }

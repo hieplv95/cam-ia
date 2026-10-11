@@ -73,6 +73,8 @@ export function BarChart({
   unit,
   extraUnit,
   average,
+  averageOver,
+  peakOnly,
 }: {
   data: { label: string; value: number; extra?: number }[];
   color?: string;
@@ -80,6 +82,10 @@ export function BarChart({
   extraUnit?: string;
   /** Show the daily average instead of the total (for counts that don't add up, like active devices). */
   average?: boolean;
+  /** Bars the average is taken over (e.g. only the hours already past today); all bars by default. */
+  averageOver?: number;
+  /** Only the highest bar (for values like "most people at once", which neither add up nor average well). */
+  peakOnly?: boolean;
 }) {
   const [picked, setPicked] = useState<number | null>(null);
   const max = Math.max(1, ...data.map((d) => d.value + (d.extra ?? 0)));
@@ -90,7 +96,9 @@ export function BarChart({
       <Text style={styles.chartInfo}>
         {shown
           ? `${shown.label}: ${num(shown.value)} ${unit}${shown.extra ? ` · ${num(shown.extra)} ${extraUnit}` : ''}`
-          : `${average ? `Trung bình ${num(Math.round(total / Math.max(1, data.length)))}` : `Tổng ${num(total)}`} ${unit} · cao nhất ${num(max)}`}
+          : peakOnly
+            ? `Cao nhất ${num(max)} ${unit}`
+            : `${average ? `Trung bình ${num(Math.round(total / Math.max(1, averageOver ?? data.length)))}` : `Tổng ${num(total)}`} ${unit} · cao nhất ${num(max)}`}
       </Text>
       <View style={styles.chart}>
         {data.map((d, i) => (
@@ -241,7 +249,7 @@ const styles = StyleSheet.create({
   empty: { fontFamily: font.regular, fontSize: 13, color: colors.textMute, paddingVertical: 8 },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, alignSelf: 'flex-start' },
   badgeText: { fontFamily: font.semi, fontSize: 11 },
-  segmented: { flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: 12, padding: 3, alignSelf: 'flex-start' },
+  segmented: { flexDirection: 'row', flexWrap: 'wrap', maxWidth: '100%', backgroundColor: colors.surface2, borderRadius: 12, padding: 3, alignSelf: 'flex-start' },
   segment: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 9 },
   segmentOn: { backgroundColor: colors.surface, ...cardShadow, shadowOpacity: 0.06 },
   segmentText: { fontFamily: font.medium, fontSize: 13, color: colors.textSoft },

@@ -39,6 +39,12 @@ export type StrokeLayer = {
 
 export type RetouchEffect = 'whiten' | 'lighten';
 
+/**
+ * A brush stroke marking what the AI should remove ("Xóa vật thể"), in image pixels.
+ * Kept outside the document: never saved or exported, only drawn over the photo sent to the AI.
+ */
+export type EraseMark = { points: number[]; width: number };
+
 /** Brushed area where a free retouch effect applies (teeth whitening, under-eye lightening). */
 export type RetouchLayer = {
   kind: 'retouch';

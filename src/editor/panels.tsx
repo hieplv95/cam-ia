@@ -11,7 +11,7 @@ import { ModelChip } from '../ModelPicker';
 import { font, paintColors } from '../theme';
 import type { PenSettings } from './EditorCanvas';
 import { frames, type FrameId } from './frames';
-import type { TransformOp } from './imageOps';
+import { cropRatios, type CropRatio, type TransformOp } from './imageOps';
 import type { RetouchEffect } from './types';
 import { stickers } from './stickers';
 import { ec, EditorSlider, Pill, ToolCircle, ToolRow } from './ui';
@@ -81,13 +81,17 @@ function DevelopToolPanel({
 
 export type BasicTool = 'crop' | 'rotate' | DevelopKeyId;
 
-const cropOptions: { op: TransformOp; label: string }[] = [
-  { op: 'square', label: '1:1' },
-  { op: 'portrait', label: '4:5' },
-  { op: 'classic', label: '3:4' },
-  { op: 'story', label: '9:16' },
-  { op: 'landscape', label: '16:9' },
+/** Crop frame shapes: free, or locked to a ratio. */
+export type CropChoice = 'free' | CropRatio;
+export const cropChoices: { id: CropChoice; label: string | null }[] = [
+  { id: 'free', label: null },
+  { id: 'square', label: '1:1' },
+  { id: 'portrait', label: '4:5' },
+  { id: 'classic', label: '3:4' },
+  { id: 'story', label: '9:16' },
+  { id: 'landscape', label: '16:9' },
 ];
+export const cropRatioOf = (c: CropChoice) => (c === 'free' ? null : cropRatios[c]);
 
 const rotateOptions: { op: TransformOp; label: MessageKey; icon: IconSpec }[] = [
   { op: 'rotateLeft', label: 'editor.op.rotateLeft', icon: { set: 'mci', name: 'rotate-left' } },
@@ -102,8 +106,15 @@ export function BasicPanel({
   tool,
   onTool,
   onTransform,
+  crop,
   ...slider
-}: SliderProps & { tool: BasicTool; onTool: (t: BasicTool) => void; onTransform: (op: TransformOp) => void }) {
+}: SliderProps & {
+  tool: BasicTool;
+  onTool: (t: BasicTool) => void;
+  onTransform: (op: TransformOp) => void;
+  /** Free crop: the chosen shape, whether the frame differs from the whole picture, and the actions. */
+  crop: { choice: CropChoice; onChoice: (c: CropChoice) => void; changed: boolean; onReset: () => void; onApply: () => void };
+}) {
   const t = useT();
   const isDevelop = tool !== 'crop' && tool !== 'rotate';
   return (
@@ -116,14 +127,28 @@ export function BasicPanel({
         ))}
       </ToolRow>
       {tool === 'crop' && (
-        <HScroll tone="dark" contentContainerStyle={styles.pills}>
-          {cropOptions.map((c) => (
-            <Pill key={c.op} label={c.label} onPress={() => onTransform(c.op)} />
-          ))}
-        </HScroll>
+        <>
+          <HScroll contentContainerStyle={styles.pills}>
+            {cropChoices.map((c) => (
+              <Pill key={c.id} label={c.label ?? t('editor.crop.free')} active={crop.choice === c.id} onPress={() => crop.onChoice(c.id)} />
+            ))}
+          </HScroll>
+          <View style={styles.cropRow}>
+            <Text style={styles.cropHint} numberOfLines={2}>
+              {t('editor.crop.hint')}
+            </Text>
+            <Pressable onPress={crop.onReset} disabled={!crop.changed} style={[styles.cropReset, !crop.changed && { opacity: 0.4 }]}>
+              <Text style={styles.cropResetText}>{t('common.reset')}</Text>
+            </Pressable>
+            <Pressable onPress={crop.onApply} disabled={!crop.changed} style={[styles.cropApply, !crop.changed && { opacity: 0.4 }]}>
+              <Icon icon={{ set: 'mci', name: 'crop' }} size={15} color="#FFFFFF" />
+              <Text style={styles.cropApplyText}>{t('editor.crop.apply')}</Text>
+            </Pressable>
+          </View>
+        </>
       )}
       {tool === 'rotate' && (
-        <HScroll tone="dark" contentContainerStyle={styles.pills}>
+        <HScroll contentContainerStyle={styles.pills}>
           {rotateOptions.map((r) => (
             <Pill key={r.op} label={t(r.label)} icon={r.icon} onPress={() => onTransform(r.op)} />
           ))}
@@ -142,21 +167,9 @@ export function BasicPanel({
   );
 }
 
-/* ---------- Điều chỉnh & Hiệu ứng ---------- */
+/* ---------- Hiệu ứng (Điều chỉnh: DevelopPanel.tsx) ---------- */
 
-const adjustIds: DevelopKeyId[] = ['exposure', 'contrast', 'highlights', 'shadows', 'whites', 'blacks', 'temperature', 'tint', 'saturation', 'vibrance', 'clarity'];
 const effectIds: DevelopKeyId[] = ['vignette', 'grain', 'clarity', 'noise', 'sharpness'];
-
-export function AdjustPanel(props: SliderProps & { active: DevelopKeyId; onActive: (id: DevelopKeyId) => void; onAdvanced: () => void }) {
-  const t = useT();
-  return (
-    <DevelopToolPanel
-      {...props}
-      ids={adjustIds}
-      extra={<ToolCircle icon={{ set: 'mci', name: 'chart-bell-curve-cumulative' }} label={t('editor.curvesHsl')} onPress={props.onAdvanced} />}
-    />
-  );
-}
 
 export function EffectsPanel(props: SliderProps & { active: DevelopKeyId; onActive: (id: DevelopKeyId) => void }) {
   return <DevelopToolPanel {...props} ids={effectIds} />;
@@ -194,12 +207,12 @@ export function FiltersPanel({
     category === 'all' ? [...custom, ...developPresets] : category === 'mine' ? custom : developPresets.filter((p) => p.categories.includes(category));
   return (
     <View style={styles.col}>
-      <HScroll tone="dark" contentContainerStyle={styles.pills}>
+      <HScroll contentContainerStyle={styles.pills}>
         {[{ id: 'all' as const, label: 'common.all' as const }, { id: 'mine' as const, label: 'common.mine' as const }, ...presetCategories].map((c) => (
           <Pill key={c.id} label={t(c.label)} active={category === c.id} onPress={() => setCategory(c.id)} />
         ))}
       </HScroll>
-      <HScroll tone="dark" contentContainerStyle={styles.thumbRow}>
+      <HScroll contentContainerStyle={styles.thumbRow}>
         <Pressable onPress={onSaveRecipe} style={styles.thumbItem} accessibilityLabel={t('recipe.saveTitle')}>
           <View style={[styles.thumb, styles.saveTile]}>
             <Icon icon={{ set: 'ion', name: 'add' }} size={26} color={ec.gold} />
@@ -330,7 +343,7 @@ export function BeautyPanel({
             ))}
           </ToolRow>
           {brush ? (
-            <HScroll tone="dark" contentContainerStyle={styles.pills}>
+            <HScroll contentContainerStyle={styles.pills}>
               <Text style={styles.brushHint}>{t(brush.hint)}</Text>
               {brushSizes.map((s) => (
                 <Pill key={s.width} label={t(s.label)} active={brushWidth === s.width} onPress={() => onBrushWidth(s.width)} />
@@ -356,9 +369,9 @@ export function BeautyPanel({
             <ToolCircle icon={{ set: 'mci', name: 'compare' }} label={t('editor.retouchAdvanced')} onPress={onAdvanced} />
           </ToolRow>
           <View style={styles.actionRow}>
-            <ModelChip dark style={styles.darkChip} />
+            <ModelChip />
             <Pressable disabled={!aiSelected.length} onPress={onAiRun} style={[styles.runBtn, !aiSelected.length && { opacity: 0.4 }]}>
-              <Icon icon={{ set: 'ion', name: 'sparkles' }} size={15} color={ec.onGold} />
+              <Icon icon={{ set: 'ion', name: 'sparkles' }} size={15} color="#FFFFFF" />
               <Text style={styles.runText}>{t('editor.beautify')}</Text>
             </Pressable>
           </View>
@@ -370,16 +383,10 @@ export function BeautyPanel({
 
 /* ---------- AI ---------- */
 
-export function AiPanel({ onPreset, onPrompt }: { onPreset: (id: AiPresetId) => void; onPrompt: (text: string) => void }) {
-  const t = useT();
+/** One-tap AI effects; writing your own request is done in the prompt box under the photo (PromptBar). */
+export function AiPanel({ onPreset }: { onPreset: (id: AiPresetId) => void }) {
   const { credits } = useAccount();
   const left = creditsLabel(credits);
-  const [text, setText] = useState('');
-  const submit = () => {
-    if (!text.trim()) return;
-    onPrompt(text.trim());
-    setText('');
-  };
   return (
     <View style={styles.col}>
       <ToolRow>
@@ -389,23 +396,8 @@ export function AiPanel({ onPreset, onPrompt }: { onPreset: (id: AiPresetId) => 
             <ToolCircle key={p.id} icon={aiPresetIcons[p.id]} label={aiPresetLabel(p.id)} onPress={() => onPreset(p.id)} />
           ))}
       </ToolRow>
-      <View style={styles.inputRow}>
-        <TextInput
-          value={text}
-          onChangeText={setText}
-          placeholder={t('editor.promptPlaceholder')}
-          placeholderTextColor={ec.textMute}
-          style={styles.input}
-          maxLength={200}
-          onSubmitEditing={submit}
-          returnKeyType="send"
-        />
-        <Pressable onPress={submit} disabled={!text.trim()} style={[styles.sendBtn, !text.trim() && { opacity: 0.4 }]}>
-          <Icon icon={{ set: 'ion', name: 'arrow-up' }} size={18} color={ec.onGold} />
-        </Pressable>
-      </View>
       <View style={styles.actionRow}>
-        <ModelChip dark style={styles.darkChip} />
+        <ModelChip />
         {left && <Text style={styles.hint}>{left}</Text>}
       </View>
     </View>
@@ -416,7 +408,7 @@ export function AiPanel({ onPreset, onPrompt }: { onPreset: (id: AiPresetId) => 
 
 function Swatches({ value, onChange }: { value: string; onChange: (c: string) => void }) {
   return (
-    <HScroll tone="dark" contentContainerStyle={styles.swatches}>
+    <HScroll contentContainerStyle={styles.swatches}>
       {paintColors.map((c) => (
         <Pressable key={c} onPress={() => onChange(c)} style={[styles.swatch, { backgroundColor: c }, c === value && styles.swatchActive]} />
       ))}
@@ -446,7 +438,7 @@ export function TextPanel({ color, onColor, onAdd }: { color: string; onColor: (
           returnKeyType="done"
         />
         <Pressable onPress={submit} disabled={!text.trim()} style={[styles.sendBtn, !text.trim() && { opacity: 0.4 }]}>
-          <Icon icon={{ set: 'ion', name: 'add' }} size={20} color={ec.onGold} />
+          <Icon icon={{ set: 'ion', name: 'add' }} size={20} color="#FFFFFF" />
         </Pressable>
       </View>
       <Swatches value={color} onChange={onColor} />
@@ -457,7 +449,7 @@ export function TextPanel({ color, onColor, onAdd }: { color: string; onColor: (
 export function StickerPanel({ thumbs, onAdd }: { thumbs: Record<string, string>; onAdd: (id: string) => void }) {
   const t = useT();
   return (
-    <HScroll tone="dark" contentContainerStyle={styles.thumbRow}>
+    <HScroll contentContainerStyle={styles.thumbRow}>
       {stickers.map((s) => (
         <Pressable key={s.id} accessibilityLabel={t(`sticker.${s.id}` as MessageKey)} onPress={() => onAdd(s.id)} style={({ pressed }) => [styles.sticker, pressed && { transform: [{ scale: 0.92 }] }]}>
           {thumbs[s.id] ? <Image source={{ uri: thumbs[s.id] }} style={styles.stickerImg} /> : null}
@@ -470,7 +462,7 @@ export function StickerPanel({ thumbs, onAdd }: { thumbs: Record<string, string>
 export function FramePanel({ value, thumbs, onPick }: { value: FrameId; thumbs: Record<string, string>; onPick: (id: FrameId) => void }) {
   const t = useT();
   return (
-    <HScroll tone="dark" contentContainerStyle={styles.thumbRow}>
+    <HScroll contentContainerStyle={styles.thumbRow}>
       {frames.map((f) => (
         <Pressable key={f.id} onPress={() => onPick(f.id)} style={styles.thumbItem}>
           <View style={[styles.thumb, value === f.id && styles.thumbActive]}>
@@ -497,7 +489,7 @@ export function DrawPanel({ pen, onChange }: { pen: PenSettings; onChange: (p: P
   const t = useT();
   return (
     <View style={styles.col}>
-      <HScroll tone="dark" contentContainerStyle={styles.pills}>
+      <HScroll contentContainerStyle={styles.pills}>
         {penKinds.map((k) => (
           <Pill key={k.id} icon={k.icon} label={t(`editor.pen.${k.id}`)} active={pen.kind === k.id} onPress={() => onChange({ ...pen, kind: k.id })} />
         ))}
@@ -511,6 +503,12 @@ export function DrawPanel({ pen, onChange }: { pen: PenSettings; onChange: (p: P
 }
 
 const styles = StyleSheet.create({
+  cropRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14 },
+  cropHint: { flex: 1, fontFamily: font.regular, fontSize: 12, color: ec.textSoft },
+  cropReset: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: ec.border },
+  cropResetText: { fontFamily: font.medium, fontSize: 13, color: ec.text },
+  cropApply: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: ec.gold, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9 },
+  cropApplyText: { fontFamily: font.semi, fontSize: 13.5, color: '#FFFFFF' },
   saveTile: { alignItems: 'center', justifyContent: 'center', borderStyle: 'dashed', borderColor: ec.gold, backgroundColor: ec.goldSoft },
   mineBadge: {
     position: 'absolute',
@@ -536,9 +534,8 @@ const styles = StyleSheet.create({
   thumbImg: { width: '100%', height: '100%' },
   thumbLabel: { fontFamily: font.regular, fontSize: 11, color: ec.textSoft },
   actionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingHorizontal: 14 },
-  darkChip: { backgroundColor: ec.surface2, borderColor: ec.border },
   runBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: ec.gold, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 8 },
-  runText: { fontFamily: font.semi, fontSize: 14, color: ec.onGold },
+  runText: { fontFamily: font.semi, fontSize: 14, color: '#FFFFFF' },
   hint: { fontFamily: font.regular, fontSize: 12, color: ec.textSoft },
   inputRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 14 },
   input: {

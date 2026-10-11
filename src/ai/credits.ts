@@ -1,21 +1,37 @@
-import { modelInfo } from './models';
+import { imageModels, modelInfo } from './models';
 
 /**
  * How AI use is paid for (shared by the app and the API route):
  * - without an account: a few free tries, whatever the model;
  * - with an account: a monthly allowance of points, where a pricier model costs more points.
+ * Admins change the numbers on the admin page (Settings); the server sends them to the app.
  */
-export const GUEST_FREE_TRIES = 3;
-export const MONTHLY_POINTS = 100;
+export type CreditPlan = {
+  monthlyPoints: number;
+  guestFreeTries: number;
+  /** Points one result costs a signed-in user, per model id. */
+  modelPoints: Record<string, number>;
+};
+
+export const DEFAULT_PLAN: CreditPlan = {
+  monthlyPoints: 100,
+  guestFreeTries: 3,
+  modelPoints: Object.fromEntries(imageModels.map((m) => [m.id, m.points])),
+};
+
+/** Limits for the admin page. */
+export const PLAN_LIMITS = { monthlyPoints: 100_000, guestFreeTries: 100, modelPoints: 1000 };
 
 /**
  * Bonus points (never expire; used after the monthly allowance runs out):
- * inviting a friend who signs up with your code, and (once a month) when someone else opens a link you shared on Facebook.
+ * inviting a friend who signs up with your code (inviter and friend both get points, up to maxPerMonth invites a
+ * month), and (once a month) `share` points when someone else opens a link you shared on Facebook.
+ * Admins change the numbers on the admin page (Settings); the server sends them to the app.
  */
-export const REFERRAL_INVITER_POINTS = 20;
-export const REFERRAL_FRIEND_POINTS = 10;
-export const MAX_REFERRALS_PER_MONTH = 10;
-export const SHARE_POINTS = 5;
+export type RewardPoints = { inviter: number; friend: number; maxPerMonth: number; share: number };
+export const DEFAULT_REWARD_POINTS: RewardPoints = { inviter: 20, friend: 10, maxPerMonth: 10, share: 5 };
+/** Highest value an admin may set for any of them. */
+export const MAX_REWARD_POINTS = 1000;
 export const sharePlatforms = ['facebook'] as const;
 export type SharePlatform = (typeof sharePlatforms)[number];
 
@@ -29,10 +45,12 @@ export type Rewards = {
   shared: Record<SharePlatform, boolean>;
   /** Other people who opened the user's Facebook link this month. */
   shareVisits: number;
+  /** The current reward amounts. */
+  points: RewardPoints;
 };
 
-/** Points one AI result costs a signed-in user. */
-export const pointsFor = (model: string) => modelInfo(model)?.points ?? 1;
+/** Points one AI result costs a signed-in user under this plan. */
+export const pointsFor = (plan: CreditPlan, model: string) => plan.modelPoints[model] ?? modelInfo(model)?.points ?? 1;
 
 /** What the app shows about the user's remaining AI use. */
 export type Credits =

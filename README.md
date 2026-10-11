@@ -77,18 +77,20 @@ index.web.js             Nạp Skia (WebAssembly) trước khi mở app trên we
 
 ## Tài khoản và điểm AI
 
-- **Chưa có tài khoản:** `GUEST_FREE_TRIES` = 3 lượt AI miễn phí (model nào cũng tính 1 lượt). Hết lượt, app tự mở bảng **Đăng ký / Đăng nhập**.
-- **Có tài khoản** (email + mật khẩu): `MONTHLY_POINTS` = 100 điểm mỗi tháng dương lịch (làm mới 0 giờ ngày 1 theo giờ Argentina/Brazil GMT-3, đổi bằng `CAMI_TIMEZONE`; không cộng dồn). Flash 1 điểm, Pro 2 điểm (`points` trong `src/ai/models.ts`). Các con số nằm ở `src/ai/credits.ts`.
+- **Chưa có tài khoản:** 3 lượt AI miễn phí (mặc định) (model nào cũng tính 1 lượt). Hết lượt, app tự mở bảng **Đăng ký / Đăng nhập**.
+- **Có tài khoản** (email + mật khẩu): 100 điểm mỗi tháng dương lịch (mặc định) (làm mới 0 giờ ngày 1 theo giờ Argentina/Brazil GMT-3, đổi bằng `CAMI_TIMEZONE`; không cộng dồn). Flash 1 điểm, Pro 2 điểm (mặc định). Đổi các con số này ở trang quản trị › **Cài đặt › Điểm AI** (áp dụng ngay, kể cả tháng đang chạy; mặc định nằm ở `DEFAULT_PLAN` trong `src/ai/credits.ts`). Điểm tháng của từng tháng được ghi lại (bảng `monthly_allowance`) nên đổi số sau này không làm sai số điểm thưởng đã dùng ở các tháng trước.
 - Máy chủ giữ và trừ điểm (`src/server/account.ts`): trừ trước khi gọi AI, AI lỗi thì hoàn lại, Pro bận phải dùng Flash thì chỉ tính giá Flash. Khách được nhận diện bằng mã máy ngẫu nhiên + IP đã băm (tối đa 9 lượt thử/IP/30 ngày, để cài lại app không lấy lại lượt). Mỗi IP tạo tối đa 3 tài khoản/ngày; sai mật khẩu 8 lần thì khóa 15 phút.
 - Dữ liệu nằm trong `data/cami.db` (SQLite có sẵn trong Node 22, không cần cài thêm; đã loại khỏi git). Mật khẩu băm scrypt, phiên đăng nhập 90 ngày chỉ lưu bản băm. Hồ sơ có **Đăng xuất** và **Xóa tài khoản** (App Store bắt buộc).
-- **Điểm thưởng** (Hồ sơ › Nhận thêm điểm thưởng, `src/server/rewards.ts`): không hết hạn, dùng sau khi hết điểm tháng. **Mời bạn bè**: mỗi tài khoản có mã 6 ký tự và link `<EXPO_PUBLIC_SHARE_URL>/?ref=MÃ` (mở link là app tự hiện bảng đăng ký có sẵn mã); bạn bè đăng ký bằng mã thì người mời +20, bạn bè +10, tối đa 10 lượt thưởng/tháng, không thưởng khi hai tài khoản cùng mạng (chống tự mời). **Chia sẻ Cami** lên Facebook: Facebook không cho app biết bài có thật sự được đăng, nên điểm tính theo kết quả. Link đăng lên Facebook có thêm `&s=fb`; khi có **người khác** mở link (khác mạng và thiết bị chủ link từng đăng ký, đăng nhập hay dùng AI, và không đăng nhập bằng tài khoản chủ link), chủ link nhận +5 điểm, mỗi tháng một lần. Mỗi người xem chỉ tính một lần mỗi tháng (bảng `visits`).
+- **Điểm thưởng** (Hồ sơ › Nhận thêm điểm thưởng, `src/server/rewards.ts`): không hết hạn, dùng sau khi hết điểm tháng. **Mời bạn bè**: mỗi tài khoản có mã 6 ký tự và link `<EXPO_PUBLIC_SHARE_URL>/?ref=MÃ` (mở link là app tự hiện bảng đăng ký có sẵn mã); bạn bè đăng ký bằng mã thì người mời +20, bạn bè +10 (mặc định), tối đa 10 lượt thưởng/tháng, không thưởng khi hai tài khoản cùng mạng (chống tự mời). **Chia sẻ Cami** lên Facebook: Facebook không cho app biết bài có thật sự được đăng, nên điểm tính theo kết quả. Link đăng lên Facebook có thêm `&s=fb`; khi có **người khác** mở link (khác mạng và thiết bị chủ link từng đăng ký, đăng nhập hay dùng AI, và không đăng nhập bằng tài khoản chủ link), chủ link nhận +5 điểm (mặc định), mỗi tháng một lần. Các con số này đổi ở trang quản trị › **Cài đặt › Điểm thưởng** (0 = tắt; chia sẻ = 0 thì app ẩn mục chia sẻ); chỉ áp dụng cho lượt thưởng từ lúc lưu. Mỗi người xem chỉ tính một lần mỗi tháng (bảng `visits`).
 - Chưa có: xác minh email, quên mật khẩu tự động, bán thêm điểm.
 
 ## Trang quản trị
 
 - Mở `/admin` (web: `<địa chỉ>/admin`; trong app: **Hồ sơ › Quản trị**). Chỉ tài khoản có email trong `ADMIN_EMAILS` (file `.env` của server, cách nhau bằng dấu phẩy) mới xem được; server kiểm tra quyền ở mọi yêu cầu. Thêm email rồi khởi động lại server.
 - **Tổng quan** (7/30/90 ngày): tài khoản mới, thiết bị hoạt động, số ảnh AI, chi phí AI ước tính (theo giá trong `src/ai/models.ts`), tỉ lệ lỗi, số lần khách hết lượt/hết điểm, biểu đồ theo ngày, từng chức năng AI (Flash/Pro, khách/tài khoản, lỗi, thời gian xử lý), chức năng không dùng AI (lưu ảnh, preset, canvas, mời bạn…), lỗi AI, điểm thưởng, khách dùng nhiều nhất.
+- **Truy cập** (hôm nay / hôm qua / tuần này / tháng này / tùy chỉnh từ ngày… đến ngày…, tối đa 366 ngày; so với cùng khoảng thời gian kỳ trước): **đang online** (tự làm mới mỗi 20 giây: ai, nền tảng, đang ở màn hình nào), người dùng (tài khoản/khách), lượt truy cập (nghỉ quá 5 phút là lượt mới), online cùng lúc cao nhất, thời gian dùng, người dùng mới, biểu đồ theo giờ/ngày, khung giờ đông người, nền tảng, màn hình dùng nhiều, tài khoản dùng lâu nhất. App gửi tín hiệu `/api/presence` mỗi 45 giây khi đang mở (chỉ gửi nền tảng và tên màn hình; ẩn app thì ngừng). Giờ theo `CAMI_TIMEZONE`. Mã ở `src/server/presence.ts`, `src/presence.tsx`, `src/admin/TrafficTab.tsx`.
 - **Khách hàng**: tìm theo email/tên/mã mời, xem điểm còn lại, lịch sử AI, điểm thưởng, bạn đã mời, ngày hoạt động; **tặng điểm thưởng** (1–1000, có ghi lý do) và **khóa/mở khóa** tài khoản (khóa là đăng xuất mọi máy). Mọi thao tác được ghi vào nhật ký quản trị.
+- **Cài đặt**: **Điểm AI** (điểm mỗi tháng, lượt miễn phí cho khách, điểm mỗi ảnh Flash/Pro), **Điểm thưởng** (mời bạn, được mời, tối đa lượt/tháng, chia sẻ Facebook) và **nguồn AI** (thêm tài khoản Google Cloud bằng file khoá service account hoặc API key AI Studio, sắp thứ tự, tạm tắt, nhập credit để app tự chuyển sang nguồn khác khi gần hết, kiểm tra kết nối miễn phí). Khoá được mã hoá bằng `CAMI_SECRET` trước khi lưu: đừng đổi `CAMI_SECRET` sau khi đã lưu khoá. Chưa lưu gì thì app dùng nguồn trong `.env`.
 - **Hệ thống**: kiểm tra cấu hình `.env` (không hiện khóa bí mật), quy tắc điểm/thưởng, thông tin máy chủ, dung lượng và số dòng của cơ sở dữ liệu.
 - Số liệu lấy từ `data/cami.db`: bảng `ai_log` (mỗi yêu cầu AI), `actives` (thiết bị mở app mỗi ngày), `events` (bộ đếm chức năng theo ngày, chỉ tên chức năng, không có ảnh hay thông tin cá nhân; app gửi qua `/api/track`), `admin_log`. Mã nằm ở `src/server/admin.ts`, `src/server/stats.ts`, giao diện ở `app/admin/` và `src/admin/`. Trang quản trị chỉ có tiếng Việt.
 - Số liệu chức năng không dùng AI chỉ có từ bản app này trở đi; ảnh AI từ trước được tính vào mục "Không rõ".
@@ -104,11 +106,11 @@ index.web.js             Nạp Skia (WebAssembly) trước khi mở app trên we
 
 ## Đưa lên mạng và build app
 
-1. **Deploy web và API lên máy chủ của bạn** (VPS chạy Node 22 + pm2 + nginx, giống booking / nails-studio). Không dùng EAS Hosting được, vì ở đó không có SQLite và không lưu được file.
+1. **Deploy web và API lên máy chủ của bạn** (VPS chạy Node 22.13+ + pm2 + nginx, giống booking / nails-studio). Không dùng EAS Hosting được, vì ở đó không có SQLite và không lưu được file. Từng bước (DNS tên miền, nginx, HTTPS, cập nhật, sao lưu): xem **[DEPLOY.md](DEPLOY.md)**.
    ```bash
    npm ci
    npx expo export -p web
-   pm2 start "npx expo serve --port 3010" --name cami
+   pm2 start ecosystem.config.cjs   # chạy server.cjs (web + API, port 3010)
    ```
    Đặt `.env` trên máy chủ: `GEMINI_API_KEY` hoặc `GOOGLE_CLOUD_PROJECT`, `CAMI_SECRET` (chuỗi ngẫu nhiên dài), tùy chọn `CAMI_DATA_DIR` và `CAMI_TIMEZONE`. Nginx cần đặt `X-Real-IP` để giới hạn theo IP hoạt động. Nhớ sao lưu thư mục `data/`.
 2. Sửa `origin` trong `app.json` (plugin `expo-router`) và `EXPO_PUBLIC_API_URL` trong `.env` thành URL vừa deploy.

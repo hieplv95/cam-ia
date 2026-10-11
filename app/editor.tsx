@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Group, Image as SkImageNode, ImageSVG, Skia, useFont, type SkImage, type SkSVG } from '@shopify/react-native-skia';
+import { ColorMatrix, Group, Image as SkImageNode, ImageSVG, Path, Skia, useFont, type SkImage, type SkSVG } from '@shopify/react-native-skia';
 import { usePreventRemove } from '@react-navigation/native';
 import { useNavigation, useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { aiEdit, type AiRequest } from '@/src/ai/client';
@@ -14,7 +15,10 @@ import { DevelopedImage } from '@/src/develop/shader';
 import { defaultDevelop, isDefault } from '@/src/develop/types';
 import { Dialog, type DialogAction } from '@/src/Dialog';
 import { loadDraft, newDraftId, saveDraft, timeAgo } from '@/src/drafts/drafts';
-import { EditorCanvas, type PenSettings } from '@/src/editor/EditorCanvas';
+import { EditorCanvas, ERASE_MARK_COLOR, type PenSettings } from '@/src/editor/EditorCanvas';
+import { ERASE_SIZES, ErasePanel, type EraseSize } from '@/src/editor/ErasePanel';
+import { inpaint } from '@/src/editor/inpaint';
+import { fitCrop, isFullCrop, scaleCrop, type CropRect } from '@/src/editor/crop';
 import { FrameOverlay, frames } from '@/src/editor/frames';
 import {
   blankImage,
@@ -25,6 +29,8 @@ import {
   loadPhotoPair,
   padImage,
   pairFromBase64,
+  cropImage,
+  renderImage,
   renderJpegThumbnail,
   renderThumbnail,
   resizeImage,
@@ -33,7 +39,6 @@ import {
   type TransformOp,
 } from '@/src/editor/imageOps';
 import {
-  AdjustPanel,
   AiPanel,
   BasicPanel,
   BeautyPanel,
@@ -47,22 +52,30 @@ import {
   type BeautyTool,
   type DevelopKey,
   type DevelopKeyId,
+  cropRatioOf,
+  type CropChoice,
 } from '@/src/editor/panels';
+import { DevelopPanel } from '@/src/editor/DevelopPanel';
+import { EditorNav } from '@/src/editor/EditorNav';
+import { buildMatrix, filters } from '@/src/editor/filters';
 import { HistorySheet } from '@/src/editor/HistorySheet';
-import { BASE_FONT_SIZE } from '@/src/editor/Scene';
+import { PromptBar } from '@/src/editor/PromptBar';
+import { BASE_FONT_SIZE, buildStrokePath } from '@/src/editor/Scene';
 import { stickers } from '@/src/editor/stickers';
-import { newId, type Doc, type Layer, type TransformableLayer } from '@/src/editor/types';
+import { defaultAdjust, newId, type Doc, type EraseMark, type Layer, type TransformableLayer } from '@/src/editor/types';
 import { CategoryTabs, ec } from '@/src/editor/ui';
 import { useDocHistory } from '@/src/editor/useDocHistory';
 import { aiPresetLabel, Icon, type IconSpec } from '@/src/icons';
 import { notify } from '@/src/notify';
 import { setPendingExport, setPendingPhoto, takePendingPhoto } from '@/src/pendingPhoto';
-import { font, paintColors } from '@/src/theme';
+import { bronzeGradient, cardShadow, font, paintColors } from '@/src/theme';
+import { BRAND_BROWN, CamiLogo } from '@/src/ui';
 import { track, trackPreset } from '@/src/track';
 import { t, useT, type MessageKey } from '@/src/i18n';
 
 type Category = 'basic' | 'beauty' | 'filters' | 'ai' | 'adjust';
-type BottomTool = 'effects' | 'text' | 'sticker' | 'frame' | 'draw';
+type BottomTool = 'effects' | 'text' | 'sticker' | 'frame' | 'draw' | 'erase';
+/** 'erase' = Xóa vật thể: paint over what to remove, then remove it on the device or with the AI. */
 type Panel = Category | BottomTool;
 
 const categories: Category[] = ['basic', 'beauty', 'filters', 'ai', 'adjust'];
@@ -73,6 +86,7 @@ const bottomTools: { id: BottomTool; icon: IconSpec }[] = [
   { id: 'sticker', icon: { set: 'mci', name: 'sticker-emoji' } },
   { id: 'frame', icon: { set: 'mci', name: 'image-frame' } },
   { id: 'draw', icon: { set: 'mci', name: 'draw' } },
+  { id: 'erase', icon: { set: 'mci', name: 'eraser' } },
 ];
 
 const THUMB = 124;
@@ -86,6 +100,7 @@ const transformName = (op: TransformOp) => {
 };
 
 const aiStepName = (req: AiRequest) => {
+  if ('erase' in req) return t('editor.aiStep.erase');
   if ('prompt' in req && req.prompt) return t('editor.aiStep.prompt');
   const id = 'preset' in req ? req.preset : undefined;
   if (id === 'retouch') return t('editor.aiStep.retouch');
@@ -155,6 +170,12 @@ export default function Editor() {
   const [savedMark, setSavedMark] = useState<Doc | null>(null);
   const saveChain = useRef<Promise<void>>(Promise.resolve());
   const [historyOpen, setHistoryOpen] = useState(false);
+  // The AI prompt box under the photo is open (the tool panel is hidden to make room above the keyboard).
+  const [promptOpen, setPromptOpen] = useState(false);
+  // "Xóa vật thể": marks painted over what to remove (not part of the document), brush size and an optional description.
+  const [eraseMarks, setEraseMarks] = useState<EraseMark[]>([]);
+  const [eraseSize, setEraseSize] = useState<EraseSize>('medium');
+  const [eraseText, setEraseText] = useState('');
   const [dialog, setDialog] = useState<DialogState>(null);
   const allowLeave = useRef(false);
   const live = useRef({ doc, draftId, canUndo });
@@ -162,7 +183,9 @@ export default function Editor() {
 
   const [panel, setPanel] = useState<Panel>('basic');
   const [basicTool, setBasicTool] = useState<BasicTool>('exposure');
-  const [adjustTool, setAdjustTool] = useState<DevelopKeyId>('exposure');
+  // Free crop: the frame over the photo (image pixels) and its shape.
+  const [cropChoice, setCropChoice] = useState<CropChoice>('free');
+  const [cropRect, setCropRect] = useState<CropRect | null>(null);
   const [effectTool, setEffectTool] = useState<DevelopKeyId>('vignette');
   const [beauty, setBeauty] = useState<RetouchOptionId[]>(['face', 'skin']);
   const [beautyMode, setBeautyMode] = useState<'free' | 'ai'>('free');
@@ -176,6 +199,7 @@ export default function Editor() {
   const [toast, setToast] = useState<string | null>(null);
   const [stickerThumbs, setStickerThumbs] = useState<Record<string, string>>({});
   const [presetThumbs, setPresetThumbs] = useState<Record<string, string>>({});
+  const [lookThumbs, setLookThumbs] = useState<Record<string, string>>({});
   const [frameThumbs, setFrameThumbs] = useState<Record<string, string>>({});
 
   const showToast = (msg: string) => {
@@ -195,6 +219,23 @@ export default function Editor() {
     } catch (e: any) {
       showToast(e.message ?? t('common.error'));
       return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /** Free crop of the working picture and, at the same place, of the full-resolution original. */
+  const runCrop = async (base: Doc, r: CropRect, label: string) => {
+    setBusy(t('editor.processing'));
+    setSelectedId(null);
+    setCompare(false);
+    try {
+      const image = await cropImage(await flatten(base, skFont, svgs), r);
+      const hasFull = base.full && base.full !== base.image;
+      const full = hasFull ? await cropImage(await flattenFull(base, skFont, svgs), scaleCrop(r, base.full!.width() / base.image.width())) : undefined;
+      commit(freshDoc(image, full, label));
+    } catch (e: any) {
+      showToast(e.message ?? t('common.error'));
     } finally {
       setBusy(null);
     }
@@ -227,6 +268,57 @@ export default function Editor() {
       return imageFromBase64(result.image);
     });
     if (ok) showToast(`Xong ✨ ${summary}`);
+  };
+
+  /** Removes what was painted over (drawn in red on the copy sent to the AI) and/or described. */
+  const runErase = async () => {
+    if (!doc) return;
+    const marks = eraseMarks;
+    const text = eraseText.trim();
+    if (!marks.length && !text) {
+      showToast(t('editor.erase.empty'));
+      return;
+    }
+    let summary = '';
+    const ok = await runFlattened(doc, t('editor.erase.busy'), t('editor.aiStep.erase'), async (flat) => {
+      const w = flat.width();
+      const h = flat.height();
+      const marked = marks.length
+        ? await renderImage(
+            <Group>
+              <SkImageNode image={flat} x={0} y={0} width={w} height={h} />
+              {marks.map((m, i) => (
+                <Path key={i} path={buildStrokePath(m.points)} style="stroke" strokeWidth={m.width} strokeCap="round" strokeJoin="round" color={ERASE_MARK_COLOR} />
+              ))}
+            </Group>,
+            w,
+            h,
+          )
+        : flat;
+      const result = await aiEdit(encodeBase64(await resizeImage(marked, 1024), 90), { erase: true, marked: marks.length > 0, ...(text && { prompt: text }) });
+      summary = result.summary;
+      return imageFromBase64(result.image);
+    });
+    if (ok) {
+      setEraseMarks([]);
+      setEraseText('');
+      showToast(`Xong ✨ ${summary}`);
+    }
+  };
+
+  /** "Xóa nhanh": removes the painted area on the device, without AI (free, offline). */
+  const runEraseQuick = async () => {
+    if (!doc) return;
+    const marks = eraseMarks;
+    if (!marks.length) {
+      showToast(t('editor.erase.needMarks'));
+      return;
+    }
+    const ok = await runFlattened(doc, t('editor.erase.quickBusy'), t('editor.step.eraseQuick'), (flat) => inpaint(flat, marks));
+    if (ok) {
+      setEraseMarks([]);
+      track('erase_quick');
+    }
   };
 
   // Load the photo chosen on another screen, then apply what the user picked there.
@@ -269,7 +361,9 @@ export default function Editor() {
         const first = freshDoc(image, full);
         const intent = pending.intent;
         commit(first);
-        if (intent?.type === 'ai') {
+        if (intent?.type === 'ai' && intent.preset === 'erase') {
+          setPanel('erase');
+        } else if (intent?.type === 'ai') {
           setPanel('ai');
           runAi(first, { preset: intent.preset });
         } else if (pending.kind === 'blank') {
@@ -315,6 +409,20 @@ export default function Editor() {
       const none = await renderThumbnail(plain, THUMB, THUMB);
       if (cancelled) return;
       setPresetThumbs({ none, ...Object.fromEntries(presets) });
+      const looks = await Promise.all(
+        filters.map(async (f) => [
+          f.id,
+          await renderThumbnail(
+            <SkImageNode image={small} x={0} y={0} width={THUMB} height={THUMB} fit="cover">
+              <ColorMatrix matrix={buildMatrix(f.id, defaultAdjust)} />
+            </SkImageNode>,
+            THUMB,
+            THUMB,
+          ),
+        ]),
+      );
+      if (cancelled) return;
+      setLookThumbs(Object.fromEntries(looks));
       const frameEntries = await Promise.all(
         frames.map(async (f) => [
           f.id,
@@ -386,6 +494,49 @@ export default function Editor() {
     else if (id) writeDraft(d, id).then(proceed, () => setDialog({ type: 'leave', proceed }));
     else setDialog({ type: 'leave', proceed });
   });
+
+  /**
+   * Undo / redo for the buttons and the keyboard: while painting what to erase, the last mark goes first;
+   * otherwise one step of the edit history.
+   */
+  const undoStep = () => {
+    if (panel === 'erase' && eraseMarks.length) return setEraseMarks((m) => m.slice(0, -1));
+    setSelectedId(null);
+    undo();
+  };
+  const redoStep = () => {
+    setSelectedId(null);
+    redo();
+  };
+  const shortcuts = useRef({ undoStep, redoStep, busy });
+  shortcuts.current = { undoStep, redoStep, busy };
+  // Ctrl+Z / ⌘Z undo, Ctrl+Y / Ctrl+Shift+Z / ⌘⇧Z redo (web). Typing in a text box keeps its own undo.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      const key = e.key.toLowerCase();
+      const redoKey = key === 'y' || (key === 'z' && e.shiftKey);
+      if (key !== 'z' && !redoKey) return;
+      e.preventDefault();
+      if (shortcuts.current.busy) return;
+      if (redoKey) shortcuts.current.redoStep();
+      else shortcuts.current.undoStep();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const cropping = panel === 'basic' && basicTool === 'crop';
+  const pictureForCrop = doc?.image;
+  useEffect(() => {
+    if (!cropping || !pictureForCrop) return;
+    setCropRect(fitCrop(pictureForCrop.width(), pictureForCrop.height(), cropRatioOf(cropChoice)));
+    // The shape is applied by chooseCropShape; here only a new tool session or a new picture resets the frame.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cropping, pictureForCrop]);
 
   if (!doc) {
     return (
@@ -494,6 +645,7 @@ export default function Editor() {
   };
 
   const choosePanel = (p: Panel) => {
+    if (p !== 'erase') setEraseMarks([]);
     setPanel(p);
     if (p === 'draw') setSelectedId(null);
   };
@@ -511,15 +663,41 @@ export default function Editor() {
   // The teeth / under-eye brushes paint masks on the canvas instead of moving stickers.
   const brushEffect =
     panel === 'beauty' && beautyMode === 'free' && (beautyTool === 'whiten' || beautyTool === 'lighten') ? beautyTool : null;
-  const canvasMode = panel === 'draw' ? 'draw' : brushEffect ? 'retouch' : 'move';
+  const canvasMode = cropping ? 'crop' : panel === 'erase' ? 'erase' : panel === 'draw' ? 'draw' : brushEffect ? 'retouch' : 'move';
+  const chooseCropShape = (c: CropChoice) => {
+    setCropChoice(c);
+    setCropRect(fitCrop(iw, ih, cropRatioOf(c)));
+  };
+  const cropChanged = !!cropRect && !isFullCrop(cropRect, iw, ih);
+  const applyCrop = () => {
+    if (!cropRect || !cropChanged) return;
+    const shape = cropChoice === 'free' ? t('editor.crop.free') : (cropRatioLabels[cropChoice] ?? '');
+    runCrop(doc, cropRect, t('editor.op.crop', { ratio: shape }));
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
+      {/* iOS: lift the AI prompt box above the keyboard (Android resizes the window itself). */}
+      <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.topBar}>
-        <TopButton icon={{ set: 'ion', name: 'chevron-back' }} label={t('common.back')} onPress={leave} />
+        <Pressable onPress={leave} hitSlop={6} style={({ pressed }) => [styles.brand, pressed && { opacity: 0.7 }]} accessibilityLabel={t('common.back')}>
+          <Icon icon={{ set: 'ion', name: 'chevron-back' }} size={18} color={ec.textSoft} />
+          <CamiLogo size={30} />
+          <View style={styles.brandText}>
+            <Text style={styles.brandName}>CamIA</Text>
+            <Text style={styles.brandSub} numberOfLines={1}>
+              {t('common.tagline')}
+            </Text>
+          </View>
+        </Pressable>
         <View style={styles.topCenter}>
-          <TopButton icon={{ set: 'ion', name: 'arrow-undo-outline' }} label={t('common.undo')} onPress={undo} disabled={!canUndo} />
-          <TopButton icon={{ set: 'ion', name: 'arrow-redo-outline' }} label={t('common.redo')} onPress={redo} disabled={!canRedo} />
+          <TopButton
+            icon={{ set: 'ion', name: 'arrow-undo-outline' }}
+            label={`${t('common.undo')} (Ctrl+Z)`}
+            onPress={undoStep}
+            disabled={!canUndo && !(panel === 'erase' && eraseMarks.length)}
+          />
+          <TopButton icon={{ set: 'ion', name: 'arrow-redo-outline' }} label={`${t('common.redo')} (Ctrl+Y)`} onPress={redoStep} disabled={!canRedo} />
           <TopButton
             icon={{ set: 'ion', name: 'time-outline' }}
             label={t('editor.history')}
@@ -531,8 +709,11 @@ export default function Editor() {
           />
           <TopButton icon={{ set: 'mci', name: 'compare' }} label={t('editor.compare')} onPress={toggleCompare} active={compare} />
         </View>
-        <Pressable style={({ pressed }) => [styles.saveBtn, pressed && { opacity: 0.85 }]} onPress={openExport}>
-          <Text style={styles.saveText}>{t('common.save')}</Text>
+        <Pressable style={({ pressed }) => [pressed && { opacity: 0.85 }]} onPress={openExport}>
+          <LinearGradient colors={bronzeGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.saveBtn}>
+            <Icon icon={{ set: 'ion', name: 'share-outline' }} size={16} color="#FFFFFF" />
+            <Text style={styles.saveText}>{t('common.save')}</Text>
+          </LinearGradient>
         </Pressable>
       </View>
 
@@ -548,6 +729,8 @@ export default function Editor() {
         checkpoint={checkpoint}
         update={update}
         compareWith={compareWith}
+        erase={{ marks: eraseMarks, width: ERASE_SIZES[eraseSize], onChange: setEraseMarks }}
+        crop={cropping && cropRect ? { rect: cropRect, ratio: cropRatioOf(cropChoice), onChange: setCropRect } : undefined}
       />
 
       {selected && panel !== 'draw' && !compareWith && (
@@ -570,15 +753,26 @@ export default function Editor() {
         </View>
       )}
 
-      <View style={styles.sheet}>
+      {/* Describe the edit for the AI, on every tab (hidden while a sticker or text is being edited, or comparing). */}
+      {!compareWith && !(selected && panel !== 'draw') && panel !== 'erase' && !cropping && <PromptBar onSubmit={(prompt) => runAi(doc, { prompt })} onExpand={setPromptOpen} />}
+
+      {/* Kept mounted while the prompt is open, so the panels keep their state. */}
+      <View style={styles.controls}>
+      <View style={[styles.sheet, promptOpen && styles.hidden]}>
         <CategoryTabs
           tabs={categories.map((id) => ({ id, label: t(`editor.tab.${id}` as MessageKey) }))}
           value={(categories.includes(panel as Category) ? panel : null) as Category | null}
           onChange={choosePanel}
         />
-        <View style={styles.panel}>
+        <View style={[styles.panel, panel === 'adjust' && styles.panelTall]}>
           {panel === 'basic' && (
-            <BasicPanel {...slider} tool={basicTool} onTool={setBasicTool} onTransform={(op) => runTransform(doc, op)} />
+            <BasicPanel
+              {...slider}
+              tool={basicTool}
+              onTool={setBasicTool}
+              onTransform={(op) => runTransform(doc, op)}
+              crop={{ choice: cropChoice, onChoice: chooseCropShape, changed: cropChanged, onReset: () => chooseCropShape(cropChoice), onApply: applyCrop }}
+            />
           )}
           {panel === 'beauty' && (
             <BeautyPanel
@@ -615,9 +809,29 @@ export default function Editor() {
               onRecipeMenu={(preset) => setDialog({ type: 'recipeMenu', preset })}
             />
           )}
-          {panel === 'ai' && <AiPanel onPreset={(preset) => runAi(doc, { preset })} onPrompt={(prompt) => runAi(doc, { prompt })} />}
+          {panel === 'ai' && <AiPanel onPreset={(preset) => (preset === 'erase' ? choosePanel('erase') : runAi(doc, { preset }))} />}
+          {panel === 'erase' && (
+            <ErasePanel
+              size={eraseSize}
+              onSize={setEraseSize}
+              marks={eraseMarks.length}
+              onUndoMark={() => setEraseMarks((m) => m.slice(0, -1))}
+              onClearMarks={() => setEraseMarks([])}
+              text={eraseText}
+              onText={setEraseText}
+              onRun={runErase}
+              onQuick={runEraseQuick}
+              onAuto={() => runAi(doc, { preset: 'erase' })}
+            />
+          )}
           {panel === 'adjust' && (
-            <AdjustPanel {...slider} active={adjustTool} onActive={setAdjustTool} onAdvanced={() => openScreen('adjust')} />
+            <DevelopPanel
+              develop={doc.develop}
+              lookThumbs={lookThumbs}
+              onStart={checkpoint}
+              onChange={(fn) => update((d) => ({ ...d, develop: fn(d.develop) }))}
+              onCommit={(fn) => commit({ ...doc, develop: fn(doc.develop) })}
+            />
           )}
           {panel === 'effects' && <EffectsPanel {...slider} active={effectTool} onActive={setEffectTool} />}
           {panel === 'text' && (
@@ -655,17 +869,29 @@ export default function Editor() {
           {panel === 'draw' && <DrawPanel pen={pen} onChange={setPen} />}
         </View>
 
-        <View style={styles.bottomBar}>
-          {bottomTools.map((tool) => {
-            const active = panel === tool.id;
-            return (
-              <Pressable key={tool.id} onPress={() => choosePanel(tool.id)} style={styles.bottomItem}>
-                <Icon icon={tool.icon} size={22} color={active ? ec.gold : ec.text} />
-                <Text style={[styles.bottomLabel, active && { color: ec.gold }]}>{t(`editor.tool.${tool.id}` as MessageKey)}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+      </View>
+
+      <View style={[styles.bottomBar, promptOpen && styles.hidden]}>
+        {bottomTools.map((tool) => {
+          const active = panel === tool.id;
+          return (
+            <Pressable
+              key={tool.id}
+              onPress={() => choosePanel(tool.id)}
+              style={({ pressed }) => [styles.bottomItem, active && styles.bottomItemActive, pressed && { opacity: 0.75 }]}
+            >
+              <Icon icon={tool.icon} size={22} color={ec.gold} />
+              <Text style={[styles.bottomLabel, active && { color: ec.gold, fontFamily: font.semi }]} numberOfLines={1}>
+                {t(`editor.tool.${tool.id}` as MessageKey)}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View style={[styles.nav, promptOpen && styles.hidden]}>
+        <EditorNav />
+      </View>
       </View>
 
       <HistorySheet
@@ -688,7 +914,6 @@ export default function Editor() {
       />
 
       <Dialog
-        tone="dark"
         visible={!!dialog}
         onClose={() => setDialog(null)}
         {...dialogProps(dialog, {
@@ -727,6 +952,7 @@ export default function Editor() {
           </View>
         </View>
       )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -787,12 +1013,25 @@ function dialogProps(
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: ec.bg },
   center: { alignItems: 'center', justifyContent: 'center' },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10, paddingVertical: 6 },
-  topCenter: { flexDirection: 'row', gap: 6 },
-  topBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
+  },
+  brand: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  brandText: { flexShrink: 1, minWidth: 0 },
+  brandName: { fontFamily: font.bold, fontSize: 16, letterSpacing: 0.3, color: BRAND_BROWN },
+  brandSub: { fontFamily: font.regular, fontSize: 10.5, color: ec.textSoft },
+  topCenter: { flexDirection: 'row', gap: 2 },
+  topBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   topBtnActive: { backgroundColor: ec.goldSoft },
-  saveBtn: { backgroundColor: ec.gold, borderRadius: 999, paddingHorizontal: 22, paddingVertical: 9 },
-  saveText: { fontFamily: font.semi, fontSize: 15, color: ec.onGold },
+  saveBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 9 },
+  saveText: { fontFamily: font.semi, fontSize: 14, color: '#FFFFFF' },
   layerBar: {
     flexDirection: 'row',
     alignSelf: 'center',
@@ -807,20 +1046,40 @@ const styles = StyleSheet.create({
   },
   layerBtn: { alignItems: 'center', minWidth: 40, gap: 1 },
   layerText: { fontFamily: font.regular, fontSize: 10, color: ec.textSoft },
+  // White card with the category tabs and the current tool panel.
   sheet: {
     backgroundColor: ec.surface,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
+    borderRadius: 22,
     paddingTop: 12,
     width: '100%',
     maxWidth: 760,
     alignSelf: 'center',
+    ...cardShadow,
   },
+  fill: { flex: 1 },
+  hidden: { display: 'none' },
   // Fixed height so the tabs don't jump when switching between taller and shorter panels.
   panel: { height: 184, justifyContent: 'center' },
-  bottomBar: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: ec.border, paddingTop: 10, paddingBottom: 6 },
-  bottomItem: { flex: 1, alignItems: 'center', gap: 4 },
-  bottomLabel: { fontFamily: font.regular, fontSize: 11, color: ec.textSoft },
+  // Điều chỉnh holds sections, sliders or the curve, and the quick looks.
+  panelTall: { height: 236, justifyContent: 'flex-start', paddingTop: 4, paddingBottom: 8 },
+  // Row of white tiles: Hiệu ứng · Văn bản · Sticker · Khung · Vẽ.
+  bottomBar: { flexDirection: 'row', gap: 8, paddingTop: 10, width: '100%', maxWidth: 760, alignSelf: 'center' },
+  bottomItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 9,
+    borderRadius: 16,
+    backgroundColor: ec.surface,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    ...cardShadow,
+    shadowOpacity: 0.06,
+  },
+  bottomItemActive: { borderColor: ec.gold, backgroundColor: '#FFFBF4' },
+  bottomLabel: { fontFamily: font.regular, fontSize: 11, color: ec.text },
+  controls: { paddingHorizontal: 12 },
+  nav: { paddingTop: 10, paddingBottom: 4 },
   toast: {
     position: 'absolute',
     top: 70,

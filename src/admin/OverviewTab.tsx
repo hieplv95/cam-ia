@@ -11,6 +11,8 @@ import { BarChart, Card, Empty, Grid, Row, Segmented, ShareRow, Stat, StatGrid }
 import { useLoad } from './useLoad';
 
 const RANGES = [
+  { id: 1, label: 'Hôm nay' },
+  { id: -1, label: 'Hôm qua' },
   { id: 7, label: '7 ngày' },
   { id: 30, label: '30 ngày' },
   { id: 90, label: '90 ngày' },
@@ -19,7 +21,7 @@ const RANGES = [
 /** Numbers for the chosen period: accounts, activity, AI use and cost, features, errors and rewards. */
 export function OverviewTab({ refresh }: { refresh: number }) {
   const router = useRouter();
-  const [days, setDays] = useState(30);
+  const [days, setDays] = useState(1);
   const { data: o, error, reload } = useLoad(() => fetchOverview(days), [days]);
   useEffect(() => {
     if (refresh) reload();
@@ -32,6 +34,7 @@ export function OverviewTab({ refresh }: { refresh: number }) {
   const errorRate = attempts ? o.ai.error / attempts : 0;
   const maxTool = Math.max(1, ...o.tools.map((t) => t.ok));
   const maxEvent = Math.max(1, ...o.events.map((e) => e.n));
+  const dayLabel = days === -1 ? 'hôm qua' : 'hôm nay';
   const openUser = (id: number) => router.push(`/admin/user/${id}`);
 
   return (
@@ -39,20 +42,20 @@ export function OverviewTab({ refresh }: { refresh: number }) {
       <View style={styles.rangeRow}>
         <Segmented options={RANGES} value={days} onChange={setDays} />
         <Text style={styles.rangeText}>
-          {shortDay(o.from)} → {shortDay(o.today)} · giờ {o.timeZone}
+          {o.from === o.today ? shortDay(o.from) : `${shortDay(o.from)} → ${shortDay(o.today)}`} · giờ {o.timeZone}
         </Text>
       </View>
 
       <StatGrid>
-        <Stat icon="people-outline" label="Tài khoản" value={num(o.users.total)} sub={`+${num(o.users.newInRange)} trong kỳ · +${num(o.users.newToday)} hôm nay`} />
+        <Stat icon="people-outline" label="Tài khoản" value={num(o.users.total)} sub={`+${num(o.users.newInRange)} trong kỳ · +${num(o.users.newToday)} ${dayLabel}`} />
         <Stat
           icon="pulse-outline"
           tone="blue"
-          label="Hoạt động hôm nay"
+          label={`Hoạt động ${dayLabel}`}
           value={num(o.active.today)}
           sub={`thiết bị · trong kỳ ${num(o.active.inRange)} thiết bị, ${num(o.active.members)} tài khoản`}
         />
-        <Stat icon="sparkles-outline" label="Ảnh AI thành công" value={num(o.ai.ok)} sub={`${num(o.ai.okToday)} hôm nay · ${num(o.ai.okMonth)} tháng này`} />
+        <Stat icon="sparkles-outline" label="Ảnh AI thành công" value={num(o.ai.ok)} sub={`${num(o.ai.okToday)} ${dayLabel} · ${num(o.ai.okMonth)} tháng này`} />
         <Stat icon="cash-outline" tone="green" label="Chi phí AI ước tính" value={usd(o.ai.usd)} sub={`Tháng này: ${usdVnd(o.ai.usdMonth)}`} />
         <Stat
           icon="warning-outline"
@@ -108,7 +111,7 @@ export function OverviewTab({ refresh }: { refresh: number }) {
         <Card title="Model AI">
           {o.models.length ? o.models.map((m) => <Row key={m.model} label={modelName(m.model)} sub={m.model} value={`${num(m.ok)} ảnh · ${usd(m.usd)}`} />) : <Empty text="Chưa có số liệu." />}
         </Card>
-        <Card title="Điểm thưởng & lời mời" subtitle={`Trong ${days} ngày`}>
+        <Card title="Điểm thưởng & lời mời" subtitle={days === -1 ? 'Hôm qua' : days === 1 ? 'Hôm nay' : `Trong ${days} ngày`}>
           {o.rewards.map((r) => (
             <Row key={r.reason} label={reasonLabel(r.reason)} value={`+${num(r.points)} điểm`} sub={`${num(r.count)} lần`} />
           ))}

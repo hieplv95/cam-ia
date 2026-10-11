@@ -3,7 +3,7 @@ import * as Linking from 'expo-linking';
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
-import type { AccountUser, Credits, Rewards } from './ai/credits';
+import { DEFAULT_PLAN, DEFAULT_REWARD_POINTS, type AccountUser, type CreditPlan, type Credits, type RewardPoints, type Rewards } from './ai/credits';
 import { getLanguage, t } from './i18n';
 
 /**
@@ -19,9 +19,13 @@ const TOKEN_KEY = 'cami-session';
 const DEVICE_KEY = 'cami-device';
 const REF_KEY = 'cami-invite';
 
-/** admin: the account may open the admin page (its email is in the server's ADMIN_EMAILS). */
-type State = { ready: boolean; user: AccountUser | null; credits: Credits | null; admin: boolean };
-let state: State = { ready: false, user: null, credits: null, admin: false };
+/**
+ * admin: the account may open the admin page (its email is in the server's ADMIN_EMAILS).
+ * rewardPoints / plan: invite and share bonuses, monthly points, free tries and points per model,
+ * as currently set on the admin page (defaults until the server answers).
+ */
+type State = { ready: boolean; user: AccountUser | null; credits: Credits | null; admin: boolean; rewardPoints: RewardPoints; plan: CreditPlan };
+let state: State = { ready: false, user: null, credits: null, admin: false, rewardPoints: DEFAULT_REWARD_POINTS, plan: DEFAULT_PLAN };
 let token: string | null = null;
 const listeners = new Set<(s: State) => void>();
 
@@ -85,7 +89,7 @@ export async function refreshAccount() {
   }
   // A token the server no longer knows (expired, account deleted) is dropped.
   if (token && !data.user) await storeSession(null);
-  set({ ready: true, user: data.user, credits: data.credits, admin: !!data.admin });
+  set({ ready: true, user: data.user, credits: data.credits, admin: !!data.admin, ...(data.rewardPoints && { rewardPoints: data.rewardPoints }), ...(data.plan && { plan: data.plan }) });
 }
 
 async function authenticate(path: string, body: Record<string, string>) {

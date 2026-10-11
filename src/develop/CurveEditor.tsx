@@ -20,9 +20,12 @@ const PAD = 10;
 export function CurveEditor({
   curves,
   onChange,
+  onStart,
 }: {
   curves: Record<CurveChannel, number[]>;
   onChange: (channel: CurveChannel, points: number[]) => void;
+  /** A drag begins (the editor records one undo step per drag). */
+  onStart?: () => void;
 }) {
   const t = useT();
   const [channel, setChannel] = useState<CurveChannel>('rgb');
@@ -46,6 +49,7 @@ export function CurveEditor({
     .runOnJS(true)
     .minDistance(0)
     .onBegin((e) => {
+      onStart?.();
       dragging.current = Math.round(Math.min(1, Math.max(0, (e.x - PAD) / w)) * 4);
       setPoint(dragging.current, e.y);
     })

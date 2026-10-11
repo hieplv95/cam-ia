@@ -112,6 +112,16 @@ Tài khoản và điểm của khách chỉ nằm trong `data/cami.db`. Sao lưu
 
 Nên chép thư mục `backups/` ra ngoài VPS định kỳ.
 
+## Quên mật khẩu
+
+App chưa có đặt lại mật khẩu qua email. Trên VPS:
+
+```bash
+cd ~/camia && node --env-file=.env scripts/reset-password.cjs email@cua-khach.com
+```
+
+Nhập mật khẩu mới hai lần (không hiện chữ khi gõ). Tài khoản bị đăng xuất khỏi mọi máy. Nếu báo không có tài khoản: email đó chưa đăng ký trên máy chủ này, hãy bấm **Đăng ký**.
+
 ## Ghi chú
 
 - VPS đang báo **"System restart required"**: chạy `pm2 save` và `pm2 startup` (làm theo lệnh nó in ra) để mọi dự án tự chạy lại, rồi khởi động lại vào lúc ít khách.

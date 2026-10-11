@@ -29,7 +29,7 @@ sudo ss -ltnp | grep 3010   # không có gì = port 3010 còn trống
 ```
 
 - Node cũ hơn và các dự án khác vẫn cần bản cũ: cài Node 22 riêng bằng nvm (`nvm install 22`), rồi bỏ dấu `//` ở dòng `interpreter` trong `ecosystem.config.cjs` và ghi đường dẫn tới node 22 (`nvm which 22`). Các dự án khác không bị ảnh hưởng.
-- Port 3010 bị dùng rồi: đổi `PORT` trong `ecosystem.config.cjs` và `proxy_pass` trong `deploy/nginx-camia.conf` sang port khác.
+- Port 3010 bị dùng rồi (vd `curl -I http://127.0.0.1:3010` trả về trang của dự án khác): thêm dòng `PORT=3020` (port còn trống) vào `.env`, và sửa `proxy_pass` trong `deploy/nginx-camia.conf` thành cùng port.
 
 ## 3. Lấy code và cấu hình
 
@@ -62,7 +62,7 @@ scp data/cami.db lee@100.75.20.25:~/camia/data/cami.db
 npx expo export -p web           # tạo dist/ (vài phút, cần ~2–3 GB RAM lúc build)
 pm2 start ecosystem.config.cjs
 pm2 save
-curl -I http://127.0.0.1:3010    # phải ra 200
+curl -I http://127.0.0.1:3010    # phải ra 200 (dùng đúng PORT trong .env); dòng X-Powered-By: Next.js là dự án khác, không phải Camia
 ```
 
 `EXPO_PUBLIC_*` được gắn vào lúc build: đổi chúng trong `.env` thì phải chạy lại `npx expo export -p web`.

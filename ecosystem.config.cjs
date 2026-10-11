@@ -12,7 +12,8 @@ module.exports = {
       node_args: '--env-file=.env',
       // Another Node version than the system one (e.g. installed with nvm): put its full path here.
       // interpreter: '/home/lee/.nvm/versions/node/v22.22.0/bin/node',
-      env: { PORT: '3010', HOST: '127.0.0.1' },
+      // The port comes from PORT in .env (3010 when not set), so it can differ per server without editing this file.
+      env: { HOST: '127.0.0.1' },
       max_memory_restart: '700M',
       time: true,
     },

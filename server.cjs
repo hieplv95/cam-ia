@@ -2,7 +2,7 @@
  * Production server for the VPS: serves the web app and the API routes built by `npx expo export -p web`.
  * Only Node is needed (no Express): expo-server comes with expo-router.
  *
- *   node --env-file=.env server.cjs        (PORT defaults to 3010)
+ *   node --env-file=.env server.cjs        (PORT in .env, 3010 when not set)
  *
  * Put nginx in front for HTTPS; it must pass X-Real-IP (see deploy/nginx-camia.conf).
  */
@@ -14,7 +14,7 @@ const { createRequestHandler } = require('expo-server/adapter/http');
 const DIST = path.join(__dirname, 'dist');
 const CLIENT = path.join(DIST, 'client');
 const SERVER = path.join(DIST, 'server');
-const PORT = Number(process.env.PORT ?? 3010);
+const PORT = Number(process.env.PORT) || 3010;
 const HOST = process.env.HOST ?? '127.0.0.1';
 
 if (!fs.existsSync(SERVER)) {

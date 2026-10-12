@@ -724,7 +724,7 @@ const es: Messages = {
   'image.draftEditorOnly': 'Los borradores solo se abren en el editor',
   'image.needPhoto': 'Se necesita una foto',
 
-  'server.noAiSource': 'El servidor no tiene configurado GEMINI_API_KEY ni GOOGLE_CLOUD_PROJECT.',
+  'server.noAiSource': 'Las funciones de IA están en mantenimiento. Vuelve a intentarlo en unos minutos.',
   'server.forbidden': 'No permitido.',
   'server.badRequest': 'Datos no válidos.',
   'server.describeImage': 'Describe la imagen que quieres crear.',

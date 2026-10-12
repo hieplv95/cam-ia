@@ -724,7 +724,7 @@ const ko: Messages = {
   'image.draftEditorOnly': '임시 저장은 편집기에서만 열 수 있어요',
   'image.needPhoto': '사진이 필요해요',
 
-  'server.noAiSource': '서버에 GEMINI_API_KEY 또는 GOOGLE_CLOUD_PROJECT가 설정되지 않았어요.',
+  'server.noAiSource': 'AI 기능을 점검하고 있어요. 몇 분 뒤에 다시 시도해 주세요.',
   'server.forbidden': '접근이 거부됐어요.',
   'server.badRequest': '잘못된 데이터예요.',
   'server.describeImage': '만들고 싶은 이미지를 설명해 주세요.',

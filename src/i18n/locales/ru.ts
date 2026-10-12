@@ -724,7 +724,7 @@ const ru: Messages = {
   'image.draftEditorOnly': 'Черновики можно открыть только в редакторе',
   'image.needPhoto': 'Нужно фото',
 
-  'server.noAiSource': 'На сервере не настроены GEMINI_API_KEY или GOOGLE_CLOUD_PROJECT.',
+  'server.noAiSource': 'Функции ИИ сейчас на обслуживании. Попробуйте ещё раз через несколько минут.',
   'server.forbidden': 'Доступ запрещён.',
   'server.badRequest': 'Неверные данные.',
   'server.describeImage': 'Опиши изображение, которое хочешь создать.',

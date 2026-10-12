@@ -744,7 +744,7 @@ const en: Messages = {
   'image.needPhoto': 'A photo is needed',
 
   // ---------- Server messages ----------
-  'server.noAiSource': 'The server has no GEMINI_API_KEY or GOOGLE_CLOUD_PROJECT set up.',
+  'server.noAiSource': 'AI features are under maintenance right now. Please try again in a few minutes.',
   'server.forbidden': 'Not allowed.',
   'server.badRequest': 'Invalid data.',
   'server.describeImage': 'Please describe the image you want.',

@@ -724,7 +724,7 @@ const fr: Messages = {
   'image.draftEditorOnly': "Les brouillons ne s'ouvrent que dans l'éditeur",
   'image.needPhoto': 'Il faut une photo',
 
-  'server.noAiSource': "Le serveur n'a ni GEMINI_API_KEY ni GOOGLE_CLOUD_PROJECT configuré.",
+  'server.noAiSource': 'Les fonctions IA sont en maintenance. Réessayez dans quelques minutes.',
   'server.forbidden': 'Non autorisé.',
   'server.badRequest': 'Données invalides.',
   'server.describeImage': "Décris l'image que tu veux créer.",

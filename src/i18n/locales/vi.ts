@@ -752,7 +752,7 @@ const vi = {
   'image.needPhoto': 'Cần một tấm ảnh',
 
   // ---------- Server messages ----------
-  'server.noAiSource': 'Máy chủ chưa cài GEMINI_API_KEY hoặc GOOGLE_CLOUD_PROJECT.',
+  'server.noAiSource': 'Chức năng AI đang tạm bảo trì, bạn thử lại sau ít phút nhé.',
   'server.forbidden': 'Không có quyền.',
   'server.badRequest': 'Dữ liệu không hợp lệ.',
   'server.describeImage': 'Hãy mô tả bức ảnh bạn muốn tạo nhé.',

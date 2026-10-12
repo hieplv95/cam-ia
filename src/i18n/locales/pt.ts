@@ -724,7 +724,7 @@ const pt: Messages = {
   'image.draftEditorOnly': 'Rascunhos só podem ser abertos no editor',
   'image.needPhoto': 'É preciso uma foto',
 
-  'server.noAiSource': 'O servidor não tem GEMINI_API_KEY nem GOOGLE_CLOUD_PROJECT configurados.',
+  'server.noAiSource': 'As funções de IA estão em manutenção. Tente de novo em alguns minutos.',
   'server.forbidden': 'Não permitido.',
   'server.badRequest': 'Dados inválidos.',
   'server.describeImage': 'Descreva a imagem que você quer criar.',

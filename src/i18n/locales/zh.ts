@@ -724,7 +724,7 @@ const zh: Messages = {
   'image.draftEditorOnly': '草稿只能在编辑器中打开',
   'image.needPhoto': '需要一张照片',
 
-  'server.noAiSource': '服务器未配置 GEMINI_API_KEY 或 GOOGLE_CLOUD_PROJECT。',
+  'server.noAiSource': 'AI 功能正在维护中，请过几分钟再试。',
   'server.forbidden': '无权访问。',
   'server.badRequest': '数据无效。',
   'server.describeImage': '请描述你想生成的图片。',

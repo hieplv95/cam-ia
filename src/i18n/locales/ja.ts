@@ -724,7 +724,7 @@ const ja: Messages = {
   'image.draftEditorOnly': '下書きはエディターでのみ開けます',
   'image.needPhoto': '写真が必要です',
 
-  'server.noAiSource': 'サーバーに GEMINI_API_KEY または GOOGLE_CLOUD_PROJECT が設定されていません。',
+  'server.noAiSource': 'AI 機能は現在メンテナンス中です。数分後にもう一度お試しください。',
   'server.forbidden': 'アクセスが拒否されました。',
   'server.badRequest': 'データが無効です。',
   'server.describeImage': '作りたい画像を説明してください。',

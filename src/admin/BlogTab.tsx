@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Image, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { apiUrl } from '../account';
@@ -7,9 +7,8 @@ import { clusterLabel, type BlogTopic } from '../blog/clusters';
 import { BLOG_LENGTHS, BLOG_TEXT_MODELS, BLOG_TONES, DEFAULT_BLOG_TEXT_MODEL, MAX_BLOG_IMAGES, type BlogLength, type BlogPost, type BlogSummary, type BlogTextModel, type BlogTone } from '../blog/types';
 import { languages, type Lang } from '../i18n/languages';
 import { SEO_LANGS } from '../seo';
-import { signedJpeg, useSignature } from '../signature';
 import { colors, font } from '../theme';
-import { blogAction, fetchBlogPost, fetchBlogPosts, type BlogImagePlan } from './api';
+import { blogAction, fetchBlogJobs, fetchBlogPost, fetchBlogPosts, type BlogJob } from './api';
 import { BlogEditor, emptyDraft } from './BlogEditor';
 import { TopicIdeas } from './BlogTopics';
 import { blogStyles, Check, Chip, confirmAction, Field } from './blogUi';
@@ -28,6 +27,7 @@ const articleUsd = (m: { usdIn: number; usdOut: number }, words: number) => (2_0
 export function BlogTab({ refresh }: { refresh: number }) {
   const { data, error, reload } = useLoad(fetchBlogPosts, []);
   const [editing, setEditing] = useState<BlogPost | 'new' | null>(null);
+  const [jobsKey, setJobsKey] = useState(0);
   useEffect(() => {
     if (refresh) reload();
   }, [refresh, reload]);
@@ -58,12 +58,8 @@ export function BlogTab({ refresh }: { refresh: number }) {
           <Button label="Tự viết bài" icon="create-outline" onPress={() => setEditing('new')} />
         </View>
       </View>
-      <AiWriter
-        onWritten={(post) => {
-          reload();
-          openPost(post.id);
-        }}
-      />
+      <AiWriter onQueued={() => setJobsKey((k) => k + 1)} />
+      <WriteJobs refreshKey={jobsKey} onFinished={reload} onOpen={openPost} />
       {error && !data ? <Failed message={error} onRetry={reload} /> : !data ? <Loading /> : <PostList posts={data.posts} onOpen={openPost} onChanged={reload} />}
     </View>
   );
@@ -71,8 +67,7 @@ export function BlogTab({ refresh }: { refresh: number }) {
 
 /* ---------- AI writer ---------- */
 
-function AiWriter({ onWritten }: { onWritten: (post: BlogPost) => void }) {
-  const signature = useSignature();
+function AiWriter({ onQueued }: { onQueued: () => void }) {
   const [lang, setLang] = useState<Lang>('es');
   const [topic, setTopic] = useState('');
   // The remembered idea being written (marked "written" on the server); dropped when the topic text is changed.
@@ -86,66 +81,32 @@ function AiWriter({ onWritten }: { onWritten: (post: BlogPost) => void }) {
   const [extra, setExtra] = useState('');
   const [publish, setPublish] = useState(false);
   const [logo, setLogo] = useState(true);
-  const [step, setStep] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
   const write = async () => {
     setMessage(null);
     if (topic.trim().length < 3) {
-      setMessage({ text: 'Nhập chủ đề bài viết hoặc bấm một gợi ý.', ok: false });
+      setMessage({ text: 'Nhập chủ đề bài viết hoặc chọn một gợi ý.', ok: false });
       return;
     }
-    const warnings: string[] = [];
+    setSending(true);
     try {
-      setStep('AI đang viết bài… (khoảng 30–90 giây, đừng đóng trang)');
       const fromIdea = picked && picked.title === topic ? picked : null;
-      const r = await blogAction<{ post: BlogPost; images: BlogImagePlan[] }>('write', { lang, topic, keyword, length, tone, images, extra, model, publish, topicId: fromIdea?.id, cluster: fromIdea?.cluster });
-      let content = r.post.content;
-      let cover = '';
-      for (let i = 0; i < r.images.length; i++) {
-        const plan = r.images[i];
-        const tag = `[[IMAGE ${i + 1}]]`;
-        try {
-          setStep(`Đang vẽ ảnh ${i + 1}/${r.images.length}… (khoảng 20–30 giây mỗi ảnh)`);
-          const drawn = await blogAction<{ image: string }>('image', { prompt: plan.prompt });
-          setStep(`Đang gắn logo và lưu ảnh ${i + 1}/${r.images.length}…`);
-          const jpeg = await signedJpeg(drawn.image, logo ? signature : null);
-          const up = await blogAction<{ name: string; url: string }>('upload', { data: jpeg });
-          if (!cover) cover = up.name;
-          const alt = plan.alt.replace(/[[\]]/g, '');
-          content = content.includes(tag) ? content.replace(tag, `![${alt}](${up.url})`) : `${content}\n\n![${alt}](${up.url})`;
-        } catch (e) {
-          warnings.push(`ảnh ${i + 1}: ${e instanceof Error ? e.message : 'lỗi'}`);
-        }
-      }
-      // Pictures that could not be drawn leave no placeholder behind.
-      content = content.replace(/^\s*\[\[IMAGE \d+\]\]\s*$/gim, '').replace(/\n{3,}/g, '\n\n');
-      let post = r.post;
-      if (r.images.length) {
-        setStep('Đang lưu bài viết…');
-        post = (
-          await blogAction<{ post: BlogPost }>('save', {
-            post: { id: post.id, slug: post.slug, lang: post.lang, title: post.title, description: post.description, keywords: post.keywords, content, cover, status: publish ? 'published' : 'draft' },
-          })
-        ).post;
-      }
-      setMessage({
-        text: `Đã viết xong “${post.title}” (${post.status === 'published' ? 'đã đăng' : 'bản nháp, xem lại rồi bấm Đăng'}).${warnings.length ? ` Không vẽ được ${warnings.join('; ')}.` : ''}`,
-        ok: !warnings.length,
-      });
+      await blogAction('write', { lang, topic, keyword, length, tone, images, extra, model, publish, logo, topicId: fromIdea?.id, cluster: fromIdea?.cluster });
+      setMessage({ text: `Đã đưa “${topic}” vào hàng chờ. Chọn chủ đề khác để viết tiếp, hoặc đóng trang: máy chủ vẫn viết.`, ok: true });
       setTopic('');
       setKeyword('');
       setPicked(null);
       setIdeasKey((k) => k + 1);
-      onWritten(post);
+      onQueued();
     } catch (e) {
-      setMessage({ text: e instanceof Error ? e.message : 'Không viết được bài.', ok: false });
+      setMessage({ text: e instanceof Error ? e.message : 'Không gửi được.', ok: false });
     } finally {
-      setStep(null);
+      setSending(false);
     }
   };
 
-  const busy = step !== null;
   const textModel = BLOG_TEXT_MODELS.find((m) => m.id === model)!;
   return (
     <Card title="✍️ Viết bài tự động bằng AI" subtitle={`Chữ: ${textModel.name} · Ảnh: AI vẽ (Gemini Flash Image)${logo ? ' + logo Camia.app' : ''}`}>
@@ -203,7 +164,7 @@ function AiWriter({ onWritten }: { onWritten: (post: BlogPost) => void }) {
         />
       </Field>
       <View style={styles.writeRow}>
-        <Button label={busy ? 'Đang làm…' : 'Viết bài'} icon="sparkles-outline" onPress={write} disabled={busy} />
+        <Button label={sending ? 'Đang gửi…' : 'Viết bài'} icon="sparkles-outline" onPress={write} disabled={sending} />
         <Check label="Đăng ngay, không cần duyệt" value={publish} onChange={setPublish} />
         <Check label="Gắn logo Camia.app vào ảnh" value={logo} onChange={setLogo} />
       </View>
@@ -211,8 +172,71 @@ function AiWriter({ onWritten }: { onWritten: (post: BlogPost) => void }) {
         Chi phí ước tính: bài viết khoảng ${articleUsd(textModel, BLOG_LENGTHS[length].words).toFixed(2).replace('.', ',')}
         {images ? ` + ${images} ảnh × $${String(IMAGE_USD).replace('.', ',')}` : ''} (tính vào chi phí AI ở tab Tổng quan).
       </Text>
-      {step ? <Text style={styles.step}>⏳ {step}</Text> : null}
       {message ? <Text style={[styles.message, { color: message.ok ? '#2E9E6A' : colors.danger }]}>{message.text}</Text> : null}
+    </Card>
+  );
+}
+
+/* ---------- Articles being written ---------- */
+
+const JOB_POLL_MS = 3_000;
+
+/** Articles the server is writing (up to 3 at once, the rest wait), with their progress; refreshes while any is active. */
+function WriteJobs({ refreshKey, onFinished, onOpen }: { refreshKey: number; onFinished: () => void; onOpen: (id: number) => void }) {
+  const [jobs, setJobs] = useState<BlogJob[]>([]);
+  const finished = useRef<Set<number> | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const tick = async () => {
+      try {
+        const { jobs: list } = await fetchBlogJobs();
+        if (!live) return;
+        setJobs(list);
+        const done = new Set(list.filter((j) => j.status === 'done' || j.status === 'error').map((j) => j.id));
+        // A job just finished: the article list gets its new (or updated) article.
+        if (finished.current && [...done].some((id) => !finished.current!.has(id))) onFinished();
+        finished.current = done;
+        if (list.some((j) => j.status === 'queued' || j.status === 'running')) timer = setTimeout(tick, JOB_POLL_MS);
+      } catch {
+        if (live) timer = setTimeout(tick, JOB_POLL_MS * 3);
+      }
+    };
+    tick();
+    return () => {
+      live = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [refreshKey, onFinished]);
+
+  if (!jobs.length) return null;
+  const active = jobs.filter((j) => j.status === 'queued' || j.status === 'running').length;
+  const dismiss = async (id: number) => {
+    setJobs((list) => list.filter((j) => j.id !== id));
+    blogAction('dismissJob', { id }).catch(() => {});
+  };
+  return (
+    <Card title={active ? `Đang viết (${active})` : 'Bài AI vừa viết'} subtitle="Máy chủ viết tối đa 3 bài cùng lúc; bạn có thể đóng trang, bài vẫn được viết tiếp.">
+      {jobs.map((j) => (
+        <View key={j.id} style={styles.job}>
+          <Ionicons
+            name={j.status === 'done' ? 'checkmark-circle' : j.status === 'error' ? 'alert-circle' : j.status === 'running' ? 'sync' : 'time-outline'}
+            size={18}
+            color={j.status === 'done' ? '#2E9E6A' : j.status === 'error' ? colors.danger : colors.goldDeep}
+          />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={styles.postTitle} numberOfLines={1}>
+              {j.topic}
+            </Text>
+            <Text style={[styles.postMeta, j.status === 'error' && { color: colors.danger }]}>
+              {j.lang.toUpperCase()} · {j.status === 'error' ? j.error : j.step}
+            </Text>
+          </View>
+          {j.postId && j.status === 'done' ? <IconAction icon="create-outline" label="Mở bài" onPress={() => onOpen(j.postId!)} /> : null}
+          {j.status === 'done' || j.status === 'error' ? <IconAction icon="close" label="Ẩn" onPress={() => dismiss(j.id)} /> : null}
+        </View>
+      ))}
     </Card>
   );
 }
@@ -318,6 +342,7 @@ const styles = StyleSheet.create({
   badges: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
   postMeta: { fontFamily: font.regular, fontSize: 12, color: colors.textMute },
   postActions: { flexDirection: 'row', gap: 4 },
+  job: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   iconAction: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8 },
   iconActionText: { fontFamily: font.medium, fontSize: 12.5 },
 });

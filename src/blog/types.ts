@@ -87,6 +87,20 @@ export type BlogWriteRequest = {
   cluster?: string;
 };
 
+/** An article being written by AI in the background (admin Blog tab, "Đang viết"). */
+export type BlogJob = {
+  id: number;
+  lang: string;
+  topic: string;
+  status: 'queued' | 'running' | 'done' | 'error';
+  /** What it is doing now, in Vietnamese. */
+  step: string;
+  postId: number | null;
+  error: string;
+  createdAt: number;
+  updatedAt: number;
+};
+
 /** One picture the AI asked for: drawn afterwards and put where the article says [[IMAGE n]]. */
 export type BlogImagePlan = { prompt: string; alt: string };
 

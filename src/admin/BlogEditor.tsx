@@ -1,3 +1,4 @@
+import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import { Image, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -16,6 +17,9 @@ import { blogStyles, Check, Chip, confirmAction, Field } from './blogUi';
 import { Button, Card, Segmented } from './ui';
 
 const langName = (l: Lang) => languages.find((x) => x.code === l)?.name ?? l;
+
+/** The site address for full picture links (this page's origin on the web, the public site in the app). */
+const siteOrigin = () => (Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : 'https://camia.app');
 
 export const emptyDraft = (): BlogDraft => ({ lang: 'es', title: '', description: '', keywords: '', content: '', cover: '', status: 'draft', cluster: '' });
 
@@ -54,16 +58,30 @@ export function BlogEditor({ post, onClose }: { post: BlogPost | BlogDraft; onCl
     }
   };
 
+  /** Puts a picture (Markdown) where the cursor was in the content, or at the end, on its own lines. */
+  const insertPicture = (url: string, patch: Partial<BlogDraft> = {}) => {
+    const text = draft.content;
+    const at = Math.min(selection.end, text.length);
+    const before = text.slice(0, at).replace(/\s*$/, '');
+    const after = text.slice(at).replace(/^\s*/, '');
+    const md = `![${draft.title || 'CamIA'}](${url})`;
+    set({ content: `${before}${before ? '\n\n' : ''}${md}\n\n${after}`.trimEnd() + '\n', ...patch });
+    // Right after it, so a second picture goes below the first.
+    const end = `${before}${before ? '\n\n' : ''}${md}\n\n`.length;
+    setSelection({ start: end, end });
+    setMode('write');
+  };
+
+  const copyLink = async (url: string) => {
+    await Clipboard.setStringAsync(url);
+    setMessage({ text: 'Đã chép link ảnh. Dán vào bài theo dạng ![mô tả](link), hoặc bấm “Chèn vào bài”.', ok: true });
+  };
+
   const insertImage = async () => {
     try {
       const up = await uploadPicked();
       if (!up) return;
-      const text = draft.content;
-      const at = Math.min(selection.end, text.length);
-      const before = text.slice(0, at).replace(/\s*$/, '');
-      const after = text.slice(at).replace(/^\s*/, '');
-      const md = `![${draft.title || 'CamIA'}](${up.url})`;
-      set({ content: `${before}${before ? '\n\n' : ''}${md}\n\n${after}`, cover: draft.cover || up.name });
+      insertPicture(up.url, { cover: draft.cover || up.name });
     } catch (e) {
       setMessage({ text: e instanceof Error ? e.message : 'Không tải được ảnh.', ok: false });
     }
@@ -159,6 +177,14 @@ export function BlogEditor({ post, onClose }: { post: BlogPost | BlogDraft; onCl
             {firstPicture && firstPicture !== draft.cover && <Button label="Dùng ảnh đầu tiên trong bài" icon="copy-outline" tone="plain" onPress={() => set({ cover: firstPicture })} />}
             {draft.cover ? <Button label="Bỏ ảnh bìa" icon="close" tone="plain" onPress={() => set({ cover: '' })} /> : null}
           </View>
+          {draft.cover ? (
+            <View style={styles.linkBox}>
+              <TextInput value={`${siteOrigin()}${blogImageUrl(draft.cover)}`} editable={false} selectTextOnFocus style={[blogStyles.input, styles.link]} />
+              <Button label="Sao chép link" icon="copy-outline" tone="plain" onPress={() => copyLink(`${siteOrigin()}${blogImageUrl(draft.cover)}`)} />
+              <Button label="Chèn vào bài" icon="add-circle-outline" onPress={() => insertPicture(blogImageUrl(draft.cover))} />
+            </View>
+          ) : null}
+          {draft.cover ? <Text style={styles.hint}>“Chèn vào bài” đặt ảnh ở chỗ con trỏ trong ô Nội dung (chưa bấm vào ô đó thì ảnh nằm cuối bài).</Text> : null}
         </Field>
       </Card>
 
@@ -203,6 +229,8 @@ const styles = StyleSheet.create({
   areaSmall: { minHeight: 64, textAlignVertical: 'top' },
   content: { minHeight: 460, textAlignVertical: 'top', fontFamily: Platform.select({ web: 'ui-monospace, Menlo, Consolas, monospace', default: undefined }), fontSize: 13.5, lineHeight: 21 },
   cover: { width: 160, height: 90, borderRadius: 10, backgroundColor: colors.surface2 },
+  linkBox: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10 },
+  link: { flex: 1, minWidth: 260, fontSize: 13, color: colors.textSoft },
   step: { fontFamily: font.semi, fontSize: 13.5, color: colors.goldDeep },
   message: { fontFamily: font.medium, fontSize: 13.5 },
   preview: { gap: 16, maxWidth: 760 },

@@ -9,7 +9,7 @@ import { dayOf, periodOf } from './time';
  * The API routes run in one Node process, so a single connection kept on globalThis is enough
  * (it survives dev reloads). Bump SCHEMA when the tables change.
  */
-export const SCHEMA = 9;
+export const SCHEMA = 10;
 const g = globalThis as unknown as { __camiDb?: DatabaseSync; __camiDbSchema?: number };
 
 function migrate(db: DatabaseSync) {
@@ -175,6 +175,21 @@ function migrate(db: DatabaseSync) {
       updated_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS blog_topics_lang ON blog_topics (lang, status);
+  `);
+  // Schema 10: articles being written by AI in the background (several at once), with their progress.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS blog_jobs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lang TEXT NOT NULL,
+      topic TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'running', 'done', 'error')),
+      step TEXT NOT NULL DEFAULT '',
+      post_id INTEGER REFERENCES blog_posts(id) ON DELETE SET NULL,
+      error TEXT NOT NULL DEFAULT '',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS blog_jobs_time ON blog_jobs (created_at);
   `);
 }
 

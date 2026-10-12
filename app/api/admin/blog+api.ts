@@ -4,18 +4,23 @@ import { caller } from '@/src/server/account';
 import { adminOf, audit } from '@/src/server/admin';
 import { allPosts, BlogError, deletePost, postById, saveImage, savePost, setStatus } from '@/src/server/blog';
 import { TOPIC_COUNTS } from '@/src/blog/clusters';
-import { drawBlogImage, suggestTopics, writeArticle } from '@/src/server/blogAi';
+import { drawBlogImage, suggestTopics } from '@/src/server/blogAi';
+import { dismissJob, enqueueArticle, recentJobs } from '@/src/server/blogJobs';
 import { coverage, pendingTopics, setTopicStatus, topicById } from '@/src/server/blogTopics';
-import { hasClaude } from '@/src/server/claude';
+import { claudeErrorText, hasClaude } from '@/src/server/claude';
 import { AiError } from '@/src/server/gemini';
 import { tr } from '@/src/server/i18n';
 import { logAi } from '@/src/server/stats';
 
-/** Blog on the admin page: GET = every article, ?id= one, or ?topics=1&lang=es (waiting ideas + coverage board); POST { action, … } below. */
+/**
+ * Blog on the admin page. GET = every article, ?id= one, ?topics=1&lang=es (waiting ideas + coverage board),
+ * ?jobs=1 (articles being written in the background). POST { action, … } below.
+ */
 export function GET(request: Request) {
   const admin = adminOf(request);
   if (admin instanceof Response) return admin;
   const params = new URL(request.url).searchParams;
+  if (params.get('jobs')) return Response.json({ jobs: recentJobs() });
   if (params.get('topics')) {
     const lang = params.get('lang');
     if (!isLang(lang)) return Response.json({ error: 'Ngôn ngữ không hợp lệ.' }, { status: 400 });
@@ -33,7 +38,7 @@ const textModel = (v: unknown) => (BLOG_TEXT_MODELS.some((m) => m.id === v) ? (v
 
 /**
  * topics { lang, direction (group id | 'random'), count, extra, model } · topicStatus { id, status } ·
- * write { lang, topic, keyword, length, tone, images, extra, model, publish, topicId?, cluster? } ·
+ * write { lang, topic, keyword, length, tone, images, extra, model, publish, logo, topicId?, cluster? } (queued, answers at once) · dismissJob { id } ·
  * image { prompt } · upload { data } · save { post } · status { id, status } · delete { id }
  */
 export async function POST(request: Request) {
@@ -43,7 +48,7 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as Record<string, any>;
   const started = Date.now();
   const action = String(body.action ?? '');
-  const aiTool = action === 'topics' ? 'blog.topics' : action === 'write' ? 'blog.write' : action === 'image' ? 'blog.image' : '';
+  const aiTool = action === 'topics' ? 'blog.topics' : action === 'image' ? 'blog.image' : '';
 
   try {
     if ((action === 'topics' || action === 'write') && isClaudeModel(textModel(body.model)) && !hasClaude()) {
@@ -77,20 +82,14 @@ export async function POST(request: Request) {
           topicId: Number(body.topicId) || undefined,
           cluster: typeof body.cluster === 'string' ? body.cluster : undefined,
         };
-        // Written from a remembered idea: it brings its keyword group.
-        const fromTopic = req.topicId ? topicById(req.topicId) : null;
-        if (fromTopic && !req.cluster) req.cluster = fromTopic.cluster;
         if (req.topic.length < 3) throw new BlogError('Nhập chủ đề bài viết (hoặc bấm một gợi ý).');
-        const r = await writeArticle(req);
-        logAi(who, { tool: aiTool, model: r.model, status: 'ok', ms: Date.now() - started, source: r.source, usd: r.usd });
-        // Saved right away as a draft, so nothing is lost; it is published once its pictures are in (or now, without pictures).
-        const post = savePost(
-          { lang: req.lang, title: r.article.title, slug: r.article.slug, description: r.article.description, keywords: r.article.keywords, content: r.article.content, cover: '', cluster: r.article.cluster, status: req.publish && !r.article.images.length ? 'published' : 'draft' },
-          { ai: true },
-        );
-        if (fromTopic) setTopicStatus(fromTopic.id, 'written', post.id);
-        audit(admin, 'blog', null, `AI viết bài #${post.id} (${req.lang}): ${post.title}`);
-        return Response.json({ post, images: r.article.images });
+        // Written in the background (several at once); the page follows its progress with ?jobs=1.
+        const job = enqueueArticle({ ...req, logo: body.logo !== false }, who, admin);
+        return Response.json({ job, jobs: recentJobs() });
+      }
+      case 'dismissJob': {
+        dismissJob(Number(body.id));
+        return Response.json({ jobs: recentJobs() });
       }
       case 'image': {
         const prompt = String(body.prompt ?? '').trim();
@@ -125,7 +124,7 @@ export async function POST(request: Request) {
   } catch (e) {
     if (aiTool && !(e instanceof BlogError)) logAi(who, { tool: aiTool, model: action === 'image' ? 'image' : textModel(body.model), status: 'error', error: e instanceof AiError ? e.key : 'unexpected', ms: Date.now() - started });
     if (e instanceof BlogError) return Response.json({ error: e.message }, { status: 400 });
-    if (e instanceof AiError) return Response.json({ error: tr(request, e.key) }, { status: e.status });
+    if (e instanceof AiError) return Response.json({ error: claudeErrorText(e) ?? tr(request, e.key) }, { status: e.status });
     console.error('[blog]', action, e);
     return Response.json({ error: e instanceof Error ? e.message : 'Lỗi không rõ.' }, { status: 500 });
   }

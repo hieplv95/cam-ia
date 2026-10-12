@@ -91,6 +91,17 @@ const en: Messages = {
   'home.removeDraft': 'Delete draft',
   'home.removeDraftTitle': 'Delete draft?',
   'home.removeDraftMsg': 'All edits in this draft will be lost.',
+  'home.blog': 'Blog',
+  'blog.title': 'CamIA Blog',
+  'blog.subtitle': 'Photo editing tips, ideas and AI how-tos',
+  'blog.empty': 'No articles yet.',
+  'blog.notFound': 'This article could not be found.',
+  'blog.minutes': '{n} min read',
+  'blog.cta': 'Try CamIA for free',
+  'blog.ctaSub': 'Edit photos with AI on your phone or computer, no download needed.',
+  'blog.ctaButton': 'Edit a photo now',
+  'blog.more': 'More articles',
+  'blog.allPosts': 'All articles',
   'featured.title': 'Featured tools',
 
   // ---------- AI tab ----------

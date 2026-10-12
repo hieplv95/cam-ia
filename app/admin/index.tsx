@@ -2,20 +2,24 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { openAuth, signOut, useAccount } from '@/src/account';
+import { BlogTab } from '@/src/admin/BlogTab';
 import { OverviewTab } from '@/src/admin/OverviewTab';
 import { Loading, Shell } from '@/src/admin/Shell';
 import { SystemTab } from '@/src/admin/SystemTab';
+import { SeoTab } from '@/src/admin/SeoTab';
 import { SettingsTab } from '@/src/admin/SettingsTab';
 import { TrafficTab } from '@/src/admin/TrafficTab';
 import { Button, Card, Segmented } from '@/src/admin/ui';
 import { UsersTab } from '@/src/admin/UsersTab';
 import { colors, font } from '@/src/theme';
 
-type Tab = 'overview' | 'traffic' | 'users' | 'system' | 'settings';
+type Tab = 'overview' | 'traffic' | 'users' | 'seo' | 'blog' | 'system' | 'settings';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Tổng quan' },
   { id: 'traffic', label: 'Truy cập' },
   { id: 'users', label: 'Khách hàng' },
+  { id: 'seo', label: 'SEO' },
+  { id: 'blog', label: 'Blog' },
   { id: 'system', label: 'Hệ thống' },
   { id: 'settings', label: 'Cài đặt' },
 ];
@@ -64,6 +68,8 @@ export default function Admin() {
       {tab === 'overview' && <OverviewTab refresh={refresh} />}
       {tab === 'traffic' && <TrafficTab refresh={refresh} />}
       {tab === 'users' && <UsersTab refresh={refresh} />}
+      {tab === 'seo' && <SeoTab refresh={refresh} />}
+      {tab === 'blog' && <BlogTab refresh={refresh} />}
       {tab === 'system' && <SystemTab refresh={refresh} />}
       {tab === 'settings' && <SettingsTab refresh={refresh} />}
     </Shell>

@@ -9,7 +9,7 @@ import { dayOf, periodOf } from './time';
  * The API routes run in one Node process, so a single connection kept on globalThis is enough
  * (it survives dev reloads). Bump SCHEMA when the tables change.
  */
-export const SCHEMA = 7;
+export const SCHEMA = 9;
 const g = globalThis as unknown as { __camiDb?: DatabaseSync; __camiDbSchema?: number };
 
 function migrate(db: DatabaseSync) {
@@ -134,6 +134,47 @@ function migrate(db: DatabaseSync) {
       beats INTEGER NOT NULL,
       PRIMARY KEY (day, screen)
     );
+  `);
+  // Schema 8: blog articles (Markdown), written on the admin page by hand or by AI. Their pictures are files in
+  // <data>/blog/ (see src/server/blog.ts), so they are backed up with the database.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS blog_posts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      lang TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      keywords TEXT NOT NULL DEFAULT '',
+      content TEXT NOT NULL DEFAULT '',
+      cover TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published')),
+      ai INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      published_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS blog_posts_list ON blog_posts (status, lang, published_at);
+  `);
+  // Schema 9: every topic the AI suggested (and whether it was written or skipped), so it never suggests the same
+  // ones again, and the keyword group (cluster, see src/blog/clusters.ts) of topics and articles for the coverage board.
+  if (!cols('blog_posts').has('cluster')) db.exec("ALTER TABLE blog_posts ADD COLUMN cluster TEXT NOT NULL DEFAULT ''");
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS blog_topics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lang TEXT NOT NULL,
+      title TEXT NOT NULL,
+      keyword TEXT NOT NULL DEFAULT '',
+      cluster TEXT NOT NULL DEFAULT '',
+      difficulty TEXT NOT NULL DEFAULT 'medium',
+      priority TEXT NOT NULL DEFAULT 'medium',
+      reason TEXT NOT NULL DEFAULT '',
+      similar TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'suggested' CHECK (status IN ('suggested', 'written', 'skipped')),
+      post_id INTEGER REFERENCES blog_posts(id) ON DELETE SET NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS blog_topics_lang ON blog_topics (lang, status);
   `);
 }
 

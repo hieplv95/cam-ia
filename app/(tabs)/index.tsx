@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import type { AiPresetId } from '@/src/ai/presets';
+import { HomeBlog } from '@/src/blog/HomeBlog';
 import { developPresets } from '@/src/develop/presets';
 import { PresetCard } from '@/src/develop/PresetCard';
 import { Dialog } from '@/src/Dialog';
@@ -200,6 +201,8 @@ export default function Home() {
           <PresetCard key={p.id} preset={p} width={136} onPress={() => choose({ type: 'adjust', preset: p.id, intensity: 70 })} />
         ))}
       </HScroll>
+
+      <HomeBlog bleedStyle={styles.bleed} bleedContentStyle={styles.bleedContent} />
 
       <SectionHeader title={t('home.recent')} />
       <HScroll style={styles.bleed} contentContainerStyle={styles.bleedContent}>

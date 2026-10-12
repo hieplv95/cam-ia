@@ -24,11 +24,12 @@ export function markActive(c: Caller) {
  * One AI request. `source` is the AI source that answered (its credit goes down). `tool` names the feature ('generate', 'prompt', 'preset.<id>', 'studio.<id>');
  * `error` is the message key of a failure, or why the request was refused.
  */
-export function logAi(c: Caller, entry: { tool: string; model: string; status: AiStatus; error?: string; ms?: number; points?: number; source?: string }) {
+export function logAi(c: Caller, entry: { tool: string; model: string; status: AiStatus; error?: string; ms?: number; points?: number; source?: string; usd?: number }) {
   try {
     const now = Date.now();
     // Only results are billed by Google; refused and failed requests cost nothing.
-    const usd = entry.status === 'ok' ? (modelInfo(entry.model)?.usd ?? 0) : 0;
+    // Text (blog) is billed per token: the caller passes its cost.
+    const usd = entry.status === 'ok' ? (entry.usd ?? modelInfo(entry.model)?.usd ?? 0) : 0;
     db()
       .prepare(
         `INSERT INTO ai_log (created_at, day, user_id, member, tool, model, status, error, ms, points, usd, source)

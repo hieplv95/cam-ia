@@ -1,5 +1,5 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Canvas, Group, Image as SkImageNode, ImageFormat, Shadow, useImage, type SkImage } from '@shopify/react-native-skia';
+import { Canvas, Group, ImageFormat, type SkImage } from '@shopify/react-native-skia';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState, type ComponentProps } from 'react';
@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { encodeBase64, renderImage, resizeImage } from '@/src/editor/imageOps';
 import { takePendingExport } from '@/src/pendingPhoto';
 import { addRecent } from '@/src/recents';
+import { Signed, useSignature } from '@/src/signature';
 import { saveImage, sendToApp, shareImage, socialAppsSupported, type ImageFormatId, type SocialApp } from '@/src/save';
 import { colors, font, goldGradient } from '@/src/theme';
 import { track } from '@/src/track';
@@ -22,32 +23,6 @@ type Destination = 'save' | 'share' | SocialApp;
 const qualityValue: Record<Quality, number> = { standard: 80, high: 92, max: 100 };
 /** "original" keeps the photo's own full resolution (up to FULL_MAX_SIDE). */
 const resolutionSide: Record<Resolution, number> = { web: 1080, high: 2048, original: Infinity };
-
-/** White "Camia.app" script signature on a transparent background. */
-const SIGNATURE_ASSET = require('@/assets/images/brand/camia-signature.png');
-// Web bundles an image as { uri }, which Skia's loader does not read: hand it the address instead.
-const SIGNATURE: number | string = Platform.OS === 'web' ? SIGNATURE_ASSET.uri : SIGNATURE_ASSET;
-
-/** The picture with the optional Camia.app signature in the bottom-right corner, in image pixels. */
-function Signed({ image, logo, watermark }: { image: SkImage; logo: SkImage | null; watermark: boolean }) {
-  const w = image.width();
-  const h = image.height();
-  const side = Math.min(w, h);
-  const lw = side * 0.34;
-  const lh = logo ? (lw * logo.height()) / logo.width() : 0;
-  const margin = side * 0.035;
-  return (
-    <Group>
-      <SkImageNode image={image} x={0} y={0} width={w} height={h} fit="fill" />
-      {watermark && logo && (
-        <SkImageNode image={logo} x={w - lw - margin} y={h - lh - margin * 0.6} width={lw} height={lh} fit="contain" opacity={0.95}>
-          {/* A soft shadow keeps the white script readable on light photos. */}
-          <Shadow dx={0} dy={side * 0.002} blur={side * 0.006} color="rgba(0,0,0,0.45)" />
-        </SkImageNode>
-      )}
-    </Group>
-  );
-}
 
 type Options = { format: ImageFormatId; quality: Quality; resolution: Resolution; watermark: boolean };
 type Output = { key: string; bytes: Uint8Array; width: number; height: number; image: SkImage };
@@ -115,7 +90,7 @@ type IonName = ComponentProps<typeof Ionicons>['name'];
 export default function Export() {
   const t = useT();
   const router = useRouter();
-  const signature = useImage(SIGNATURE);
+  const signature = useSignature();
   const [source] = useState<SkImage | null>(() => takePendingExport());
   const [opts, setOpts] = useState<Options>({ format: 'jpg', quality: 'high', resolution: 'original', watermark: true });
   const [output, setOutput] = useState<Output | null>(null);

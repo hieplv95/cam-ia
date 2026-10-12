@@ -47,6 +47,7 @@ Trong `.env` trên VPS, điền:
 - `GEMINI_API_KEY` (hoặc `GOOGLE_CLOUD_PROJECT`), `GEMINI_IMAGE_MODEL`.
 - `CAMI_SECRET`: chuỗi ngẫu nhiên dài, tạo bằng `openssl rand -hex 32`. **Nếu chép `data/cami.db` từ máy bạn lên** (giữ tài khoản, nguồn AI đã lưu trong trang quản trị) thì phải dùng **đúng `CAMI_SECRET` trong `.env` ở máy bạn**, nếu không các khoá AI đã lưu sẽ không mở được.
 - `ADMIN_EMAILS=hieplv1995@gmail.com`
+- `CAMI_CLAUDE_API_KEY`: khoá Claude (Anthropic) để AI viết bài blog; chép từ `.env` ở máy bạn. Tên riêng của Camia, không dùng `ANTHROPIC_API_KEY`.
 - `EXPO_PUBLIC_SHARE_URL=https://camia.app` (link mời bạn bè).
 - `EXPO_PUBLIC_API_URL`: để trống cho web (web và API cùng tên miền). Khi build app Android/iOS thì đặt `https://camia.app` (xem mục 7).
 
@@ -110,7 +111,7 @@ Tài khoản và điểm của khách chỉ nằm trong `data/cami.db`. Sao lưu
 30 3 * * * cd ~/camia && mkdir -p backups && node -e "new (require('node:sqlite').DatabaseSync)('data/cami.db').exec(\"VACUUM INTO 'backups/cami-$(date +\%F).db'\")" && find backups -name 'cami-*.db' -mtime +14 -delete
 ```
 
-Nên chép thư mục `backups/` ra ngoài VPS định kỳ.
+Nên chép thư mục `backups/` ra ngoài VPS định kỳ. Ảnh của blog nằm riêng ở `data/blog/`: sao lưu cả thư mục này (vd `tar czf backups/blog-$(date +%F).tgz data/blog`).
 
 ## Quên mật khẩu
 

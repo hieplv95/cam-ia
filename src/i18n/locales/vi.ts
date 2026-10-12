@@ -93,6 +93,17 @@ const vi = {
   'home.removeDraft': 'Xóa bản nháp',
   'home.removeDraftTitle': 'Xóa bản nháp?',
   'home.removeDraftMsg': 'Mọi chỉnh sửa trong bản nháp này sẽ mất.',
+  'home.blog': 'Blog',
+  'blog.title': 'Blog CamIA',
+  'blog.subtitle': 'Mẹo chỉnh ảnh, ý tưởng và hướng dẫn dùng AI',
+  'blog.empty': 'Chưa có bài viết nào.',
+  'blog.notFound': 'Không tìm thấy bài viết này.',
+  'blog.minutes': '{n} phút đọc',
+  'blog.cta': 'Dùng thử CamIA miễn phí',
+  'blog.ctaSub': 'Chỉnh ảnh bằng AI ngay trên điện thoại hoặc máy tính, không cần cài đặt.',
+  'blog.ctaButton': 'Chỉnh ảnh ngay',
+  'blog.more': 'Bài viết khác',
+  'blog.allPosts': 'Tất cả bài viết',
   'featured.title': 'Công cụ nổi bật',
 
   // ---------- AI tab ----------

@@ -16,6 +16,7 @@ export function toolLabel(tool: string) {
   const [kind, id] = tool.split('.');
   if (kind === 'preset') return `Phép AI: ${vi(`aiPreset.${id}`, id)}`;
   if (kind === 'studio') return vi(`studio.${id}.title`, id);
+  if (kind === 'blog') return { write: 'Blog: AI viết bài', topics: 'Blog: gợi ý chủ đề', image: 'Blog: AI vẽ ảnh' }[id] ?? `Blog: ${id}`;
   return tool;
 }
 

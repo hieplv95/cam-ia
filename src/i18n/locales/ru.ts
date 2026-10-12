@@ -98,6 +98,12 @@ const ru: Messages = {
   'blog.ctaButton': 'Обработать фото',
   'blog.more': 'Другие статьи',
   'blog.allPosts': 'Все статьи',
+  'blog.nav.cta': 'Обработать фото',
+  'blog.footer.about': 'ИИ-редактор фото, бесплатно и без установки.',
+  'blog.footer.tools': 'Инструменты',
+  'blog.footer.recent': 'Новые статьи',
+  'blog.footer.language': 'Язык',
+  'blog.footer.rights': '© {year} CamIA. Все права защищены.',
   'featured.title': 'Лучшие инструменты',
 
   'ai.title': 'ИИ-инструменты',

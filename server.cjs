@@ -175,19 +175,30 @@ async function pageMeta(seo, lang, pathname, origin) {
     url: base.url,
     published: post.publishedAt,
     modified: post.updatedAt,
-    jsonLd: {
-      '@context': 'https://schema.org',
-      '@type': 'BlogPosting',
-      headline: post.title,
-      description: post.description,
-      image: [image],
-      inLanguage: post.lang,
-      datePublished: new Date(post.publishedAt ?? post.createdAt).toISOString(),
-      dateModified: new Date(post.updatedAt).toISOString(),
-      mainEntityOfPage: base.url,
-      author: { '@type': 'Organization', name: 'CamIA', url: origin },
-      publisher: { '@type': 'Organization', name: 'CamIA', logo: { '@type': 'ImageObject', url: `${origin}/apple-touch-icon.png` } },
-    },
+    jsonLd: [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'CamIA', item: `${origin}/` },
+          { '@type': 'ListItem', position: 2, name: 'Blog', item: `${origin}/blog` },
+          { '@type': 'ListItem', position: 3, name: post.title, item: base.url },
+        ],
+      },
+      {
+        '@context': 'https://schema.org',
+        '@type': 'BlogPosting',
+        headline: post.title,
+        description: post.description,
+        image: [image],
+        inLanguage: post.lang,
+        datePublished: new Date(post.publishedAt ?? post.createdAt).toISOString(),
+        dateModified: new Date(post.updatedAt).toISOString(),
+        mainEntityOfPage: base.url,
+        author: { '@type': 'Organization', name: 'CamIA', url: origin },
+        publisher: { '@type': 'Organization', name: 'CamIA', logo: { '@type': 'ImageObject', url: `${origin}/apple-touch-icon.png` } },
+      },
+    ],
   };
 }
 

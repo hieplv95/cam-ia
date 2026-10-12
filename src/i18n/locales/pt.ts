@@ -98,6 +98,12 @@ const pt: Messages = {
   'blog.ctaButton': 'Editar uma foto agora',
   'blog.more': 'Mais artigos',
   'blog.allPosts': 'Todos os artigos',
+  'blog.nav.cta': 'Editar foto grátis',
+  'blog.footer.about': 'Editor de fotos com IA, grátis e sem baixar nada.',
+  'blog.footer.tools': 'Ferramentas',
+  'blog.footer.recent': 'Artigos recentes',
+  'blog.footer.language': 'Idioma',
+  'blog.footer.rights': '© {year} CamIA. Todos os direitos reservados.',
   'featured.title': 'Ferramentas em destaque',
 
   'ai.title': 'Ferramentas de IA',

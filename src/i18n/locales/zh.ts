@@ -98,6 +98,12 @@ const zh: Messages = {
   'blog.ctaButton': '立即修图',
   'blog.more': '更多文章',
   'blog.allPosts': '全部文章',
+  'blog.nav.cta': '免费修图',
+  'blog.footer.about': 'AI 修图工具，免费且无需下载。',
+  'blog.footer.tools': '工具',
+  'blog.footer.recent': '最新文章',
+  'blog.footer.language': '语言',
+  'blog.footer.rights': '© {year} CamIA。保留所有权利。',
   'featured.title': '精选工具',
 
   'ai.title': 'AI 工具',

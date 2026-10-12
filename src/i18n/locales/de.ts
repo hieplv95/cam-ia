@@ -98,6 +98,12 @@ const de: Messages = {
   'blog.ctaButton': 'Jetzt ein Foto bearbeiten',
   'blog.more': 'Weitere Artikel',
   'blog.allPosts': 'Alle Artikel',
+  'blog.nav.cta': 'Foto gratis bearbeiten',
+  'blog.footer.about': 'KI-Fotoeditor, kostenlos und ohne Download.',
+  'blog.footer.tools': 'Werkzeuge',
+  'blog.footer.recent': 'Neueste Artikel',
+  'blog.footer.language': 'Sprache',
+  'blog.footer.rights': '© {year} CamIA. Alle Rechte vorbehalten.',
   'featured.title': 'Top-Tools',
 
   'ai.title': 'KI-Tools',

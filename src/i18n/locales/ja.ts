@@ -98,6 +98,12 @@ const ja: Messages = {
   'blog.ctaButton': '今すぐ写真を編集',
   'blog.more': 'ほかの記事',
   'blog.allPosts': 'すべての記事',
+  'blog.nav.cta': '無料で写真を編集',
+  'blog.footer.about': 'AI 写真編集、無料でダウンロード不要。',
+  'blog.footer.tools': 'ツール',
+  'blog.footer.recent': '最新の記事',
+  'blog.footer.language': '言語',
+  'blog.footer.rights': '© {year} CamIA. All rights reserved.',
   'featured.title': '注目ツール',
 
   'ai.title': 'AI ツール',

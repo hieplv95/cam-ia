@@ -98,6 +98,12 @@ const fr: Messages = {
   'blog.ctaButton': 'Retoucher une photo',
   'blog.more': 'Autres articles',
   'blog.allPosts': 'Tous les articles',
+  'blog.nav.cta': 'Retoucher une photo',
+  'blog.footer.about': 'Retouche photo par IA, gratuite et sans installation.',
+  'blog.footer.tools': 'Outils',
+  'blog.footer.recent': 'Articles récents',
+  'blog.footer.language': 'Langue',
+  'blog.footer.rights': '© {year} CamIA. Tous droits réservés.',
   'featured.title': 'Outils phares',
 
   'ai.title': 'Outils IA',

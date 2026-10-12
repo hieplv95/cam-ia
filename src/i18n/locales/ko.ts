@@ -98,6 +98,12 @@ const ko: Messages = {
   'blog.ctaButton': '지금 사진 편집하기',
   'blog.more': '다른 글',
   'blog.allPosts': '모든 글',
+  'blog.nav.cta': '무료로 사진 편집',
+  'blog.footer.about': 'AI 사진 편집기, 무료이며 설치가 필요 없어요.',
+  'blog.footer.tools': '도구',
+  'blog.footer.recent': '최신 글',
+  'blog.footer.language': '언어',
+  'blog.footer.rights': '© {year} CamIA. All rights reserved.',
   'featured.title': '추천 도구',
 
   'ai.title': 'AI 도구',

@@ -102,6 +102,12 @@ const en: Messages = {
   'blog.ctaButton': 'Edit a photo now',
   'blog.more': 'More articles',
   'blog.allPosts': 'All articles',
+  'blog.nav.cta': 'Edit a photo free',
+  'blog.footer.about': 'AI photo editor, free and with nothing to install.',
+  'blog.footer.tools': 'Tools',
+  'blog.footer.recent': 'Latest articles',
+  'blog.footer.language': 'Language',
+  'blog.footer.rights': '© {year} CamIA. All rights reserved.',
   'featured.title': 'Featured tools',
 
   // ---------- AI tab ----------

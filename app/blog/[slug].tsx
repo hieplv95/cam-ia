@@ -1,21 +1,23 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchPost, fetchPosts, postDate } from '@/src/blog/api';
+import { BlogFooter } from '@/src/blog/BlogFooter';
+import { BlogHeader, Breadcrumb } from '@/src/blog/BlogHeader';
 import { BlogImage, Markdown } from '@/src/blog/Markdown';
 import { PostCard } from '@/src/blog/PostCard';
 import type { BlogPost, BlogSummary } from '@/src/blog/types';
 import { useT } from '@/src/i18n';
 import { colors, font, goldGradient } from '@/src/theme';
-import { IconButton } from '@/src/ui';
+import { usePhotoSource } from '@/src/photoSource';
 
 /** One blog article, with a call to try CamIA and a few more articles in its language. */
 export default function BlogArticle() {
   const t = useT();
-  const router = useRouter();
+  const { choose } = usePhotoSource();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const [post, setPost] = useState<BlogPost | null | undefined>(undefined);
   const [more, setMore] = useState<BlogSummary[]>([]);
@@ -35,22 +37,17 @@ export default function BlogArticle() {
     if (Platform.OS === 'web' && post) document.title = `${post.title} | CamIA`;
   }, [post]);
 
-  const back = () => (router.canGoBack() ? router.back() : router.replace('/blog'));
-
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <View style={styles.header}>
-        <IconButton icon={{ set: 'ion', name: 'chevron-back' }} onPress={back} />
-        <Pressable onPress={() => router.navigate('/blog')} hitSlop={8}>
-          <Text style={styles.headerLink}>{t('blog.allPosts')}</Text>
-        </Pressable>
-      </View>
-      <ScrollView contentContainerStyle={styles.column}>
+      <BlogHeader />
+      <ScrollView>
+        <View style={styles.column}>
         {post === undefined && <ActivityIndicator color={colors.gold} style={{ marginTop: 40 }} />}
         {post === null && <Text style={styles.empty}>{t('blog.notFound')}</Text>}
         {post && (
           <>
             <View style={{ gap: 10 }}>
+              <Breadcrumb items={[{ label: t('tabs.home'), href: '/' }, { label: t('home.blog'), href: '/blog' }, { label: post.title }]} />
               <Text role="heading" aria-level={1} style={styles.title}>
                 {post.title}
               </Text>
@@ -64,7 +61,7 @@ export default function BlogArticle() {
             <LinearGradient colors={goldGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cta}>
               <Text style={styles.ctaTitle}>{t('blog.cta')}</Text>
               <Text style={styles.ctaSub}>{t('blog.ctaSub')}</Text>
-              <Pressable onPress={() => router.navigate('/')} style={({ pressed }) => [styles.ctaButton, pressed && { opacity: 0.8 }]}>
+              <Pressable onPress={() => choose()} style={({ pressed }) => [styles.ctaButton, pressed && { opacity: 0.8 }]}>
                 <Text style={styles.ctaButtonText}>{t('blog.ctaButton')}</Text>
               </Pressable>
             </LinearGradient>
@@ -81,6 +78,8 @@ export default function BlogArticle() {
             )}
           </>
         )}
+        </View>
+        <BlogFooter />
       </ScrollView>
     </SafeAreaView>
   );
@@ -88,9 +87,7 @@ export default function BlogArticle() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, paddingVertical: 6, width: '100%', maxWidth: 760, alignSelf: 'center' },
-  headerLink: { fontFamily: font.semi, fontSize: 14, color: colors.goldDeep, paddingHorizontal: 8 },
-  column: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 18, paddingBottom: 48, gap: 20 },
+  column: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 18, paddingTop: 18, gap: 20 },
   title: { fontFamily: font.serif, fontSize: 30, lineHeight: 38, color: colors.text },
   meta: { fontFamily: font.regular, fontSize: 13, color: colors.textSoft },
   empty: { fontFamily: font.regular, fontSize: 15, color: colors.textSoft, textAlign: 'center', marginTop: 40 },

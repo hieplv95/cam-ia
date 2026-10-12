@@ -104,6 +104,12 @@ const vi = {
   'blog.ctaButton': 'Chỉnh ảnh ngay',
   'blog.more': 'Bài viết khác',
   'blog.allPosts': 'Tất cả bài viết',
+  'blog.nav.cta': 'Chỉnh ảnh miễn phí',
+  'blog.footer.about': 'Chỉnh ảnh bằng AI, miễn phí và không cần cài đặt.',
+  'blog.footer.tools': 'Công cụ',
+  'blog.footer.recent': 'Bài viết mới',
+  'blog.footer.language': 'Ngôn ngữ',
+  'blog.footer.rights': '© {year} CamIA. Bảo lưu mọi quyền.',
   'featured.title': 'Công cụ nổi bật',
 
   // ---------- AI tab ----------

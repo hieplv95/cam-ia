@@ -91,6 +91,23 @@ const en: Messages = {
   'home.removeDraft': 'Delete draft',
   'home.removeDraftTitle': 'Delete draft?',
   'home.removeDraftMsg': 'All edits in this draft will be lost.',
+  'home.blog': 'Blog',
+  'blog.title': 'CamIA Blog',
+  'blog.subtitle': 'Photo editing tips, ideas and AI how-tos',
+  'blog.empty': 'No articles yet.',
+  'blog.notFound': 'This article could not be found.',
+  'blog.minutes': '{n} min read',
+  'blog.cta': 'Try CamIA for free',
+  'blog.ctaSub': 'Edit photos with AI on your phone or computer, no download needed.',
+  'blog.ctaButton': 'Edit a photo now',
+  'blog.more': 'More articles',
+  'blog.allPosts': 'All articles',
+  'blog.nav.cta': 'Edit a photo free',
+  'blog.footer.about': 'AI photo editor, free and with nothing to install.',
+  'blog.footer.tools': 'Tools',
+  'blog.footer.recent': 'Latest articles',
+  'blog.footer.language': 'Language',
+  'blog.footer.rights': '© {year} CamIA. All rights reserved.',
   'featured.title': 'Featured tools',
 
   // ---------- AI tab ----------
@@ -727,7 +744,7 @@ const en: Messages = {
   'image.needPhoto': 'A photo is needed',
 
   // ---------- Server messages ----------
-  'server.noAiSource': 'The server has no GEMINI_API_KEY or GOOGLE_CLOUD_PROJECT set up.',
+  'server.noAiSource': 'AI features are under maintenance right now. Please try again in a few minutes.',
   'server.forbidden': 'Not allowed.',
   'server.badRequest': 'Invalid data.',
   'server.describeImage': 'Please describe the image you want.',

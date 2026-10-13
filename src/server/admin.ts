@@ -11,6 +11,7 @@ import { getPlan } from './plan';
 import { getRewardPoints } from './rewards';
 import { db, dbFile, SCHEMA } from './db';
 import { creditState, getAiSources, storedView } from './aiSources';
+import { hasClaude } from './claude';
 import { aiSourceSummary, retryIn } from './gemini';
 import { dayLabel, dayOf, lastDays, monthWindow, periodOf, startOfDay, timeZone } from './time';
 
@@ -311,6 +312,12 @@ export function systemInfo(): SystemInfo {
       ok: imageModels.some((m) => m.id === defaultModel),
       value: defaultModel,
       hint: 'GEMINI_IMAGE_MODEL nên là một trong các model của app.',
+    },
+    {
+      label: 'Claude (viết blog)',
+      ok: hasClaude(),
+      value: hasClaude() ? 'Đã đặt CAMI_CLAUDE_API_KEY' : 'Chưa đặt CAMI_CLAUDE_API_KEY',
+      hint: 'Khoá từ console.anthropic.com, dùng để AI viết bài blog. Chưa có thì chọn model Gemini Flash trong tab Blog.',
     },
     {
       label: 'CAMI_SECRET',

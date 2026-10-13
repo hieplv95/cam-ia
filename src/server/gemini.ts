@@ -193,6 +193,64 @@ export async function editImage(
   throw new AiError(friendly(last), last, 502);
 }
 
+export type TextResult = { text: string; model: string; source: string; inTokens: number; outTokens: number };
+
+/** Text models tried after the one asked for (all available on AI Studio and Vertex "global"). */
+const TEXT_FALLBACKS = ['gemini-3.5-flash', 'gemini-3-flash-preview'];
+
+/**
+ * Writes text (blog articles, topic ideas). With `json`, the model must answer with JSON only.
+ * Same sources and fallbacks as images.
+ */
+export async function generateText(prompt: string, systemInstruction: string, opts: { model?: string; json?: boolean; timeoutMs?: number } = {}): Promise<TextResult> {
+  if (!hasAiSource()) throw new AiError('server.noAiSource', '', 500);
+  const all = usable();
+  if (!all.length) throw new AiError('server.aiNoCredit', 'no usable source', 503);
+  const ready = all.filter((s) => (downUntil.get(s.id) ?? 0) <= Date.now());
+  const order = ready.length ? ready : all;
+  const models = [...new Set([opts.model, process.env.GEMINI_TEXT_MODEL, ...TEXT_FALLBACKS].filter(Boolean) as string[])];
+
+  const body = {
+    systemInstruction: { parts: [{ text: systemInstruction }] },
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.8, maxOutputTokens: 16_384, ...(opts.json && { responseMimeType: 'application/json' }) },
+  };
+
+  let last = '';
+  for (const s of order) {
+    for (const model of models) {
+      let data: any;
+      try {
+        data = await callOnce(s, model, body, undefined, opts.timeoutMs ?? 180_000);
+      } catch (e) {
+        last = e instanceof Error ? `${e.name} ${e.message}` : String(e);
+        console.error(`[ai] ${s.id} ${model} (text) failed:`, last.slice(0, 300));
+        if (isRateLimit(last) || isMissingModel(last) || isTimeout(last)) continue;
+        if (isOutOfMoney(last) || isNoAccess(last)) break;
+        throw new AiError(friendly(last), last, 502);
+      }
+      const text = (data?.candidates?.[0]?.content?.parts ?? [])
+        .filter((p: any) => typeof p.text === 'string' && !p.thought)
+        .map((p: any) => p.text)
+        .join('');
+      if (!text.trim()) {
+        console.warn('[ai] no text returned', JSON.stringify(data?.candidates?.[0]?.finishReason ?? data?.promptFeedback));
+        throw new AiError('server.aiCantDo', '', 422);
+      }
+      const usage = data?.usageMetadata ?? {};
+      return {
+        text,
+        model,
+        source: s.id,
+        inTokens: Number(usage.promptTokenCount ?? 0),
+        outTokens: Number(usage.candidatesTokenCount ?? 0) + Number(usage.thoughtsTokenCount ?? 0),
+      };
+    }
+    if (isOutOfMoney(last) || isNoAccess(last) || isRateLimit(last)) markDown(s, last);
+  }
+  throw new AiError(friendly(last), last, 502);
+}
+
 /**
  * Connection test for the admin page: counts the tokens of one word (free) on the app's image model.
  * This checks the project, the key, the permissions and access to that exact model, not the remaining credit.

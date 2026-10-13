@@ -58,6 +58,9 @@ async function headers(): Promise<Record<string, string>> {
   };
 }
 
+/** Full address of something the server serves (e.g. a blog picture "/api/blog/image/…"), for <Image> on phones. */
+export const apiUrl = (path: string) => (path.startsWith('/') ? `${API_BASE}${path}` : path);
+
 /** fetch() to the app's API with the session and device headers; returns the parsed JSON body. */
 export async function apiFetch(path: string, init: { method?: string; body?: unknown } = {}) {
   let res: Response;

@@ -1,5 +1,8 @@
 import { apiFetch } from '../account';
 import type { CreditPlan, RewardPoints } from '../ai/credits';
+import type { BlogTopic, ClusterCoverage } from '../blog/clusters';
+import type { BlogImagePlan, BlogJob, BlogPost, BlogSummary } from '../blog/types';
+import type { SeoSettings } from '../seo';
 import type { AiSettings, NewSource, OnlineNow, Overview, SystemInfo, TestResult, Traffic, TrafficPeriod, UserDetail, UserList, UserSort } from './types';
 
 /** Calls to /api/admin/* with the signed-in session; failures throw with the server's message. */
@@ -40,3 +43,14 @@ export const saveRewardPoints = (points: RewardPoints) => call<{ points: RewardP
 
 export const fetchPlan = () => call<{ plan: CreditPlan }>('/api/admin/plan');
 export const savePlan = (plan: CreditPlan) => call<{ plan: CreditPlan }>('/api/admin/plan', plan);
+
+export const fetchSeo = () => call<{ seo: SeoSettings }>('/api/admin/seo');
+export const saveSeo = (seo: Partial<SeoSettings>) => call<{ seo: SeoSettings }>('/api/admin/seo', seo);
+
+export const fetchBlogPosts = () => call<{ posts: BlogSummary[] }>('/api/admin/blog');
+export const fetchBlogTopics = (lang: string) => call<{ topics: BlogTopic[]; coverage: ClusterCoverage[] }>(`/api/admin/blog?topics=1&lang=${lang}`);
+export const fetchBlogJobs = () => call<{ jobs: BlogJob[] }>('/api/admin/blog?jobs=1');
+export const fetchBlogPost = (id: number) => call<{ post: BlogPost }>(`/api/admin/blog?id=${id}`);
+/** POST /api/admin/blog { action, ... } (topics, write, image, upload, save, status, delete). */
+export const blogAction = <T>(action: string, body: Record<string, unknown> = {}) => call<T>('/api/admin/blog', { action, ...body });
+export type { BlogImagePlan, BlogJob };

@@ -93,6 +93,23 @@ const vi = {
   'home.removeDraft': 'Xóa bản nháp',
   'home.removeDraftTitle': 'Xóa bản nháp?',
   'home.removeDraftMsg': 'Mọi chỉnh sửa trong bản nháp này sẽ mất.',
+  'home.blog': 'Blog',
+  'blog.title': 'Blog CamIA',
+  'blog.subtitle': 'Mẹo chỉnh ảnh, ý tưởng và hướng dẫn dùng AI',
+  'blog.empty': 'Chưa có bài viết nào.',
+  'blog.notFound': 'Không tìm thấy bài viết này.',
+  'blog.minutes': '{n} phút đọc',
+  'blog.cta': 'Dùng thử CamIA miễn phí',
+  'blog.ctaSub': 'Chỉnh ảnh bằng AI ngay trên điện thoại hoặc máy tính, không cần cài đặt.',
+  'blog.ctaButton': 'Chỉnh ảnh ngay',
+  'blog.more': 'Bài viết khác',
+  'blog.allPosts': 'Tất cả bài viết',
+  'blog.nav.cta': 'Chỉnh ảnh miễn phí',
+  'blog.footer.about': 'Chỉnh ảnh bằng AI, miễn phí và không cần cài đặt.',
+  'blog.footer.tools': 'Công cụ',
+  'blog.footer.recent': 'Bài viết mới',
+  'blog.footer.language': 'Ngôn ngữ',
+  'blog.footer.rights': '© {year} CamIA. Bảo lưu mọi quyền.',
   'featured.title': 'Công cụ nổi bật',
 
   // ---------- AI tab ----------
@@ -735,7 +752,7 @@ const vi = {
   'image.needPhoto': 'Cần một tấm ảnh',
 
   // ---------- Server messages ----------
-  'server.noAiSource': 'Máy chủ chưa cài GEMINI_API_KEY hoặc GOOGLE_CLOUD_PROJECT.',
+  'server.noAiSource': 'Chức năng AI đang tạm bảo trì, bạn thử lại sau ít phút nhé.',
   'server.forbidden': 'Không có quyền.',
   'server.badRequest': 'Dữ liệu không hợp lệ.',
   'server.describeImage': 'Hãy mô tả bức ảnh bạn muốn tạo nhé.',

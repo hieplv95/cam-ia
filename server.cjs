@@ -142,6 +142,206 @@ async function blogPost(slug) {
 
 const blogSlugOf = (pathname) => pathname.match(/^\/blog\/([a-z0-9-]{1,100})$/)?.[1] ?? null;
 
+/* ---------- GEO: what AI assistants can read (they mostly don't run JavaScript) ---------- */
+
+/** Same lists as src/seo.ts: answer/search bots are always welcome, training bots follow the admin switch. */
+const AI_SEARCH_BOTS = ['OAI-SearchBot', 'ChatGPT-User', 'PerplexityBot', 'Perplexity-User', 'Claude-SearchBot', 'Claude-User', 'DuckAssistBot'];
+const AI_TRAINING_BOTS = ['GPTBot', 'ClaudeBot', 'Google-Extended', 'Applebot-Extended', 'CCBot', 'meta-externalagent', 'Bytespider'];
+
+const FAQ_TITLE = {
+  es: 'Preguntas frecuentes',
+  pt: 'Perguntas frequentes',
+  en: 'Frequently asked questions',
+  vi: 'Câu hỏi thường gặp',
+  fr: 'Questions fréquentes',
+  de: 'Häufige Fragen',
+  ru: 'Частые вопросы',
+  zh: '常见问题',
+  ja: 'よくある質問',
+  ko: '자주 묻는 질문',
+};
+
+/** Latest published articles in a language (all languages while there are none), cached like the SEO texts. */
+const listCache = new Map();
+async function latestPosts(lang, limit = 12) {
+  const key = `${lang}:${limit}`;
+  const hit = listCache.get(key);
+  if (hit && Date.now() - hit.at < SEO_TTL_MS) return hit.posts;
+  let posts = [];
+  try {
+    const r = await fetch(`http://127.0.0.1:${PORT}/api/blog?lang=${lang}&limit=${limit}`);
+    if (r.ok) posts = (await r.json()).posts ?? [];
+  } catch (e) {
+    console.error('[seo] blog list unavailable', e.message);
+  }
+  listCache.set(key, { at: Date.now(), posts });
+  return posts;
+}
+
+const safeUrl = (url) => /^(https?:\/\/|\/)/.test(url);
+
+/** **bold**, *italic*, `code` and [links](…) of one line, as escaped HTML. */
+function inlineMd(text) {
+  return esc(text)
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, label, url) => (safeUrl(url) ? `<a href="${url}">${label}</a>` : label))
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*\w])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+
+/** Blog Markdown → plain semantic HTML (same rules as the app's renderer, src/blog/Markdown.tsx). */
+function mdToHtml(md) {
+  const out = [];
+  let para = [];
+  let list = null;
+  const flush = () => {
+    if (para.length) out.push(`<p>${inlineMd(para.join(' '))}</p>`);
+    para = [];
+    if (list) out.push(`<${list.tag}>${list.items.map((i) => `<li>${inlineMd(i)}</li>`).join('')}</${list.tag}>`);
+    list = null;
+  };
+  for (const raw of String(md).replace(/\r\n?/g, '\n').split('\n')) {
+    const line = raw.trim();
+    if (!line) {
+      flush();
+      continue;
+    }
+    if (/^\[\[IMAGE \d+\]\]$/i.test(line)) continue;
+    let m = line.match(/^(#{1,6})\s+(.+?)\s*#*$/);
+    if (m) {
+      flush();
+      const n = Math.min(4, Math.max(2, m[1].length));
+      out.push(`<h${n}>${inlineMd(m[2])}</h${n}>`);
+      continue;
+    }
+    m = line.match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/);
+    if (m) {
+      flush();
+      if (safeUrl(m[2])) out.push(`<figure><img src="${esc(m[2])}" alt="${esc(m[1])}" loading="lazy"/>${m[1] ? `<figcaption>${esc(m[1])}</figcaption>` : ''}</figure>`);
+      continue;
+    }
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(line)) {
+      flush();
+      out.push('<hr/>');
+      continue;
+    }
+    m = line.match(/^>\s?(.*)$/);
+    if (m) {
+      flush();
+      out.push(`<blockquote>${inlineMd(m[1])}</blockquote>`);
+      continue;
+    }
+    const bullet = line.match(/^[-*+]\s+(.+)$/);
+    const numbered = line.match(/^\d+[.)]\s+(.+)$/);
+    if (bullet || numbered) {
+      const tag = numbered ? 'ol' : 'ul';
+      if (para.length || (list && list.tag !== tag)) flush();
+      list ??= { tag, items: [] };
+      list.items.push((bullet ?? numbered)[1]);
+      continue;
+    }
+    if (list) {
+      list.items[list.items.length - 1] += ` ${line}`;
+      continue;
+    }
+    para.push(line);
+  }
+  flush();
+  return out.join('\n');
+}
+
+/** Text without Markdown marks (for structured data). */
+const plainMd = (s) =>
+  s
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/^\s*(?:[-*+]|\d+[.)])\s+/, '')
+    .replace(/[*_`#>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const FAQ_HEADING = /faq|preguntas frecuentes|perguntas frequentes|frequently asked|câu hỏi thường gặp|questions fréquentes|häufige fragen|часто задаваемые|частые вопросы|常见问题|よくある質問|자주 묻는/i;
+
+/** The questions of an article's FAQ section (## FAQ, then ### question + answer paragraphs). */
+function faqFromMarkdown(md) {
+  const items = [];
+  let inFaq = false;
+  let cur = null;
+  for (const raw of String(md).split('\n')) {
+    const line = raw.trim();
+    if (/^##\s/.test(line)) {
+      if (cur) items.push(cur);
+      cur = null;
+      inFaq = FAQ_HEADING.test(line);
+      continue;
+    }
+    if (!inFaq) continue;
+    const q = line.match(/^###\s+(.+)$/);
+    if (q) {
+      if (cur) items.push(cur);
+      cur = { q: plainMd(q[1]), a: [] };
+      continue;
+    }
+    if (cur && line && !/^!\[/.test(line) && !/^\[\[IMAGE/i.test(line)) cur.a.push(plainMd(line));
+  }
+  if (cur) items.push(cur);
+  return items.filter((i) => i.q && i.a.length).map((i) => ({ q: i.q, a: i.a.join(' ') }));
+}
+
+const faqJsonLd = (items) =>
+  items.length
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: items.map((i) => ({ '@type': 'Question', name: i.q, acceptedAnswer: { '@type': 'Answer', text: i.a } })),
+      }
+    : null;
+
+const paragraphs = (text) =>
+  String(text ?? '')
+    .split(/\n{2,}/)
+    .filter(Boolean)
+    .map((p) => `<p>${esc(p)}</p>`)
+    .join('');
+
+const faqHtml = (items, lang) =>
+  items.length ? `<h2>${esc(FAQ_TITLE[lang] ?? FAQ_TITLE.en)}</h2>${items.map((i) => `<h3>${esc(i.q)}</h3><p>${esc(i.a)}</p>`).join('')}` : '';
+
+const postListHtml = (posts, origin) =>
+  posts.length
+    ? `<ul>${posts.map((p) => `<li><a href="${esc(`${origin}/blog/${p.slug}`)}">${esc(p.title)}</a>${p.description ? ` — ${esc(p.description)}` : ''}</li>`).join('')}</ul>`
+    : '';
+
+/** /llms.txt: a Markdown summary of CamIA for AI assistants (llmstxt.org), in the main language. */
+async function llmsTxt(origin) {
+  const seo = await seoSettings();
+  if (!seo) return '# CamIA\n';
+  const lang = seo.primary;
+  const t = seo.texts[lang];
+  const geo = seo.geo ?? {};
+  const posts = await latestPosts(lang, 30);
+  const faq = geo.faq?.[lang] ?? [];
+  const lines = [
+    '# CamIA',
+    '',
+    `> ${t.description}`,
+    '',
+    geo.about?.[lang] ?? '',
+    '',
+    '## Pages',
+    '',
+    `- [CamIA](${origin}/): ${t.title}`,
+    `- [AI tools](${origin}/ai)`,
+    `- [Presets](${origin}/presets)`,
+    `- [Blog](${origin}/blog): ${BLOG_TITLE[lang] ?? BLOG_TITLE.es}`,
+  ];
+  if (posts.length) lines.push('', '## Blog', '', ...posts.map((p) => `- [${p.title}](${origin}/blog/${p.slug})${p.description ? `: ${p.description}` : ''}`));
+  if (faq.length) lines.push('', `## ${FAQ_TITLE[lang] ?? FAQ_TITLE.en}`, '', ...faq.flatMap((i) => [`### ${i.q}`, '', i.a, '']));
+  const social = Object.values(geo.social ?? {}).filter(Boolean);
+  if (social.length) lines.push('', '## Social', '', ...social.map((u) => `- ${u}`));
+  return `${lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()}\n`;
+}
+
 /** What a page says about itself: the site texts, or the article's own title, picture and language. */
 async function pageMeta(seo, lang, pathname, origin) {
   const t = seo.texts[lang] ?? seo.texts[seo.primary];
@@ -156,14 +356,56 @@ async function pageMeta(seo, lang, pathname, origin) {
     indexed: INDEXED.includes(pathname),
     url: `${origin}${pathname}`,
     jsonLd: null,
+    bodyHtml: '',
   };
-  if (pathname === '/blog') return { ...base, title: BLOG_TITLE[lang] ?? BLOG_TITLE.es, indexed: true };
+  const geo = seo.geo ?? {};
+  const nav = `<nav><a href="${origin}/">CamIA</a> · <a href="${origin}/ai">IA</a> · <a href="${origin}/blog">Blog</a></nav>`;
+
+  if (pathname === '/') {
+    const faq = geo.faq?.[lang] ?? [];
+    const sameAs = Object.values(geo.social ?? {}).filter(Boolean);
+    const posts = await latestPosts(lang, 6);
+    return {
+      ...base,
+      jsonLd: [
+        { '@context': 'https://schema.org', '@type': 'Organization', '@id': `${origin}/#org`, name: 'CamIA', url: `${origin}/`, logo: `${origin}/apple-touch-icon.png`, ...(sameAs.length && { sameAs }) },
+        { '@context': 'https://schema.org', '@type': 'WebSite', '@id': `${origin}/#site`, name: 'CamIA', url: `${origin}/`, inLanguage: lang, publisher: { '@id': `${origin}/#org` } },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'WebApplication',
+          name: 'CamIA',
+          url: `${origin}/`,
+          description: geo.about?.[lang] || t.description,
+          applicationCategory: 'MultimediaApplication',
+          operatingSystem: 'Web, Android, iOS',
+          browserRequirements: 'Requires JavaScript',
+          inLanguage: lang,
+          image: base.image,
+          offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+          publisher: { '@id': `${origin}/#org` },
+        },
+        faqJsonLd(faq),
+      ].filter(Boolean),
+      bodyHtml: `<main><h1>${esc(t.title)}</h1><p>${esc(t.description)}</p>${paragraphs(geo.about?.[lang])}${faqHtml(faq, lang)}${posts.length ? `<h2>Blog</h2>${postListHtml(posts, origin)}` : ''}${nav}</main>`,
+    };
+  }
+  if (pathname === '/blog') {
+    const title = BLOG_TITLE[lang] ?? BLOG_TITLE.es;
+    const posts = await latestPosts(lang, 50);
+    return { ...base, title, indexed: true, bodyHtml: `<main><h1>${esc(title)}</h1>${postListHtml(posts, origin)}${nav}</main>` };
+  }
   const slug = blogSlugOf(pathname);
-  if (!slug) return base;
+  if (!slug) return base.indexed ? { ...base, bodyHtml: `<main><h1>${esc(t.title)}</h1><p>${esc(t.description)}</p>${nav}</main>` } : base;
   const post = await blogPost(slug);
   if (!post) return { ...base, indexed: false };
   const image = post.cover ? `${origin}${post.cover}` : base.image;
+  const articleFaq = faqFromMarkdown(post.content);
+  const published = new Date(post.publishedAt ?? post.createdAt).toISOString();
   return {
+    bodyHtml:
+      `<main><article><nav><a href="${origin}/">CamIA</a> › <a href="${origin}/blog">Blog</a></nav><h1>${esc(post.title)}</h1>` +
+      `<p><time datetime="${published}">${published.slice(0, 10)}</time></p>${post.cover ? `<img src="${esc(image)}" alt="${esc(post.title)}"/>` : ''}` +
+      `${mdToHtml(post.content)}</article>${nav}</main>`,
     lang: post.lang,
     title: `${post.title} | CamIA`,
     description: post.description || t.description,
@@ -198,7 +440,8 @@ async function pageMeta(seo, lang, pathname, origin) {
         author: { '@type': 'Organization', name: 'CamIA', url: origin },
         publisher: { '@type': 'Organization', name: 'CamIA', logo: { '@type': 'ImageObject', url: `${origin}/apple-touch-icon.png` } },
       },
-    ],
+      faqJsonLd(articleFaq),
+    ].filter(Boolean),
   };
 }
 
@@ -232,7 +475,9 @@ function withSeo(html, seo, m) {
   return html
     .replace(/<html[^>]*>/, `<html lang="${m.lang}">`)
     .replace(/<title[^>]*>[\s\S]*?<\/title>/, `<title data-rh="true">${esc(m.title)}</title>`)
-    .replace('</head>', `${tags}</head>`);
+    .replace('</head>', `${tags}</head>`)
+    // A plain copy of the page for crawlers and AI assistants that don't run JavaScript (same content the app shows).
+    .replace('</body>', m.bodyHtml ? `<noscript>${m.bodyHtml}</noscript></body>` : '</body>');
 }
 
 /** Collects what the Expo handler writes, so a page can be edited before it is sent. */
@@ -275,16 +520,27 @@ async function servePage(req, res, pathname) {
   res.end(req.method === 'HEAD' ? undefined : body);
 }
 
-function robotsTxt(origin) {
-  // Blog pictures live under /api/, which is otherwise closed: let Google Images see them.
-  return `User-agent: *
-Allow: /
-Allow: /api/blog/image/
-Disallow: /admin
-Disallow: /api/
-
-Sitemap: ${origin}/sitemap.xml
-`;
+/** robots.txt: search engines and AI answer bots read the public pages; AI training bots follow the admin switch. */
+async function robotsTxt(origin) {
+  const seo = await seoSettings();
+  const allowTraining = seo?.geo?.allowTraining !== false;
+  // Blog pictures live under /api/, which is otherwise closed: let image search see them.
+  const rules = ['Allow: /', 'Allow: /api/blog/image/', 'Disallow: /admin', 'Disallow: /api/'];
+  return [
+    'User-agent: *',
+    ...rules,
+    '',
+    '# AI assistants that answer questions and cite their sources',
+    ...AI_SEARCH_BOTS.map((b) => `User-agent: ${b}`),
+    ...rules,
+    '',
+    `# AI model training (${allowTraining ? 'allowed' : 'not allowed'} in the admin SEO tab)`,
+    ...AI_TRAINING_BOTS.map((b) => `User-agent: ${b}`),
+    ...(allowTraining ? rules : ['Disallow: /']),
+    '',
+    `Sitemap: ${origin}/sitemap.xml`,
+    '',
+  ].join('\n');
 }
 
 async function apiJson(pathAndQuery) {
@@ -299,10 +555,13 @@ async function apiJson(pathAndQuery) {
 async function sitemapXml(origin) {
   const pages = INDEXED.map((p) => `  <url><loc>${esc(origin + p)}</loc><changefreq>weekly</changefreq><priority>${p === '/' ? '1.0' : '0.7'}</priority></url>`);
   const posts = ((await apiJson('/api/blog?sitemap=1'))?.posts ?? []).map(
-    (p) => `  <url><loc>${esc(`${origin}/blog/${p.slug}`)}</loc><lastmod>${new Date(p.updated_at).toISOString().slice(0, 10)}</lastmod><priority>0.6</priority></url>`,
+    (p) =>
+      `  <url><loc>${esc(`${origin}/blog/${p.slug}`)}</loc><lastmod>${new Date(p.updated_at).toISOString().slice(0, 10)}</lastmod><priority>0.6</priority>` +
+      (p.cover ? `<image:image><image:loc>${esc(`${origin}/api/blog/image/${p.cover}`)}</image:loc></image:image>` : '') +
+      '</url>',
   );
   return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${[...pages, ...posts].join('\n')}
 </urlset>
 `;
@@ -324,7 +583,8 @@ ${items.join('\n')}
 `;
 }
 
-const FEEDS = { '/robots.txt': 'text/plain', '/sitemap.xml': 'application/xml', '/blog/rss.xml': 'application/rss+xml' };
+const FEEDS = { '/robots.txt': 'text/plain', '/sitemap.xml': 'application/xml', '/blog/rss.xml': 'application/rss+xml', '/llms.txt': 'text/plain' };
+const FEED_MAKERS = { '/robots.txt': robotsTxt, '/sitemap.xml': sitemapXml, '/blog/rss.xml': rssXml, '/llms.txt': llmsTxt };
 
 const server = http.createServer((req, res) => {
   const pathname = (() => {
@@ -336,7 +596,7 @@ const server = http.createServer((req, res) => {
   })();
   if ((req.method === 'GET' || req.method === 'HEAD') && FEEDS[pathname]) {
     const origin = originOf(req);
-    const make = pathname === '/robots.txt' ? async () => robotsTxt(origin) : pathname === '/sitemap.xml' ? () => sitemapXml(origin) : () => rssXml(origin);
+    const make = () => FEED_MAKERS[pathname](origin);
     make()
       .then((text) => {
         res.writeHead(200, { 'Content-Type': `${FEEDS[pathname]}; charset=utf-8`, 'Cache-Control': 'public, max-age=600' });

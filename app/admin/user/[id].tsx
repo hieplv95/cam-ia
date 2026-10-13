@@ -4,7 +4,7 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useAccount } from '@/src/account';
 import { fetchUser, grantBonus, setLocked } from '@/src/admin/api';
-import { dateTime, date, errorLabel, modelName, num, reasonLabel, shortDay, statusLabel, toolLabel, usdVnd } from '@/src/admin/labels';
+import { dateTime, date, errorLabel, modelName, num, reasonLabel, shortDay, statusLabel, toolLabel, usd } from '@/src/admin/labels';
 import { Failed, Loading, Shell } from '@/src/admin/Shell';
 import type { UserDetail } from '@/src/admin/types';
 import { Badge, Button, Card, Empty, Grid, Row, Stat, StatGrid } from '@/src/admin/ui';
@@ -98,7 +98,7 @@ export default function AdminUser() {
         <Stat icon="diamond-outline" label="Điểm còn lại" value={num(u.points)} sub={`${num(d.monthly)} điểm tháng + ${num(u.bonus)} điểm thưởng`} />
         <Stat icon="trending-down-outline" tone="blue" label="Đã dùng tháng này" value={`${num(d.spentThisMonth)} điểm`} />
         <Stat icon="sparkles-outline" label="Ảnh AI đã tạo" value={num(u.ai)} sub={d.errors ? `${num(d.errors)} lần lỗi` : undefined} />
-        <Stat icon="cash-outline" tone="green" label="Chi phí AI" value={usdVnd(d.usd)} />
+        <Stat icon="cash-outline" tone="green" label="Chi phí AI" value={usd(d.usd)} />
         <Stat icon="people-outline" tone="plain" label="Bạn bè đã mời" value={num(u.invited)} />
       </StatGrid>
 

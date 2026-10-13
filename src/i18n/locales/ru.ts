@@ -257,7 +257,7 @@ const ru: Messages = {
   'profile.chooseLanguage': 'Выбери язык',
 
   'model.title': 'Выбери ИИ-модель',
-  'model.sub': 'Для ретуши, удаления фона и всех ИИ-инструментов. У аккаунтов {n} баллов/месяц; примерная цена за изображение (~1K).',
+  'model.sub': 'Для ретуши, удаления фона и всех ИИ-инструментов. У аккаунтов {n} баллов/месяц.',
   'model.note': 'Если Pro перегружена, приложение использует Flash (дешевле) и сообщит тебе об этом.',
   'model.chip': 'Модель:',
   'model.flashHint': 'Сбалансированная · рекомендуем',
@@ -619,6 +619,7 @@ const ru: Messages = {
   'studio.restore.action': 'Восстановить фото',
   'studio.restore.busy': 'ИИ восстанавливает фото... (около 20–40 секунд)',
   'studio.restore.fix': 'Что исправить?',
+  'studio.restore.fix.extract': 'Вырезать фото из рамки и фона',
   'studio.restore.fix.scratches': 'Царапины, пыль и заломы',
   'studio.restore.fix.noise': 'Шум и зерно',
   'studio.restore.fix.sharpen': 'Резкость',

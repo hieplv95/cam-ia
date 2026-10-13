@@ -257,7 +257,7 @@ const de: Messages = {
   'profile.chooseLanguage': 'Sprache wählen',
 
   'model.title': 'KI-Modell wählen',
-  'model.sub': 'Für Retusche, Freistellen und alle KI-Tools. Konten haben {n} Punkte/Monat; geschätzter Preis pro Bild (~1K).',
+  'model.sub': 'Für Retusche, Freistellen und alle KI-Tools. Konten haben {n} Punkte/Monat.',
   'model.note': 'Ist Pro ausgelastet, nutzt die App Flash (günstiger) und sagt dir danach Bescheid.',
   'model.chip': 'Modell:',
   'model.flashHint': 'Ausgewogen · empfohlen',
@@ -619,6 +619,7 @@ const de: Messages = {
   'studio.restore.action': 'Foto restaurieren',
   'studio.restore.busy': 'Die KI restauriert dein Foto... (ca. 20–40 Sekunden)',
   'studio.restore.fix': 'Was soll repariert werden?',
+  'studio.restore.fix.extract': 'Foto aus Rahmen/Umgebung lösen',
   'studio.restore.fix.scratches': 'Kratzer, Staub und Knicke',
   'studio.restore.fix.noise': 'Rauschen und Körnung',
   'studio.restore.fix.sharpen': 'Schärfen',

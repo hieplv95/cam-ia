@@ -257,7 +257,7 @@ const ko: Messages = {
   'profile.chooseLanguage': '언어 선택',
 
   'model.title': 'AI 모델 선택',
-  'model.sub': '보정, 배경 제거 및 모든 AI 도구에 사용돼요. 계정은 월 {n}P, 이미지 1장당 예상 가격(~1K).',
+  'model.sub': '보정, 배경 제거 및 모든 AI 도구에 사용돼요. 계정은 월 {n}P예요.',
   'model.note': 'Pro가 혼잡하면 앱이 Flash(더 저렴)를 사용하고 알려 드려요.',
   'model.chip': '모델:',
   'model.flashHint': '균형형 · 추천',
@@ -619,6 +619,7 @@ const ko: Messages = {
   'studio.restore.action': '사진 복원',
   'studio.restore.busy': 'AI가 사진을 복원 중... (약 20–40초)',
   'studio.restore.fix': '무엇을 고칠까요?',
+  'studio.restore.fix.extract': '액자·배경에서 사진만 꺼내기',
   'studio.restore.fix.scratches': '긁힘, 먼지, 접힌 자국',
   'studio.restore.fix.noise': '노이즈와 입자',
   'studio.restore.fix.sharpen': '선명하게',

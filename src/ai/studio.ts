@@ -38,8 +38,10 @@ export const studioTools: StudioTool[] = [
       {
         id: 'fix',
         multi: true,
-        defaults: ['scratches', 'noise', 'sharpen', 'colorize', 'faces'],
+        defaults: ['extract', 'scratches', 'noise', 'sharpen', 'colorize', 'faces'],
         options: [
+          // Customers often photograph a print where it is (an altar, a wall, a frame, in a hand): keep only the print.
+          { id: 'extract', prompt: 'take only the old photograph out of its surroundings' },
           { id: 'scratches', prompt: 'remove scratches, dust, stains, tears and fold marks' },
           { id: 'noise', prompt: 'remove noise and film grain' },
           { id: 'sharpen', prompt: 'sharpen blurry details and recover fine textures' },
@@ -243,13 +245,31 @@ export function studioPrompt(
   // What the client typed (any language), checked against the content filter on the server.
   const request = text.extra?.trim() ? `\nAlso follow this request from the client (it may be in any language; it takes priority over the instructions above): "${text.extra.trim()}".` : '';
   switch (tool.id) {
-    case 'restore':
+    case 'restore': {
+      const fixes = picked(tool, choices, 'fix');
+      const extract = fixes.some((o) => o.id === 'extract');
+      const steps = fixes.filter((o) => o.id !== 'extract').map((o) => `- ${o.prompt}`);
+      if (!extract) {
+        return (
+          'Restore this old photograph:\n' +
+          steps.join('\n') +
+          '\nKeep the composition, people, poses, clothing and background exactly the same, and keep it looking like a real photo (not a painting or illustration).' +
+          request
+        );
+      }
       return (
-        'Restore this old photograph:\n' +
-        p('fix').map((s) => `- ${s}`).join('\n') +
-        '\nKeep the composition, people, poses, clothing and background exactly the same, and keep it looking like a real photo (not a painting or illustration).' +
+        'This picture may be a photo taken OF an old printed photograph: for example on a wall, table or altar, in a frame or an album, ' +
+        'held in a hand, photographed at an angle, with glare or reflections, next to flowers, candles or other pictures.\n' +
+        'If so, first isolate ONLY that old photograph: straighten its perspective so it is flat and rectangular, crop away everything around it ' +
+        '(frame, mat, glass, wall, cloth, flowers, candles, other pictures, hands) and remove glare and reflections. ' +
+        'If the picture is already just the photograph, keep all of it.\n' +
+        'Then restore the photograph:\n' +
+        (steps.length ? steps.join('\n') : '- gently clean it and improve its quality') +
+        "\nKeep the photograph's own content (people, faces, poses, clothing and the scene inside the print) exactly the same, and keep it looking like a real photo (not a painting or illustration). " +
+        'The result must show only the restored photograph, filling the whole image, with no frame, border or surroundings.' +
         request
       );
+    }
     case 'style': {
       const [hair] = p('hair');
       const [color] = p('color');

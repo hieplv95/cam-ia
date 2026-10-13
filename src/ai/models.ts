@@ -15,7 +15,3 @@ export const isImageModel = (v: unknown): v is ImageModelId => imageModels.some(
 
 export const modelInfo = (id: string) => imageModels.find((m) => m.id === id);
 
-/** Same rate as nails-studio; update when the exchange rate moves. */
-const USD_TO_VND = 26000;
-
-export const formatVnd = (usd: number) => `${(Math.round((usd * USD_TO_VND) / 100) * 100).toLocaleString('vi-VN')}đ`;

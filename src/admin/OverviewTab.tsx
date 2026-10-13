@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, font } from '../theme';
 import { fetchOverview } from './api';
-import { errorLabel, eventLabel, dateTime, modelName, num, percent, reasonLabel, shortDay, sourceLabel, toolLabel, usd, usdVnd } from './labels';
+import { errorLabel, eventLabel, dateTime, modelName, num, percent, reasonLabel, shortDay, sourceLabel, toolLabel, usd } from './labels';
 import { Failed, Loading } from './Shell';
 import type { ToolStat } from './types';
 import { BarChart, Card, Empty, Grid, Row, Segmented, ShareRow, Stat, StatGrid } from './ui';
@@ -56,7 +56,7 @@ export function OverviewTab({ refresh }: { refresh: number }) {
           sub={`thiết bị · trong kỳ ${num(o.active.inRange)} thiết bị, ${num(o.active.members)} tài khoản`}
         />
         <Stat icon="sparkles-outline" label="Ảnh AI thành công" value={num(o.ai.ok)} sub={`${num(o.ai.okToday)} ${dayLabel} · ${num(o.ai.okMonth)} tháng này`} />
-        <Stat icon="cash-outline" tone="green" label="Chi phí AI ước tính" value={usd(o.ai.usd)} sub={`Tháng này: ${usdVnd(o.ai.usdMonth)}`} />
+        <Stat icon="cash-outline" tone="green" label="Chi phí AI ước tính" value={usd(o.ai.usd)} sub={`Tháng này: ${usd(o.ai.usdMonth)}`} />
         <Stat
           icon="warning-outline"
           tone={errorRate > 0.1 ? 'red' : 'plain'}

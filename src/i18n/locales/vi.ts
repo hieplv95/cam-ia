@@ -269,7 +269,7 @@ const vi = {
 
   // ---------- Model picker ----------
   'model.title': 'Chọn model AI',
-  'model.sub': 'Dùng cho Retouch, xóa nền và mọi công cụ AI. Tài khoản có {n} điểm/tháng; giá ước tính mỗi ảnh (~1K).',
+  'model.sub': 'Dùng cho Retouch, xóa nền và mọi công cụ AI. Tài khoản có {n} điểm/tháng.',
   'model.note': 'Nếu Pro đang bận, app tự dùng Flash (rẻ hơn) và báo cho bạn biết sau khi xong.',
   'model.chip': 'Model:',
   'model.flashHint': 'Cân bằng · nên dùng',
@@ -645,6 +645,7 @@ const vi = {
   'studio.restore.action': 'Phục hồi ảnh',
   'studio.restore.busy': 'AI đang phục hồi ảnh... (khoảng 20–40 giây)',
   'studio.restore.fix': 'Muốn sửa gì?',
+  'studio.restore.fix.extract': 'Tách ảnh cũ khỏi khung, nền',
   'studio.restore.fix.scratches': 'Xóa vết xước, bụi, nếp gấp',
   'studio.restore.fix.noise': 'Khử nhiễu, hạt',
   'studio.restore.fix.sharpen': 'Làm nét',

@@ -265,7 +265,7 @@ const en: Messages = {
 
   // ---------- Model picker ----------
   'model.title': 'Choose AI model',
-  'model.sub': 'Used for Retouch, background removal and every AI tool. Accounts get {n} points/month; estimated price per image (~1K).',
+  'model.sub': 'Used for Retouch, background removal and every AI tool. Accounts get {n} points/month.',
   'model.note': 'If Pro is busy, the app uses Flash (cheaper) and lets you know afterwards.',
   'model.chip': 'Model:',
   'model.flashHint': 'Balanced · recommended',
@@ -637,6 +637,7 @@ const en: Messages = {
   'studio.restore.action': 'Restore photo',
   'studio.restore.busy': 'AI is restoring your photo... (about 20–40 seconds)',
   'studio.restore.fix': 'What should be fixed?',
+  'studio.restore.fix.extract': 'Take the photo out of its frame/background',
   'studio.restore.fix.scratches': 'Scratches, dust and creases',
   'studio.restore.fix.noise': 'Noise and grain',
   'studio.restore.fix.sharpen': 'Sharpen',

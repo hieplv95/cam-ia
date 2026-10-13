@@ -68,7 +68,8 @@ export function publishedPost(slug: string): BlogPost | null {
 }
 
 /** Slugs and dates of every published article (sitemap). */
-export const publishedSlugs = () => all<{ slug: string; updated_at: number }>("SELECT slug, updated_at FROM blog_posts WHERE status = 'published' ORDER BY published_at DESC");
+export const publishedSlugs = () =>
+  all<{ slug: string; updated_at: number; cover: string }>("SELECT slug, updated_at, cover FROM blog_posts WHERE status = 'published' ORDER BY published_at DESC");
 
 /** Admin: every article, newest first. */
 export const allPosts = (): BlogSummary[] => all<Row>('SELECT * FROM blog_posts ORDER BY created_at DESC').map(summary);

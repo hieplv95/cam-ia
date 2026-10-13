@@ -257,7 +257,7 @@ const zh: Messages = {
   'profile.chooseLanguage': '选择语言',
 
   'model.title': '选择 AI 模型',
-  'model.sub': '用于修图、抠图和所有 AI 工具。账号每月 {n} 点；每张图片的预估价格（~1K）。',
+  'model.sub': '用于修图、抠图和所有 AI 工具。账号每月 {n} 点。',
   'model.note': '如果 Pro 繁忙，应用会改用 Flash（更便宜）并告诉你。',
   'model.chip': '模型：',
   'model.flashHint': '均衡 · 推荐',
@@ -619,6 +619,7 @@ const zh: Messages = {
   'studio.restore.action': '修复照片',
   'studio.restore.busy': 'AI 正在修复照片...（约 20–40 秒）',
   'studio.restore.fix': '需要修复什么？',
+  'studio.restore.fix.extract': '从相框/背景中取出照片',
   'studio.restore.fix.scratches': '划痕、灰尘和折痕',
   'studio.restore.fix.noise': '噪点和颗粒',
   'studio.restore.fix.sharpen': '锐化',

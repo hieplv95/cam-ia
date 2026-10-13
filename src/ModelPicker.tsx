@@ -6,14 +6,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAccount } from './account';
 import { useAiModel } from './ai/client';
 import { pointsFor } from './ai/credits';
-import { formatVnd, imageModels, modelInfo, type ImageModelId } from './ai/models';
-import { getLanguage, useT, type MessageKey } from './i18n';
+import { imageModels, modelInfo, type ImageModelId } from './ai/models';
+import { useT, type MessageKey } from './i18n';
 import { colors, font, MAX_CONTENT_WIDTH } from './theme';
 
 const modelHints: Record<ImageModelId, MessageKey> = { 'gemini-3.1-flash-image': 'model.flashHint', 'gemini-3-pro-image': 'model.proHint' };
 
 /** Estimated cost of one picture: in đồng for Vietnamese, otherwise in US dollars. */
-export const formatCost = (usd: number) => (getLanguage() === 'vi' ? formatVnd(usd) : `${usd.toFixed(3)}`);
 
 /** Bottom sheet listing the image models with their price per picture. */
 export function ModelSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -47,8 +46,7 @@ export function ModelSheet({ visible, onClose }: { visible: boolean; onClose: ()
                   <Text style={styles.id}>{m.id}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={styles.price}>~{formatCost(m.usd)}</Text>
-                  <Text style={styles.usd}>{t('common.points', { n: pointsFor(plan, m.id) })}{getLanguage() === 'vi' ? ` · ${m.usd.toFixed(3)}` : ''}</Text>
+                  <Text style={styles.price}>{t('common.points', { n: pointsFor(plan, m.id) })}</Text>
                 </View>
                 <Ionicons name={active ? 'checkmark-circle' : 'ellipse-outline'} size={22} color={active ? colors.gold : colors.textMute} />
               </Pressable>
@@ -114,7 +112,6 @@ const styles = StyleSheet.create({
   hint: { fontFamily: font.regular, fontSize: 12, color: colors.textSoft },
   id: { fontFamily: font.regular, fontSize: 11, color: colors.textMute, marginTop: 2 },
   price: { fontFamily: font.semi, fontSize: 14, color: colors.gold },
-  usd: { fontFamily: font.regular, fontSize: 11, color: colors.textMute },
   note: { fontFamily: font.regular, fontSize: 12, lineHeight: 17, color: colors.textSoft, marginTop: 2 },
   chip: {
     flexDirection: 'row',

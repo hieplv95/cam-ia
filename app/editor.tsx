@@ -234,6 +234,8 @@ export default function Editor() {
       const hasFull = base.full && base.full !== base.image;
       const full = hasFull ? await cropImage(await flattenFull(base, skFont, svgs), scaleCrop(r, base.full!.width() / base.image.width())) : undefined;
       commit(freshDoc(image, full, label));
+      // Done cropping: leave the crop tool so its frame doesn't come back over the new picture (tap "Cắt" to crop again).
+      setBasicTool('exposure');
     } catch (e: any) {
       showToast(e.message ?? t('common.error'));
     } finally {

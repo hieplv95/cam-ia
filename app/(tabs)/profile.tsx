@@ -12,7 +12,7 @@ import { modelInfo } from '@/src/ai/models';
 import { Dialog } from '@/src/Dialog';
 import { getLanguage, languageName, t, useT } from '@/src/i18n';
 import { LanguageSheet } from '@/src/LanguageSheet';
-import { formatCost, ModelSheet } from '@/src/ModelPicker';
+import { ModelSheet } from '@/src/ModelPicker';
 import { RewardsCard } from '@/src/RewardsCard';
 import { photoAuthors } from '@/src/photos';
 import { clearRecents, useRecents } from '@/src/recents';
@@ -61,7 +61,7 @@ export default function Profile() {
   const [langOpen, setLangOpen] = useState(false);
   const [removing, setRemoving] = useState<{ password: string; error?: string } | null>(null);
   const info = modelInfo(model);
-  const modelLabel = info ? `${info.name} · ${t('common.points', { n: pointsFor(plan, info.id) })} · ~${formatCost(info.usd)}` : model;
+  const modelLabel = info ? `${info.name} · ${t('common.points', { n: pointsFor(plan, info.id) })}` : model;
   const resetDay = credits?.kind === 'member' ? credits.resetLabel : '';
 
   // Credits change when AI is used on other screens; refresh when coming back.

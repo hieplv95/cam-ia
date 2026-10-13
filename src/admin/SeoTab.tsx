@@ -4,7 +4,8 @@ import { Image, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View 
 import { languages, type Lang } from '../i18n/languages';
 import { DEFAULT_SEO, SEO_GOOD, SEO_LANGS, SEO_LIMITS, type SeoSettings, type SeoText } from '../seo';
 import { colors, font } from '../theme';
-import { fetchSeo, saveSeo } from './api';
+import { fetchBlogPosts, fetchSeo, saveSeo } from './api';
+import { GeoCard, SeoScore } from './SeoGeo';
 import { Failed, Loading } from './Shell';
 import { Button, Card, Grid } from './ui';
 import { useLoad } from './useLoad';
@@ -28,6 +29,13 @@ export function SeoTab({ refresh }: { refresh: number }) {
   const [lang, setLang] = useState<Lang>('es');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
+  // Published articles, for the score ("at least 5 / 20 articles").
+  const [published, setPublished] = useState<number | null>(null);
+  useEffect(() => {
+    fetchBlogPosts()
+      .then((r) => setPublished(r.posts.filter((p) => p.status === 'published').length))
+      .catch(() => setPublished(null));
+  }, [refresh]);
   useEffect(() => {
     if (refresh) reload();
   }, [refresh, reload]);
@@ -41,7 +49,8 @@ export function SeoTab({ refresh }: { refresh: number }) {
   const saved = data.seo;
   const text = draft.texts[lang];
   const changedLangs = SEO_LANGS.filter((l) => JSON.stringify(draft.texts[l]) !== JSON.stringify(saved.texts[l]));
-  const changed = changedLangs.length > 0 || draft.primary !== saved.primary || draft.verification !== saved.verification;
+  const geoChanged = JSON.stringify(draft.geo) !== JSON.stringify(saved.geo);
+  const changed = changedLangs.length > 0 || draft.primary !== saved.primary || draft.verification !== saved.verification || geoChanged;
 
   const edit = (patch: Partial<SeoText>) => {
     setMessage(null);
@@ -52,7 +61,7 @@ export function SeoTab({ refresh }: { refresh: number }) {
     setBusy(true);
     try {
       const texts = Object.fromEntries(changedLangs.map((l) => [l, draft.texts[l]])) as SeoSettings['texts'];
-      setData(await saveSeo({ primary: draft.primary, verification: draft.verification, texts }));
+      setData(await saveSeo({ primary: draft.primary, verification: draft.verification, texts, ...(geoChanged && { geo: draft.geo }) }));
       setMessage({ text: 'Đã lưu. Website cập nhật trong khoảng 30 giây; Google cần vài ngày đến vài tuần để hiện kết quả mới.', ok: true });
     } catch (e) {
       setMessage({ text: e instanceof Error ? e.message : 'Không lưu được.', ok: false });
@@ -153,11 +162,29 @@ export function SeoTab({ refresh }: { refresh: number }) {
             <View style={styles.actions}>
               <Button label="robots.txt" icon="open-outline" tone="plain" onPress={() => Linking.openURL(`${siteOrigin()}/robots.txt`)} />
               <Button label="sitemap.xml" icon="open-outline" tone="plain" onPress={() => Linking.openURL(`${siteOrigin()}/sitemap.xml`)} />
+              <Button label="llms.txt" icon="open-outline" tone="plain" onPress={() => Linking.openURL(`${siteOrigin()}/llms.txt`)} />
             </View>
             <Text style={styles.note}>Các thẻ SEO, robots.txt và sitemap.xml chỉ có trên máy chủ thật (camia.app), không có khi chạy thử bằng expo start.</Text>
           </Card>
         </View>
       </Grid>
+
+      <Grid min={360}>
+        <GeoCard
+          lang={lang}
+          geo={draft.geo}
+          onChange={(geo) => {
+            setMessage(null);
+            setDraft({ ...draft, geo });
+          }}
+        />
+        <SeoScore seo={draft} publishedPosts={published} />
+      </Grid>
+      <View style={styles.saveBar}>
+        <Button label={busy ? 'Đang lưu…' : 'Lưu thay đổi'} icon="save-outline" onPress={save} disabled={busy || !changed} />
+        {changed && !busy ? <Text style={styles.unsaved}>Có thay đổi chưa lưu.</Text> : null}
+        {message ? <Text style={[styles.message, { color: message.ok ? '#2E9E6A' : colors.danger }]}>{message.text}</Text> : null}
+      </View>
     </View>
   );
 }
@@ -207,6 +234,8 @@ const styles = StyleSheet.create({
   hint: { fontFamily: font.regular, fontSize: 12, color: colors.textSoft, lineHeight: 17 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   message: { fontFamily: font.medium, fontSize: 13 },
+  saveBar: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 12 },
+  unsaved: { fontFamily: font.medium, fontSize: 13, color: '#C77C1E' },
   google: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, gap: 3, borderWidth: 1, borderColor: colors.border },
   gSite: { fontSize: 12.5, color: '#4D5156', fontFamily: Platform.OS === 'web' ? 'Arial, sans-serif' : undefined },
   gTitle: { fontSize: 19, color: '#1A0DAB', fontFamily: Platform.OS === 'web' ? 'Arial, sans-serif' : undefined },

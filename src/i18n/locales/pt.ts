@@ -257,7 +257,7 @@ const pt: Messages = {
   'profile.chooseLanguage': 'Escolha o idioma',
 
   'model.title': 'Escolha o modelo de IA',
-  'model.sub': 'Usado no Retoque, remoção de fundo e em todas as ferramentas de IA. Contas têm {n} pontos/mês; preço estimado por imagem (~1K).',
+  'model.sub': 'Usado no Retoque, remoção de fundo e em todas as ferramentas de IA. Contas têm {n} pontos/mês.',
   'model.note': 'Se o Pro estiver ocupado, o app usa o Flash (mais barato) e avisa você no final.',
   'model.chip': 'Modelo:',
   'model.flashHint': 'Equilibrado · recomendado',
@@ -619,6 +619,7 @@ const pt: Messages = {
   'studio.restore.action': 'Restaurar foto',
   'studio.restore.busy': 'A IA está restaurando sua foto... (cerca de 20–40 segundos)',
   'studio.restore.fix': 'O que você quer corrigir?',
+  'studio.restore.fix.extract': 'Tirar a foto da moldura ou do fundo',
   'studio.restore.fix.scratches': 'Riscos, poeira e dobras',
   'studio.restore.fix.noise': 'Ruído e granulado',
   'studio.restore.fix.sharpen': 'Dar nitidez',

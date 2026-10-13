@@ -257,7 +257,7 @@ const ja: Messages = {
   'profile.chooseLanguage': '言語を選択',
 
   'model.title': 'AI モデルを選択',
-  'model.sub': 'レタッチ、背景削除、すべての AI ツールで使用。アカウントは月 {n} pt、画像 1 枚あたりの目安価格（~1K）。',
+  'model.sub': 'レタッチ、背景削除、すべての AI ツールで使用。アカウントは月 {n} pt。',
   'model.note': 'Pro が混雑しているときは Flash（より安価）を使い、お知らせします。',
   'model.chip': 'モデル：',
   'model.flashHint': 'バランス型 · おすすめ',
@@ -619,6 +619,7 @@ const ja: Messages = {
   'studio.restore.action': '写真を復元',
   'studio.restore.busy': 'AI が写真を復元中...（約 20〜40 秒）',
   'studio.restore.fix': '何を修復しますか？',
+  'studio.restore.fix.extract': '額縁や背景から写真だけを取り出す',
   'studio.restore.fix.scratches': '傷、ほこり、折り目',
   'studio.restore.fix.noise': 'ノイズと粒子',
   'studio.restore.fix.sharpen': 'シャープに',

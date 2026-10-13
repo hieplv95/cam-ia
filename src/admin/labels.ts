@@ -1,4 +1,4 @@
-import { formatVnd, modelInfo } from '../ai/models';
+import { modelInfo } from '../ai/models';
 import { presetById } from '../develop/presets';
 import { isMessageKey, translate } from '../i18n/core';
 import { isTrackedEvent, trackedEvents } from './events';
@@ -57,7 +57,6 @@ export const num = (n: number) => n.toLocaleString('vi-VN');
 
 export const usd = (n: number) => `$${n.toFixed(2)}`;
 
-export const usdVnd = (n: number) => `${usd(n)} · ${formatVnd(n)}`;
 
 export const percent = (part: number, whole: number) => (whole ? `${Math.round((part / whole) * 1000) / 10}%` : '—');
 

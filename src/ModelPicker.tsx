@@ -43,7 +43,6 @@ export function ModelSheet({ visible, onClose }: { visible: boolean; onClose: ()
                     <Text style={styles.name}>{m.name}</Text>
                     <Text style={styles.hint}>{t(modelHints[m.id])}</Text>
                   </View>
-                  <Text style={styles.id}>{m.id}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={styles.price}>{t('common.points', { n: pointsFor(plan, m.id) })}</Text>
@@ -110,7 +109,6 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' },
   name: { fontFamily: font.semi, fontSize: 16, color: colors.text },
   hint: { fontFamily: font.regular, fontSize: 12, color: colors.textSoft },
-  id: { fontFamily: font.regular, fontSize: 11, color: colors.textMute, marginTop: 2 },
   price: { fontFamily: font.semi, fontSize: 14, color: colors.gold },
   note: { fontFamily: font.regular, fontSize: 12, lineHeight: 17, color: colors.textSoft, marginTop: 2 },
   chip: {

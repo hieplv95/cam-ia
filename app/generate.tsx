@@ -12,7 +12,7 @@ import { imageFromBase64 } from '@/src/editor/imageOps';
 import { ModelChip } from '@/src/ModelPicker';
 import { setPendingExport, setPendingPhoto } from '@/src/pendingPhoto';
 import { cardShadow, colors, font, goldGradient } from '@/src/theme';
-import { IconButton } from '@/src/ui';
+import { HomeButton, IconButton } from '@/src/ui';
 import { HScroll } from '@/src/HScroll';
 import { useT } from '@/src/i18n';
 
@@ -72,7 +72,7 @@ export default function Generate() {
       <View style={styles.header}>
         <IconButton icon={{ set: 'ion', name: 'chevron-back' }} onPress={() => (router.canGoBack() ? router.back() : router.replace('/ai'))} />
         <Text style={styles.title}>{t('generate.title')}</Text>
-        <View style={{ width: 44 }} />
+        <HomeButton />
       </View>
 
       <ScrollView contentContainerStyle={styles.column} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>

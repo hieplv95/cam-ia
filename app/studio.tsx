@@ -33,7 +33,7 @@ import { notify } from '@/src/notify';
 import { saveImage } from '@/src/save';
 import { setPendingExport, setPendingPhoto, takePendingPhoto } from '@/src/pendingPhoto';
 import { colors, font, goldGradient } from '@/src/theme';
-import { IconButton } from '@/src/ui';
+import { HomeButton, IconButton } from '@/src/ui';
 import { useT, type MessageKey } from '@/src/i18n';
 
 /**
@@ -224,9 +224,12 @@ export default function Studio() {
           <Text style={styles.title} numberOfLines={1}>
             {t(studioText.tool(tool, 'title'))}
           </Text>
-          <View style={styles.proPill}>
-            <MaterialCommunityIcons name="crown" size={13} color={colors.gold} />
-            <Text style={styles.proText}>PRO</Text>
+          <View style={styles.headerRight}>
+            <View style={styles.proPill}>
+              <MaterialCommunityIcons name="crown" size={13} color={colors.gold} />
+              <Text style={styles.proText}>PRO</Text>
+            </View>
+            <HomeButton />
           </View>
         </View>
 
@@ -482,6 +485,7 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4, gap: 8 },
   title: { flex: 1, textAlign: 'center', fontFamily: font.semi, fontSize: 17, color: colors.text },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   proPill: {
     flexDirection: 'row',
     alignItems: 'center',

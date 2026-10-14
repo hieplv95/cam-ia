@@ -13,7 +13,7 @@ import { Signed, useSignature } from '@/src/signature';
 import { saveImage, sendToApp, shareImage, socialAppsSupported, type ImageFormatId, type SocialApp } from '@/src/save';
 import { colors, font, goldGradient } from '@/src/theme';
 import { track } from '@/src/track';
-import { IconButton } from '@/src/ui';
+import { HomeButton, IconButton } from '@/src/ui';
 import { useT } from '@/src/i18n';
 
 type Quality = 'standard' | 'high' | 'max';
@@ -97,6 +97,9 @@ export default function Export() {
   const [destination, setDestination] = useState<Destination>('save');
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // Once the photo is saved or shared, a "back home" button shows under the export button.
+  const [exported, setExported] = useState(false);
+  const home = () => (router.canDismiss() ? router.dismissTo('/') : router.replace('/'));
   const [box, setBox] = useState({ w: 0, h: 0 });
   const latest = useRef('');
 
@@ -152,6 +155,7 @@ export default function Export() {
       if (destination === 'save') track('export_save');
       else if (destination === 'share') track('export_share');
       else track('export_app', destination);
+      setExported(true);
       addRecent(encodeBase64(await resizeImage(out.image, 720), 80));
     } catch (e: any) {
       if (e?.name !== 'AbortError') showToast(e.message ?? t('export.failed'));
@@ -175,7 +179,7 @@ export default function Export() {
           <Text style={styles.title}>{t('export.title')}</Text>
           <Text style={styles.subtitle}>{t('export.subtitle')}</Text>
         </View>
-        <View style={{ width: 44 }} />
+        <HomeButton />
       </View>
 
       <ScrollView contentContainerStyle={styles.column} showsVerticalScrollIndicator={false}>
@@ -271,6 +275,12 @@ export default function Export() {
           <Ionicons name="sparkles" size={12} color={colors.gold} />
           <Text style={styles.footText}>{ready ? t('export.size', { size: formatSize(output.bytes.length) }) : t('export.sizing')}</Text>
         </View>
+        {exported && (
+          <Pressable onPress={home} style={({ pressed }) => [styles.homeBtn, pressed && { opacity: 0.7 }]}>
+            <Ionicons name="home-outline" size={18} color={colors.text} />
+            <Text style={styles.homeText}>{t('tabs.home')}</Text>
+          </Pressable>
+        )}
       </ScrollView>
 
       {toast && (
@@ -350,6 +360,18 @@ const styles = StyleSheet.create({
   exportText: { fontFamily: font.semi, fontSize: 16, color: colors.onGold },
   footNote: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   footText: { fontFamily: font.regular, fontSize: 12, color: colors.textSoft },
+  homeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingVertical: 13,
+  },
+  homeText: { fontFamily: font.semi, fontSize: 15, color: colors.text },
   toast: {
     position: 'absolute',
     top: 70,

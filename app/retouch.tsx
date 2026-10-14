@@ -16,7 +16,7 @@ import { notify } from '@/src/notify';
 import { ModelChip } from '@/src/ModelPicker';
 import { setPendingPhoto, takePendingPhoto } from '@/src/pendingPhoto';
 import { colors, font, goldGradient } from '@/src/theme';
-import { IconButton } from '@/src/ui';
+import { HomeButton, IconButton } from '@/src/ui';
 import { useT } from '@/src/i18n';
 
 const optionIcons: Record<RetouchOptionId, IconSpec> = {
@@ -104,9 +104,12 @@ export default function Retouch() {
         <View style={styles.header}>
           <IconButton icon={{ set: 'ion', name: 'chevron-back' }} onPress={leave} />
           <Text style={styles.title}>{t('retouch.title')}</Text>
-          <View style={styles.proPill}>
-            <MaterialCommunityIcons name="crown" size={13} color={colors.gold} />
-            <Text style={styles.proText}>PRO</Text>
+          <View style={styles.headerRight}>
+            <View style={styles.proPill}>
+              <MaterialCommunityIcons name="crown" size={13} color={colors.gold} />
+              <Text style={styles.proText}>PRO</Text>
+            </View>
+            <HomeButton />
           </View>
         </View>
 
@@ -188,6 +191,7 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 },
   title: { fontFamily: font.semi, fontSize: 17, color: colors.text },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   proPill: {
     flexDirection: 'row',
     alignItems: 'center',

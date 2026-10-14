@@ -3,7 +3,7 @@ import { Canvas, ColorMatrix, Image as SkImageNode, type SkImage } from '@shopif
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CurveEditor } from '@/src/develop/CurveEditor';
@@ -30,7 +30,7 @@ import { notify } from '@/src/notify';
 import { setPendingExport, setPendingPhoto, takePendingPhoto } from '@/src/pendingPhoto';
 import { colors, font, goldGradient } from '@/src/theme';
 import { trackPreset } from '@/src/track';
-import { IconButton } from '@/src/ui';
+import { HomeButton, IconButton } from '@/src/ui';
 import { HScroll } from '@/src/HScroll';
 import { useT } from '@/src/i18n';
 
@@ -92,6 +92,8 @@ export default function Adjust() {
   const [busy, setBusy] = useState<string | null>(t('common.openingPhoto'));
   const [toast, setToast] = useState<string | null>(null);
   const [menu, setMenu] = useState(false);
+  // Phones: the PRO badge gives its room to the title and the home button.
+  const narrow = useWindowDimensions().width < 420;
   const [looks, setLooks] = useState<Record<string, string>>({});
 
   /** Slider drags arrive as many small changes; changes less than 600 ms apart form a single undo step. */
@@ -245,7 +247,9 @@ export default function Adjust() {
       <View style={styles.column}>
         <View style={styles.header}>
           <IconButton icon={{ set: 'ion', name: 'chevron-back' }} onPress={leave} />
-          <Text style={styles.title}>{t('adjust.title')}</Text>
+          <Text style={styles.title} numberOfLines={1}>
+            {t('adjust.title')}
+          </Text>
           <View style={styles.headerRight}>
             <Pressable hitSlop={6} onPress={undo} disabled={!hist.past.length} accessibilityLabel={t('common.undo')} style={!hist.past.length && styles.dim}>
               <Ionicons name="arrow-undo-outline" size={21} color={colors.text} />
@@ -259,10 +263,13 @@ export default function Adjust() {
             <Pressable hitSlop={8} onPress={() => setMenu(true)} disabled={!image}>
               <Ionicons name="ellipsis-horizontal" size={22} color={colors.text} />
             </Pressable>
-            <View style={styles.proPill}>
-              <MaterialCommunityIcons name="crown" size={13} color={colors.gold} />
-              <Text style={styles.proText}>PRO</Text>
-            </View>
+            {!narrow && (
+              <View style={styles.proPill}>
+                <MaterialCommunityIcons name="crown" size={13} color={colors.gold} />
+                <Text style={styles.proText}>PRO</Text>
+              </View>
+            )}
+            <HomeButton style={{ minWidth: 0, paddingHorizontal: 0 }} />
           </View>
         </View>
 
@@ -448,9 +455,9 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   column: { flex: 1, width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: 14, paddingBottom: 8, gap: 10 },
   center: { alignItems: 'center', justifyContent: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 },
-  title: { fontFamily: font.semi, fontSize: 17, color: colors.text },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14, marginRight: 6 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingTop: 4 },
+  title: { flexShrink: 1, fontFamily: font.semi, fontSize: 17, color: colors.text },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   dim: { opacity: 0.3 },
   proPill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: colors.gold, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   proText: { fontFamily: font.bold, fontSize: 11, color: colors.gold, letterSpacing: 1 },

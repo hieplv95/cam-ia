@@ -98,6 +98,12 @@ export function IconButton({
   );
 }
 
+/** Straight back to the home screen from any tool, however many screens deep. */
+export function HomeButton({ style }: { style?: StyleProp<ViewStyle> }) {
+  const router = useRouter();
+  return <IconButton icon={{ set: 'ion', name: 'home-outline' }} style={style} onPress={() => (router.canDismiss() ? router.dismissTo('/') : router.replace('/'))} />;
+}
+
 export function Swatches({ colorsList, value, onChange }: { colorsList: string[]; value: string; onChange: (c: string) => void }) {
   return (
     <View style={styles.swatches}>

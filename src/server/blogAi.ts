@@ -38,7 +38,26 @@ export function textCost(model: string, inTokens: number, outTokens: number) {
   return (inTokens * m.usdIn + outTokens * m.usdOut) / 1_000_000;
 }
 
-/** Strips a ```json fence and parses; if there is text around the JSON, keeps the object itself. */
+/** Index just past the `}` closing the object that opens at `start` (strings and escapes skipped), or -1. */
+function objectEnd(text: string, start: number) {
+  let depth = 0;
+  let inString = false;
+  for (let i = start; i < text.length; i++) {
+    const c = text[i];
+    if (inString) {
+      if (c === '\\') i++;
+      else if (c === '"') inString = false;
+    } else if (c === '"') inString = true;
+    else if (c === '{') depth++;
+    else if (c === '}' && --depth === 0) return i + 1;
+  }
+  return -1;
+}
+
+/**
+ * Strips a ```json fence and parses; if there is text around the JSON, keeps the first whole object
+ * (models sometimes add a note or a second copy of the object after it).
+ */
 function parseJson<T>(text: string): T {
   const clean = text
     .trim()
@@ -48,9 +67,9 @@ function parseJson<T>(text: string): T {
     return JSON.parse(clean) as T;
   } catch {
     const start = clean.indexOf('{');
-    const end = clean.lastIndexOf('}');
-    if (start < 0 || end <= start) throw new Error('AI không trả về đúng định dạng, thử lại nhé.');
-    return JSON.parse(clean.slice(start, end + 1)) as T;
+    const end = start < 0 ? -1 : objectEnd(clean, start);
+    if (end < 0) throw new Error('AI không trả về đúng định dạng, thử lại nhé.');
+    return JSON.parse(clean.slice(start, end)) as T;
   }
 }
 

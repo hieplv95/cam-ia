@@ -70,7 +70,7 @@ export function BlogTab({ refresh }: { refresh: number }) {
 function AiWriter({ onQueued }: { onQueued: () => void }) {
   const [lang, setLang] = useState<Lang>('es');
   const [topic, setTopic] = useState('');
-  // The remembered idea being written (marked "written" on the server); dropped when the topic text is changed.
+  // The remembered idea being written (marked "written" on the server); kept when the title is reworded, dropped when it is cleared.
   const [picked, setPicked] = useState<BlogTopic | null>(null);
   const [ideasKey, setIdeasKey] = useState(0);
   const [keyword, setKeyword] = useState('');
@@ -92,8 +92,7 @@ function AiWriter({ onQueued }: { onQueued: () => void }) {
     }
     setSending(true);
     try {
-      const fromIdea = picked && picked.title === topic ? picked : null;
-      await blogAction('write', { lang, topic, keyword, length, tone, images, extra, model, publish, logo, topicId: fromIdea?.id, cluster: fromIdea?.cluster });
+      await blogAction('write', { lang, topic, keyword, length, tone, images, extra, model, publish, logo, topicId: picked?.id, cluster: picked?.cluster });
       setMessage({ text: `Đã đưa “${topic}” vào hàng chờ. Chọn chủ đề khác để viết tiếp, hoặc đóng trang: máy chủ vẫn viết.`, ok: true });
       setTopic('');
       setKeyword('');
@@ -131,7 +130,13 @@ function AiWriter({ onQueued }: { onQueued: () => void }) {
       />
       <View style={styles.grid}>
         <Field label="Chủ đề bài viết" style={{ flexBasis: 360 }}>
-          <TextInput value={topic} onChangeText={setTopic} placeholder="Nhập chủ đề hoặc chọn một gợi ý ở trên" placeholderTextColor={colors.textMute} style={blogStyles.input} />
+          <TextInput
+            value={topic}
+            onChangeText={(v) => {
+              setTopic(v);
+              if (!v.trim()) setPicked(null);
+            }}
+            placeholder="Nhập chủ đề hoặc chọn một gợi ý ở trên" placeholderTextColor={colors.textMute} style={blogStyles.input} />
         </Field>
         <Field label="Từ khoá chính (SEO)" style={{ flexBasis: 240 }}>
           <TextInput value={keyword} onChangeText={setKeyword} placeholder="Để trống = AI tự chọn" placeholderTextColor={colors.textMute} style={blogStyles.input} />

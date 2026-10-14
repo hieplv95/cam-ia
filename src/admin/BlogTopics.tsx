@@ -114,7 +114,7 @@ export function TopicIdeas({
 
       {pending.length > 0 && (
         <View style={{ gap: 10 }}>
-          <View style={styles.row}>
+          <View style={{ gap: 8 }}>
             <Text style={styles.label}>Gợi ý đang chờ ({num(pending.length)})</Text>
             {groupsWithIdeas.length > 1 && (
               <View style={styles.chips}>

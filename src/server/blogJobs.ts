@@ -45,6 +45,8 @@ export function enqueueArticle(req: BlogWriteRequest & { logo: boolean }, who: C
       .prepare("INSERT INTO blog_jobs (lang, topic, status, step, created_at, updated_at) VALUES (?, ?, 'queued', 'Đang chờ lượt', ?, ?)")
       .run(req.lang, req.topic, now, now).lastInsertRowid,
   );
+  // The idea leaves the waiting list now, not when the article is done; it comes back if writing fails.
+  if (req.topicId) setTopicStatus(req.topicId, 'written');
   state.work.set(id, { req, who, admin });
   state.queue.push(id);
   pump();
@@ -72,6 +74,7 @@ async function run(id: number) {
   if (!work) return;
   const { req, who, admin } = work;
   let started = Date.now();
+  let saved = false;
   try {
     update(id, { status: 'running', step: 'AI đang viết bài… (30–90 giây)' });
     const topic = req.topicId ? topicById(req.topicId) : null;
@@ -83,6 +86,7 @@ async function run(id: number) {
       { lang: req.lang, title: a.title, slug: a.slug, description: a.description, keywords: a.keywords, content: a.content, cover: '', cluster: a.cluster, status: req.publish && !a.images.length ? 'published' : 'draft' },
       { ai: true },
     );
+    saved = true;
     if (topic) setTopicStatus(topic.id, 'written', post.id);
     update(id, { postId: post.id });
 
@@ -124,6 +128,7 @@ async function run(id: number) {
     }
     const message = claudeErrorText(e) ?? (e instanceof AiError ? translate('vi', e.key) : e instanceof Error ? e.message : 'Lỗi không rõ.');
     update(id, { status: 'error', step: 'Lỗi', error: message });
+    if (req.topicId && !saved) setTopicStatus(req.topicId, 'suggested');
   }
 }
 

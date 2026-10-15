@@ -784,7 +784,7 @@ const vi = {
   'studio.logo.layout.mascot': 'Linh vật',
   'studio.logo.palette.brown': 'Nâu cà phê',
   'studio.logo.palette.red': 'Đỏ cam',
-  'studio.extraPlaceholder': 'Yêu cầu thêm (không bắt buộc), VD: chữ màu đen, thêm ngọn lửa',
+  'studio.extraPlaceholder': 'Hãy miêu tả phong cách, kiểu dáng logo bạn muốn, VD: bông sen nét mảnh, chữ có chân, tông vàng đồng',
   'studio.refinePlaceholder': 'Sửa logo bằng mô tả, VD: đổi chữ sang màu đen',
   'studio.refineBusy': 'AI đang sửa logo... (khoảng 20–30 giây)',
   'studio.previous': 'Bản trước',

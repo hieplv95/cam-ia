@@ -758,7 +758,7 @@ const ja: Messages = {
   'studio.logo.layout.mascot': 'マスコット',
   'studio.logo.palette.brown': 'コーヒーブラウン',
   'studio.logo.palette.red': 'レッド＆オレンジ',
-  'studio.extraPlaceholder': '追加の要望（任意）例：文字を黒に、炎を追加',
+  'studio.extraPlaceholder': 'ほしいロゴのスタイルや形を書いてください。例：細い線の蓮、セリフ体の文字、ブロンズゴールド系',
   'studio.refinePlaceholder': '説明でロゴを修正（例：文字を黒にする）',
   'studio.refineBusy': 'AI がロゴを修正中...（約 20〜30 秒）',
   'studio.previous': '前の版',

@@ -758,7 +758,7 @@ const de: Messages = {
   'studio.logo.layout.mascot': 'Maskottchen',
   'studio.logo.palette.brown': 'Kaffeebraun',
   'studio.logo.palette.red': 'Rot & Orange',
-  'studio.extraPlaceholder': 'Zusätzlicher Wunsch (optional), z. B. schwarze Schrift, eine Flamme hinzufügen',
+  'studio.extraPlaceholder': 'Beschreibe Stil und Form des Logos, das du möchtest, z. B. Lotus in feinen Linien, Serifenschrift, Goldtöne',
   'studio.refinePlaceholder': 'Logo per Beschreibung ändern, z. B. Schrift schwarz machen',
   'studio.refineBusy': 'Die KI bearbeitet das Logo... (ca. 20–30 Sekunden)',
   'studio.previous': 'Vorherige',

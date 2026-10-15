@@ -758,7 +758,7 @@ const ko: Messages = {
   'studio.logo.layout.mascot': '마스코트',
   'studio.logo.palette.brown': '커피 브라운',
   'studio.logo.palette.red': '레드·오렌지',
-  'studio.extraPlaceholder': '추가 요청(선택), 예: 검은 글씨, 불꽃 추가',
+  'studio.extraPlaceholder': '원하는 로고의 스타일과 모양을 적어 주세요. 예: 가는 선의 연꽃, 세리프 글씨, 브론즈 골드 톤',
   'studio.refinePlaceholder': '설명으로 로고 수정, 예: 글자를 검은색으로',
   'studio.refineBusy': 'AI가 로고를 수정 중... (약 20–30초)',
   'studio.previous': '이전 버전',

@@ -218,6 +218,19 @@ export default function Studio() {
     router.push('/export');
   };
 
+  // A written request, on top of the options (any language).
+  const extraInput = (
+    <TextInput
+      value={extra}
+      onChangeText={setExtra}
+      placeholder={t(isLogo ? 'studio.extraPlaceholder' : (`studio.${tool.id}.extra` as MessageKey))}
+      placeholderTextColor={colors.textMute}
+      maxLength={MAX_EXTRA}
+      multiline
+      style={[styles.input, styles.extra, isLogo && styles.logoExtra]}
+    />
+  );
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.column}>
@@ -387,19 +400,12 @@ export default function Studio() {
                   );
                 })}
               </HScroll>
+              {/* Logo maker: the description of the wanted logo sits right under the business ideas. */}
+              {isLogo && g.id === 'idea' && extraInput}
             </View>
           ))}
 
-          {/* A written request, on top of the options (any language). */}
-          <TextInput
-            value={extra}
-            onChangeText={setExtra}
-            placeholder={t(isLogo ? 'studio.extraPlaceholder' : (`studio.${tool.id}.extra` as MessageKey))}
-            placeholderTextColor={colors.textMute}
-            maxLength={MAX_EXTRA}
-            multiline
-            style={[styles.input, styles.extra]}
-          />
+          {!isLogo && extraInput}
 
           <ModelChip />
         </ScrollView>
@@ -600,6 +606,8 @@ const styles = StyleSheet.create({
   saveAll: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: colors.gold, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
   saveAllText: { fontFamily: font.semi, fontSize: 13, color: colors.goldDeep },
   extra: { minHeight: 46, maxHeight: 90, textAlignVertical: 'top' },
+  // Room for the three-line hint of the logo description.
+  logoExtra: { minHeight: 82, maxHeight: 110, marginTop: 2 },
   refineRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   refineBox: {
     flex: 1,

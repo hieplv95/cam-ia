@@ -758,7 +758,7 @@ const ru: Messages = {
   'studio.logo.layout.mascot': 'Талисман',
   'studio.logo.palette.brown': 'Кофейный',
   'studio.logo.palette.red': 'Красно-оранжевый',
-  'studio.extraPlaceholder': 'Доп. пожелание (необязательно), напр.: чёрные буквы, добавить пламя',
+  'studio.extraPlaceholder': 'Опиши стиль и форму логотипа, который хочешь, напр.: лотос тонкими линиями, шрифт с засечками, золотистые тона',
   'studio.refinePlaceholder': 'Измени логотип описанием, напр.: сделай текст чёрным',
   'studio.refineBusy': 'ИИ правит логотип... (около 20–30 секунд)',
   'studio.previous': 'Предыдущий',

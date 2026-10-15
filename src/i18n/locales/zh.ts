@@ -758,7 +758,7 @@ const zh: Messages = {
   'studio.logo.layout.mascot': '吉祥物',
   'studio.logo.palette.brown': '咖啡棕',
   'studio.logo.palette.red': '红橙',
-  'studio.extraPlaceholder': '额外要求（可选），例如：黑色文字、加一团火焰',
+  'studio.extraPlaceholder': '描述你想要的标志风格和样式，例如：细线条莲花、衬线字体、古铜金色调',
   'studio.refinePlaceholder': '用文字描述修改标志，例如：把文字改成黑色',
   'studio.refineBusy': 'AI 正在修改标志...（约 20–30 秒）',
   'studio.previous': '上一版',

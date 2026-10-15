@@ -776,7 +776,7 @@ const en: Messages = {
   'studio.logo.layout.mascot': 'Mascot',
   'studio.logo.palette.brown': 'Coffee brown',
   'studio.logo.palette.red': 'Red & orange',
-  'studio.extraPlaceholder': 'Extra request (optional), e.g. black lettering, add a flame',
+  'studio.extraPlaceholder': 'Describe the style and look of the logo you want, e.g. a thin-line lotus, serif lettering, bronze-gold tones',
   'studio.refinePlaceholder': 'Edit the logo by describing it, e.g. make the text black',
   'studio.refineBusy': 'The AI is editing the logo... (about 20–30 seconds)',
   'studio.previous': 'Previous',

@@ -758,7 +758,7 @@ const es: Messages = {
   'studio.logo.layout.mascot': 'Mascota',
   'studio.logo.palette.brown': 'Café',
   'studio.logo.palette.red': 'Rojo y naranja',
-  'studio.extraPlaceholder': 'Petición extra (opcional), p. ej.: letras negras, añade una llama',
+  'studio.extraPlaceholder': 'Describe el estilo y la forma del logo que quieres, p. ej.: un loto de líneas finas, letras con serifa, tonos dorados',
   'studio.refinePlaceholder': 'Edita el logo describiéndolo, p. ej.: pon el texto en negro',
   'studio.refineBusy': 'La IA está editando el logo... (unos 20–30 segundos)',
   'studio.previous': 'Anterior',

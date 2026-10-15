@@ -758,7 +758,7 @@ const fr: Messages = {
   'studio.logo.layout.mascot': 'Mascotte',
   'studio.logo.palette.brown': 'Brun café',
   'studio.logo.palette.red': 'Rouge et orange',
-  'studio.extraPlaceholder': 'Demande en plus (facultatif), ex. : lettres noires, ajoute une flamme',
+  'studio.extraPlaceholder': 'Décris le style et la forme du logo que tu veux, ex. : un lotus en traits fins, lettres à empattements, tons dorés',
   'studio.refinePlaceholder': 'Modifie le logo en le décrivant, ex. : mets le texte en noir',
   'studio.refineBusy': 'L’IA modifie le logo... (environ 20–30 secondes)',
   'studio.previous': 'Précédent',

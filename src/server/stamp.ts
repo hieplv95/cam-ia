@@ -11,7 +11,8 @@ import path from 'node:path';
 type CK = any;
 const g = globalThis as unknown as { __camiCanvasKit?: Promise<CK>; __camiSignature?: unknown };
 
-function canvasKit(): Promise<CK> {
+/** Shared with the old-photo crop (printCrop.ts). */
+export function canvasKit(): Promise<CK> {
   if (!g.__camiCanvasKit) {
     const dir = path.join(process.cwd(), 'node_modules', 'canvaskit-wasm', 'bin', 'full');
     // A require made at run time, so the server bundle doesn't try to pack the WebAssembly loader.

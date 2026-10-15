@@ -8,6 +8,7 @@ import { cleanChoices, cleanPart, MAX_BRAND, MAX_EXTRA, MAX_TAGLINE, studioProbl
 import { caller, charge, creditsOf, isDenied, refund, settle, type Caller } from '@/src/server/account';
 import { AiError, editImage, hasAiSource } from '@/src/server/gemini';
 import { tr } from '@/src/server/i18n';
+import { isolatePrint } from '@/src/server/printCrop';
 import { logAi } from '@/src/server/stats';
 
 const MAX_BASE64_LENGTH = 8 * 1024 * 1024;
@@ -131,6 +132,15 @@ export async function POST(request: Request) {
       return json({ error: tr(request, 'server.badImage') }, 400);
     }
     const photo = body.image;
+    // A photo of an old print (on a table, a wall, in a frame...): cut the print out first, the image model would keep the whole scene.
+    if (tool.id === 'restore' && choices.fix?.includes('extract')) {
+      return paid(async () => {
+        const print = await isolatePrint(photo);
+        if (!print) return editImage(photo, instruction, SAFETY_INSTRUCTION, model);
+        const rest = { ...choices, fix: choices.fix.filter((id) => id !== 'extract') };
+        return editImage(print, studioPrompt(tool, rest, { extra }), SAFETY_INSTRUCTION, model);
+      });
+    }
     return paid(() => editImage(photo, instruction, SAFETY_INSTRUCTION, model));
   }
 

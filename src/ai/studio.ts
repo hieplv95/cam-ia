@@ -335,7 +335,7 @@ export function studioPrompt(
       if (!extract) {
         return (
           'Restore this old photograph:\n' +
-          steps.join('\n') +
+          (steps.length ? steps.join('\n') : '- gently clean it and improve its quality') +
           '\nKeep the composition, people, poses, clothing and background exactly the same, and keep it looking like a real photo (not a painting or illustration).' +
           request
         );

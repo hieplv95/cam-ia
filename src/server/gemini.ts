@@ -200,9 +200,10 @@ const TEXT_FALLBACKS = ['gemini-3.5-flash', 'gemini-3-flash-preview'];
 
 /**
  * Writes text (blog articles, topic ideas). With `json`, the model must answer with JSON only.
+ * With `image` (a JPEG, base64), the model looks at it first (e.g. to locate an old print in a photo).
  * Same sources and fallbacks as images.
  */
-export async function generateText(prompt: string, systemInstruction: string, opts: { model?: string; json?: boolean; timeoutMs?: number } = {}): Promise<TextResult> {
+export async function generateText(prompt: string, systemInstruction: string, opts: { model?: string; json?: boolean; timeoutMs?: number; image?: string; temperature?: number } = {}): Promise<TextResult> {
   if (!hasAiSource()) throw new AiError('server.noAiSource', '', 500);
   const all = usable();
   if (!all.length) throw new AiError('server.aiNoCredit', 'no usable source', 503);
@@ -212,8 +213,8 @@ export async function generateText(prompt: string, systemInstruction: string, op
 
   const body = {
     systemInstruction: { parts: [{ text: systemInstruction }] },
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.8, maxOutputTokens: 16_384, ...(opts.json && { responseMimeType: 'application/json' }) },
+    contents: [{ role: 'user', parts: [...(opts.image ? [{ inlineData: { mimeType: 'image/jpeg', data: opts.image } }] : []), { text: prompt }] }],
+    generationConfig: { temperature: opts.temperature ?? 0.8, maxOutputTokens: 16_384, ...(opts.json && { responseMimeType: 'application/json' }) },
   };
 
   let last = '';

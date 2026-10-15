@@ -284,8 +284,12 @@ export async function testConnection(sources: RuntimeSource[]) {
  * Each source tries them in that order until one accepts the request. The job id says which one runs it.
  */
 
-/** The video model; override with GEMINI_VIDEO_MODEL in .env when Google renames it. */
-export const videoModel = () => process.env.GEMINI_VIDEO_MODEL || 'gemini-omni-1.1-flash';
+/**
+ * Video model ids, tried in order (a project may only see one of them, e.g. the preview).
+ * GEMINI_VIDEO_MODEL in .env (comma separated) goes first.
+ */
+export const videoModels = () =>
+  [...new Set([...(process.env.GEMINI_VIDEO_MODEL ?? '').split(','), 'gemini-omni-1.1-flash', 'gemini-omni-flash-preview'].map((m) => m.trim()).filter(Boolean))];
 
 async function authHeaders(s: Source): Promise<Record<string, string>> {
   if (s.kind === 'studio') return { 'x-goog-api-key': s.apiKey };
@@ -391,27 +395,32 @@ export async function startVideo(prompt: string, image?: string): Promise<{ id: 
   const all = usable();
   if (!all.length) throw new AiError('server.aiNoCredit', 'no usable source', 503);
   const ready = all.filter((s) => (downUntil.get(s.id) ?? 0) <= Date.now());
-  const model = videoModel();
+  const models = videoModels();
   const errors: string[] = [];
   let last = '';
   for (const s of ready.length ? ready : all) {
     const methods: Method[] = s.kind === 'studio' ? ['int', 'lro', 'gc'] : ['lro', 'int', 'gc'];
+    let nextSource = false;
     for (const method of methods) {
-      try {
-        const id = await startWith(s, method, model, prompt, image);
-        console.log(`[video] started ${id.slice(0, 120)} via ${s.id} (${model}, ${method})`);
-        return { id, source: s.id, model };
-      } catch (e) {
-        last = e instanceof Error ? `${e.name} ${e.message}` : String(e);
-        errors.push(`${method}: ${last.slice(0, 250)}`);
-        console.error(`[video] ${s.id} ${model} ${method} failed:`, last.slice(0, 500));
-        if (isOutOfMoney(last) || isNoAccess(last) || isRateLimit(last)) {
-          markDown(s, last);
-          break; // next source
+      for (const model of models) {
+        try {
+          const id = await startWith(s, method, model, prompt, image);
+          console.log(`[video] started ${id.slice(0, 120)} via ${s.id} (${model}, ${method})`);
+          return { id, source: s.id, model };
+        } catch (e) {
+          last = e instanceof Error ? `${e.name} ${e.message}` : String(e);
+          errors.push(`${method} ${model}: ${last.slice(0, 250)}`);
+          console.error(`[video] ${s.id} ${model} ${method} failed:`, last.slice(0, 500));
+          if (isOutOfMoney(last) || isNoAccess(last) || isRateLimit(last)) {
+            markDown(s, last);
+            nextSource = true;
+            break;
+          }
+          if (isWrongMethod(last) || isTimeout(last)) continue; // next model, then next method
+          throw new AiError(friendly(last), errors.join('\n'), 502);
         }
-        if (isWrongMethod(last) || isTimeout(last)) continue; // next method
-        throw new AiError(friendly(last), errors.join('\n'), 502);
       }
+      if (nextSource) break;
     }
   }
   throw new AiError(friendly(last), errors.join('\n'), 502);

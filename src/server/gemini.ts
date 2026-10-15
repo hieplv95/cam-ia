@@ -276,19 +276,111 @@ export async function testConnection(sources: RuntimeSource[]) {
   );
 }
 
-/* ---------- Video (Gemini Omni, through the Interactions API) ---------- */
+/* ---------- Video (Gemini Omni) ----------
+ * Google serves video models in more than one way, depending on the model and on Vertex vs AI Studio:
+ *   lro: :predictLongRunning, then :fetchPredictOperation (Vertex) or GET the operation (AI Studio), like Veo;
+ *   int: the Interactions API in the background (AI Studio);
+ *   gc:  plain generateContent with a VIDEO response, awaited here in the background.
+ * Each source tries them in that order until one accepts the request. The job id says which one runs it.
+ */
 
 /** The video model; override with GEMINI_VIDEO_MODEL in .env when Google renames it. */
 export const videoModel = () => process.env.GEMINI_VIDEO_MODEL || 'gemini-omni-1.1-flash';
 
-async function interactionsUrl(s: Source, id?: string): Promise<{ url: string; headers: Record<string, string> }> {
-  const tail = `/interactions${id ? `/${encodeURIComponent(id)}` : ''}`;
-  if (s.kind === 'studio') return { url: `https://generativelanguage.googleapis.com/v1beta${tail}`, headers: { 'x-goog-api-key': s.apiKey } };
-  const host = s.location === 'global' ? 'aiplatform.googleapis.com' : `${s.location}-aiplatform.googleapis.com`;
+async function authHeaders(s: Source): Promise<Record<string, string>> {
+  if (s.kind === 'studio') return { 'x-goog-api-key': s.apiKey };
   const token = await s.auth.getAccessToken();
   if (!token) throw new Error('UNAUTHENTICATED: Could not load the default credentials');
-  return { url: `https://${host}/v1beta1/projects/${s.project}/locations/${s.location}${tail}`, headers: { authorization: `Bearer ${token}` } };
+  return { authorization: `Bearer ${token}` };
 }
+
+const vertexHost = (s: Extract<Source, { kind: 'vertex' }>) => (s.location === 'global' ? 'aiplatform.googleapis.com' : `${s.location}-aiplatform.googleapis.com`);
+
+/** Full model path: for :predictLongRunning and :fetchPredictOperation. */
+function modelUrl(s: Source, model: string) {
+  return s.kind === 'studio'
+    ? `https://generativelanguage.googleapis.com/v1beta/models/${model}`
+    : `https://${vertexHost(s)}/v1/projects/${s.project}/locations/${s.location}/publishers/google/models/${model}`;
+}
+
+function interactionsUrl(s: Source, id?: string) {
+  const tail = `/interactions${id ? `/${encodeURIComponent(id)}` : ''}`;
+  return s.kind === 'studio'
+    ? `https://generativelanguage.googleapis.com/v1beta${tail}`
+    : `https://${vertexHost(s)}/v1beta1/projects/${s.project}/locations/${s.location}${tail}`;
+}
+
+async function send(s: Source, url: string, body?: unknown, timeoutMs = 60_000) {
+  const res = await fetch(url, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers: { 'content-type': 'application/json', ...(await authHeaders(s)) },
+    ...(body !== undefined && { body: JSON.stringify(body) }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${text}`);
+  return JSON.parse(text);
+}
+
+/** Videos made with generateContent, kept in memory for half an hour (lost if the server restarts). */
+type LocalJob = { done: boolean; video?: string; mimeType?: string; error?: string; at: number };
+const localJobs = ((globalThis as unknown as { __camiVideoJobs?: Map<string, LocalJob> }).__camiVideoJobs ??= new Map<string, LocalJob>());
+
+/** The video in a generateContent answer: inline bytes or a file to download. */
+function videoPart(data: any): { data?: string; uri?: string; mime_type?: string } | null {
+  const part = (data?.candidates?.[0]?.content?.parts ?? []).find((p: any) => p.inlineData?.mimeType?.startsWith('video/') || p.fileData?.fileUri);
+  if (!part) return null;
+  return part.inlineData ? { data: part.inlineData.data, mime_type: part.inlineData.mimeType } : { uri: part.fileData.fileUri, mime_type: part.fileData.mimeType };
+}
+
+type Method = 'lro' | 'int' | 'gc';
+
+/** Asks one source to start a video with one method; returns the job id (prefixed with the method). */
+async function startWith(s: Source, method: Method, model: string, prompt: string, image?: string): Promise<string> {
+  if (method === 'lro') {
+    const op = await send(s, `${modelUrl(s, model)}:predictLongRunning`, {
+      instances: [{ prompt, ...(image && { image: { bytesBase64Encoded: image, mimeType: 'image/jpeg' } }) }],
+      parameters: { aspectRatio: '9:16', sampleCount: 1, generateAudio: true },
+    });
+    if (!op?.name) throw new Error(`no operation name: ${JSON.stringify(op).slice(0, 300)}`);
+    return `lro|${model}|${op.name}`;
+  }
+  if (method === 'int') {
+    const data = await send(s, interactionsUrl(s), {
+      model,
+      input: [...(image ? [{ type: 'image', data: image, mime_type: 'image/jpeg' }] : []), { type: 'text', text: prompt }],
+      background: true,
+      store: true,
+      generation_config: { video_config: { task: image ? 'image_to_video' : 'text_to_video' } },
+    });
+    if (!data?.id) throw new Error(`no interaction id: ${JSON.stringify(data).slice(0, 300)}`);
+    return `int|${data.id}`;
+  }
+  // generateContent answers only when the video is ready (minutes), so it runs in the background here.
+  const id = `gc|${randomId()}`;
+  for (const [k, j] of localJobs) if (Date.now() - j.at > 30 * 60_000) localJobs.delete(k);
+  localJobs.set(id, { done: false, at: Date.now() });
+  const body = {
+    contents: [{ role: 'user', parts: [...(image ? [{ inlineData: { mimeType: 'image/jpeg', data: image } }] : []), { text: prompt }] }],
+    generationConfig: { responseModalities: ['VIDEO'] },
+  };
+  send(s, `${modelUrl(s, model)}:generateContent`, body, 10 * 60_000)
+    .then(async (data) => {
+      const out = videoPart(data);
+      if (!out) throw new Error(`no video in the answer: ${JSON.stringify(data?.candidates?.[0]?.finishReason ?? data?.promptFeedback ?? data).slice(0, 300)}`);
+      localJobs.set(id, { done: true, ...(await videoBytes(s, out)), at: Date.now() });
+    })
+    .catch((e) => {
+      console.error(`[video] ${id} failed:`, String(e).slice(0, 500));
+      localJobs.set(id, { done: true, error: String(e).slice(0, 600), at: Date.now() });
+    });
+  return id;
+}
+
+const randomId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+/** Wrong method for this model (try the next one) rather than an account problem. */
+const isWrongMethod = (t: string) => /not supported|not found|"code":\s*(400|404)|HTTP (400|404)|INVALID_ARGUMENT|Unknown name|no (operation name|interaction id)/i.test(t);
 
 /**
  * Starts a video in the background (it takes one to three minutes). Returns the job id and the source that runs it,
@@ -300,41 +392,29 @@ export async function startVideo(prompt: string, image?: string): Promise<{ id: 
   if (!all.length) throw new AiError('server.aiNoCredit', 'no usable source', 503);
   const ready = all.filter((s) => (downUntil.get(s.id) ?? 0) <= Date.now());
   const model = videoModel();
-  const body = {
-    model,
-    input: [...(image ? [{ type: 'image', data: image, mime_type: 'image/jpeg' }] : []), { type: 'text', text: prompt }],
-    background: true,
-    store: true,
-    generation_config: { video_config: { task: image ? 'image_to_video' : 'text_to_video' } },
-  };
+  const errors: string[] = [];
   let last = '';
   for (const s of ready.length ? ready : all) {
-    try {
-      const { url, headers } = await interactionsUrl(s);
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', ...headers },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(60_000),
-      });
-      const text = await res.text();
-      if (!res.ok) throw new Error(`HTTP ${res.status} ${text}`);
-      const data = JSON.parse(text);
-      if (!data?.id) throw new Error(`no interaction id: ${text.slice(0, 300)}`);
-      console.log(`[video] started ${data.id} via ${s.id} (${model}), status ${data.status}`);
-      return { id: data.id, source: s.id, model };
-    } catch (e) {
-      last = e instanceof Error ? `${e.name} ${e.message}` : String(e);
-      console.error(`[video] ${s.id} ${model} failed:`, last.slice(0, 500));
-      if (isOutOfMoney(last) || isNoAccess(last) || isRateLimit(last)) {
-        markDown(s, last);
-        continue;
+    const methods: Method[] = s.kind === 'studio' ? ['int', 'lro', 'gc'] : ['lro', 'int', 'gc'];
+    for (const method of methods) {
+      try {
+        const id = await startWith(s, method, model, prompt, image);
+        console.log(`[video] started ${id.slice(0, 120)} via ${s.id} (${model}, ${method})`);
+        return { id, source: s.id, model };
+      } catch (e) {
+        last = e instanceof Error ? `${e.name} ${e.message}` : String(e);
+        errors.push(`${method}: ${last.slice(0, 250)}`);
+        console.error(`[video] ${s.id} ${model} ${method} failed:`, last.slice(0, 500));
+        if (isOutOfMoney(last) || isNoAccess(last) || isRateLimit(last)) {
+          markDown(s, last);
+          break; // next source
+        }
+        if (isWrongMethod(last) || isTimeout(last)) continue; // next method
+        throw new AiError(friendly(last), errors.join('\n'), 502);
       }
-      if (isMissingModel(last) || isTimeout(last)) continue;
-      throw new AiError(friendly(last), last, 502);
     }
   }
-  throw new AiError(friendly(last), last, 502);
+  throw new AiError(friendly(last), errors.join('\n'), 502);
 }
 
 export type VideoCheck =
@@ -346,26 +426,48 @@ export type VideoCheck =
 async function videoBytes(s: Source, out: { data?: string; uri?: string; mime_type?: string }) {
   const mimeType = out.mime_type || 'video/mp4';
   if (out.data) return { video: out.data, mimeType };
-  if (!out.uri) throw new Error('the interaction finished without a video');
+  if (!out.uri) throw new Error('finished without a video');
   // Vertex may answer with a Cloud Storage path; read it through the storage API.
   const m = /^gs:\/\/([^/]+)\/(.+)$/.exec(out.uri);
   const url = m ? `https://storage.googleapis.com/storage/v1/b/${m[1]}/o/${encodeURIComponent(m[2])}?alt=media` : out.uri;
-  const headers: Record<string, string> =
-    s.kind === 'studio' ? { 'x-goog-api-key': s.apiKey } : { authorization: `Bearer ${await s.auth.getAccessToken()}` };
-  const res = await fetch(url, { headers, signal: AbortSignal.timeout(120_000) });
+  const res = await fetch(url, { headers: await authHeaders(s), signal: AbortSignal.timeout(120_000) });
   if (!res.ok) throw new Error(`download HTTP ${res.status} ${(await res.text()).slice(0, 300)}`);
-  return { video: Buffer.from(await res.arrayBuffer()).toString('base64'), mimeType: res.headers.get('content-type')?.startsWith('video/') ? res.headers.get('content-type')! : mimeType };
+  const type = res.headers.get('content-type');
+  return { video: Buffer.from(await res.arrayBuffer()).toString('base64'), mimeType: type?.startsWith('video/') ? type : mimeType };
 }
 
 /** Where a background video stands. */
 export async function checkVideo(id: string, sourceId: string): Promise<VideoCheck> {
+  if (id.startsWith('gc|')) {
+    const job = localJobs.get(id);
+    if (!job) return { status: 'failed', error: 'Máy chủ đã khởi động lại trong lúc làm video này.' };
+    if (!job.done) return { status: 'running', state: 'generating' };
+    return job.error ? { status: 'failed', error: job.error } : { status: 'done', video: job.video!, mimeType: job.mimeType! };
+  }
   const s = current().built.find((x) => x.id === sourceId);
   if (!s) return { status: 'failed', error: 'Nguồn AI chạy video này không còn trong cài đặt.' };
-  const { url, headers } = await interactionsUrl(s, id);
-  const res = await fetch(url, { headers, signal: AbortSignal.timeout(60_000) });
-  const text = await res.text();
-  if (!res.ok) return { status: 'failed', error: `HTTP ${res.status} ${text.slice(0, 500)}` };
-  const data = JSON.parse(text);
+
+  if (id.startsWith('lro|')) {
+    const [, model, name] = id.split('|');
+    const op =
+      s.kind === 'vertex'
+        ? await send(s, `${modelUrl(s, model)}:fetchPredictOperation`, { operationName: name })
+        : await send(s, `https://generativelanguage.googleapis.com/v1beta/${name}`);
+    if (!op?.done) return { status: 'running', state: 'in_progress' };
+    if (op.error) return { status: 'failed', error: JSON.stringify(op.error).slice(0, 600) };
+    const r = op.response ?? {};
+    // Vertex: response.videos[]; AI Studio: response.generateVideoResponse.generatedSamples[].video.
+    const v = r.videos?.[0] ?? r.generateVideoResponse?.generatedSamples?.[0]?.video ?? r.generatedVideos?.[0]?.video;
+    if (!v) {
+      console.warn('[video] operation done without a video:', JSON.stringify(op).slice(0, 1000));
+      const why = r.raiMediaFilteredReasons ?? r.generateVideoResponse?.raiMediaFilteredReasons;
+      return { status: 'failed', error: why ? `Bộ lọc an toàn của Google chặn: ${JSON.stringify(why)}` : 'AI đã chạy xong nhưng không trả video.' };
+    }
+    return { status: 'done', ...(await videoBytes(s, { data: v.bytesBase64Encoded ?? v.videoBytes, uri: v.gcsUri ?? v.uri, mime_type: v.mimeType })) };
+  }
+
+  const interactionId = id.startsWith('int|') ? id.slice(4) : id;
+  const data = await send(s, interactionsUrl(s, interactionId));
   const state: string = data?.status ?? 'unknown';
   if (['in_progress', 'queued', 'requires_action'].includes(state)) return { status: 'running', state };
   if (state !== 'completed') {
@@ -378,7 +480,7 @@ export async function checkVideo(id: string, sourceId: string): Promise<VideoChe
     .find((c: any) => c?.type === 'video');
   const out = data?.output_video ?? fromSteps;
   if (!out) {
-    console.warn('[video] completed without a video:', text.slice(0, 1000));
+    console.warn('[video] completed without a video:', JSON.stringify(data).slice(0, 1000));
     return { status: 'failed', error: 'AI đã chạy xong nhưng không trả video (có thể bị bộ lọc an toàn chặn).' };
   }
   return { status: 'done', ...(await videoBytes(s, out)) };

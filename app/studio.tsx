@@ -100,7 +100,9 @@ export default function Studio() {
   const pick = (g: StudioGroup, id: string) =>
     setChoices((c) => {
       const cur = c[g.id] ?? [];
-      if (!g.multi) return { ...c, [g.id]: [id] };
+      // A logo idea also picks the style, layout and colors that suit it (each can still be changed).
+      const sets = g.options.find((o) => o.id === id)?.sets ?? {};
+      if (!g.multi) return { ...c, ...Object.fromEntries(Object.entries(sets).map(([k, v]) => [k, [v]])), [g.id]: [id] };
       return { ...c, [g.id]: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] };
     });
 

@@ -5,7 +5,12 @@ import type { MessageKey } from '../i18n/core';
  * The app only sends option ids; the server turns them into the English instruction below.
  * Texts shown in the app come from the translations, keyed by ids (see studioText).
  */
-export type StudioOption = { id: string; prompt: string };
+export type StudioOption = {
+  id: string;
+  prompt: string;
+  /** Picking this option also picks these options in other groups (logo ideas preset style, layout and colors). */
+  sets?: Record<string, string>;
+};
 export type StudioGroup = {
   id: string;
   /** Several options can be on at once (otherwise exactly one). */
@@ -139,6 +144,69 @@ export const studioTools: StudioTool[] = [
         ],
       },
       {
+        // Ready-made ideas by business: the icon idea, plus a style, layout and colors that suit it.
+        id: 'idea',
+        defaults: [AUTO],
+        options: [
+          { id: AUTO, prompt: '' },
+          {
+            id: 'nails',
+            prompt: 'a nail salon: an elegant icon such as a slender hand with long manicured nails, a nail polish bottle, or a fingertip merged with a small flower',
+            sets: { look: 'luxury', layout: 'stacked', palette: 'pink' },
+          },
+          {
+            id: 'spa',
+            prompt: 'a beauty spa or skincare studio: a calm icon such as a lotus, a leaf or a soft face profile, conveying purity and relaxation',
+            sets: { look: 'minimal', layout: 'stacked', palette: 'green' },
+          },
+          {
+            id: 'hair',
+            prompt: 'a hair salon or barber shop: an icon built from scissors, a comb or a flowing strand of hair',
+            sets: { look: 'modern', layout: 'horizontal', palette: 'black' },
+          },
+          {
+            id: 'bakery',
+            prompt: 'a bakery or pastry shop: a warm icon such as a wheat stalk, a croissant, a whisk or a cupcake',
+            sets: { look: 'vintage', layout: 'badge', palette: 'brown' },
+          },
+          {
+            id: 'coffee',
+            prompt: 'a coffee shop: an icon such as a coffee bean, or a cup whose steam forms a leaf or a heart',
+            sets: { look: 'vintage', layout: 'badge', palette: 'brown' },
+          },
+          {
+            id: 'food',
+            prompt: 'a restaurant or street-food brand: an appetizing icon such as a chef hat, a fork and spoon, a cooking pot or a signature dish',
+            sets: { look: 'modern', layout: 'stacked', palette: 'red' },
+          },
+          {
+            id: 'fashion',
+            prompt: 'a fashion boutique: a chic icon such as a hanger, a dress silhouette, a needle and thread, or an elegant monogram',
+            sets: { look: 'luxury', layout: 'monogram', palette: 'black' },
+          },
+          {
+            id: 'kids',
+            prompt: "a kids' or toy shop: a playful icon such as a smiling star, a balloon, a teddy bear or building blocks",
+            sets: { look: 'cute', layout: 'mascot', palette: 'colorful' },
+          },
+          {
+            id: 'pets',
+            prompt: 'a pet shop or pet groomer: a friendly icon such as a paw print, or a dog and a cat silhouette forming a heart',
+            sets: { look: 'cute', layout: 'stacked', palette: 'blue' },
+          },
+          {
+            id: 'fitness',
+            prompt: 'a gym or fitness coach: an energetic icon such as a dumbbell, a running figure or a lightning bolt, conveying strength and movement',
+            sets: { look: 'modern', layout: 'horizontal', palette: 'red' },
+          },
+          {
+            id: 'photo',
+            prompt: 'a photographer or photo studio: an icon such as a camera, a lens aperture or a viewfinder frame',
+            sets: { look: 'minimal', layout: 'horizontal', palette: 'black' },
+          },
+        ],
+      },
+      {
         id: 'look',
         defaults: [AUTO],
         options: [
@@ -152,6 +220,19 @@ export const studioTools: StudioTool[] = [
         ],
       },
       {
+        id: 'layout',
+        defaults: [AUTO],
+        options: [
+          { id: AUTO, prompt: '' },
+          { id: 'stacked', prompt: 'the icon centered above the brand name' },
+          { id: 'horizontal', prompt: 'the icon on the left and the brand name on the right, on one line' },
+          { id: 'wordmark', prompt: 'a wordmark only: the brand name in distinctive custom lettering, with at most a tiny accent and no separate icon' },
+          { id: 'monogram', prompt: "a monogram: the brand's initials elegantly combined inside a simple shape, with the full brand name small underneath" },
+          { id: 'badge', prompt: 'an emblem: the icon and the brand name together inside a circular or shield-shaped badge' },
+          { id: 'mascot', prompt: 'a friendly mascot character as the icon, with the brand name underneath' },
+        ],
+      },
+      {
         id: 'palette',
         defaults: [AUTO],
         options: [
@@ -161,6 +242,8 @@ export const studioTools: StudioTool[] = [
           { id: 'pink', prompt: 'blush pink and rose gold' },
           { id: 'green', prompt: 'sage green and natural tones' },
           { id: 'blue', prompt: 'navy and sky blue' },
+          { id: 'brown', prompt: 'warm coffee brown and cream' },
+          { id: 'red', prompt: 'warm red and orange' },
           { id: 'colorful', prompt: 'a cheerful harmonious multicolor palette' },
           // Only offered when a reference image was added.
           { id: REFERENCE_PALETTE, prompt: 'the main colors of the reference image' },
@@ -303,6 +386,10 @@ export function studioPrompt(
     case 'logo': {
       // "Auto" has no prompt: the model decides (or keeps the sketch's own look).
       const look = p('look').find(Boolean);
+      const [idea] = p('idea').filter(Boolean);
+      const [layout] = p('layout').filter(Boolean);
+      const nameOnly = choices.layout?.includes('wordmark');
+      const icon = nameOnly ? '' : ', with a simple memorable icon';
       const brand = text.brand?.trim();
       const tagline = text.tagline?.trim();
       const fromReference = choices.palette?.includes(REFERENCE_PALETTE);
@@ -311,7 +398,14 @@ export function studioPrompt(
       const extra = text.extra?.trim() ? `Also follow this extra request from the client (may be in any language): "${text.extra.trim()}". ` : '';
       const business = tagline ? ` (business: "${tagline}", may be in any language)` : '';
       const about = brand ? `a brand named "${brand}"${business}` : `a business${business}`;
-      const finish = 'Centered on a plain light background, flat vector look, high contrast, no mockup, no watermark.';
+      const kind = idea ? `This is for ${idea}. ` : '';
+      // What separates a designer's logo from clip art; the image model tends to over-decorate without it.
+      const craft =
+        'Work like a senior brand designer: one clear, distinctive idea that fits the business (not generic clip art), ' +
+        'built from a few simple shapes with consistent line weight and clever use of negative space; at most 2–3 flat colors; ' +
+        'clean, well-spaced typography that pairs with the icon; strong balance and alignment; it must stay recognizable when small and in a single color. ' +
+        'Avoid photos, 3D, bevels, drop shadows, heavy gradients, tiny details and busy backgrounds. ';
+      const finish = 'Centered on a plain white or very light background with generous margins, crisp flat vector look, no mockup, no watermark.';
       // Never recreate someone else's trademark, whatever the mode.
       const notOthers = "If the attached image is a well-known company's logo, do not reproduce it; only borrow its general style.";
 
@@ -322,7 +416,9 @@ export function studioPrompt(
           'Redraw it as a polished, professional logo that clearly keeps its concept: the same main subject or character, ' +
           'its pose and expression, the key symbols and props, and the overall layout. ' +
           'Clean up the lines and proportions and make it work as a logo (bold, simple, readable at small sizes). ' +
+          kind +
           (look ? `Finish: ${look}, applied only where it suits the sketch. ` : "Keep the sketch's own character and drawing style. ") +
+          (layout ? `Arrange it as ${layout}. ` : '') +
           `Colors: ${palette ?? 'a harmonious palette that suits the concept'}. ` +
           (brand
             ? `The brand name must read "${brand}", spelled exactly like that. Keep any other text written in the sketch (such as a slogan), spelled exactly as written; add no other words. `
@@ -336,11 +432,13 @@ export function studioPrompt(
             (fromReference ? ', mood and colors' : ' and mood') +
             `, but create a new, original logo rather than a copy of it. ${notOthers} `
           : '') +
-        `Design a professional logo for ${about}. ` +
-        `Style: ${look ?? 'whatever suits the brand best'}. Colors: ${palette ?? 'colors that suit the brand'}. ` +
+        `Design a professional, original logo for ${about}. ${kind}` +
+        `Style: ${look ?? 'whatever suits the brand best'}. Layout: ${layout ?? 'whatever lockup of icon and name suits the brand best'}. ` +
+        `Colors: ${palette ?? 'colors that suit the brand'}. ` +
         (brand
-          ? `Show the brand name "${brand}" spelled exactly like that as the wordmark, with a simple memorable icon. `
-          : 'Use the brand name written in the reference image, spelled exactly, as the wordmark, with a simple memorable icon; if it shows no name, make a symbol-only logo without words. ') +
+          ? `Show the brand name "${brand}" spelled exactly like that as the wordmark${icon}. `
+          : `Use the brand name written in the reference image, spelled exactly, as the wordmark${icon}; if it shows no name, make a symbol-only logo without words. `) +
+        craft +
         `${extra}${finish} No extra words.`
       );
     }

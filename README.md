@@ -118,6 +118,8 @@ index.web.js             Nạp Skia (WebAssembly) trước khi mở app trên we
 2. Sửa `origin` trong `app.json` (plugin `expo-router`) và `EXPO_PUBLIC_API_URL` trong `.env` thành URL vừa deploy.
 3. **Build app:**
    ```bash
-   eas build -p android
-   eas build -p ios
+   npx eas-cli@latest build -p android --profile production   # file .aab để tải lên Google Play
+   npx eas-cli@latest build -p android --profile preview      # file .apk để cài thử
+   npx eas-cli@latest build -p ios --profile production
    ```
+   Các profile nằm trong `eas.json` (đã đặt sẵn `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_SHARE_URL` = `https://camia.app`). `versionCode` do EAS tự tăng mỗi lần build. Nếu máy chủ có đặt `APP_TOKEN` thì phải thêm `EXPO_PUBLIC_APP_TOKEN` cùng giá trị trên EAS (`npx eas-cli@latest env:create`), vì `.env` không được gửi lên EAS.

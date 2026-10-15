@@ -289,7 +289,7 @@ export async function testConnection(sources: RuntimeSource[]) {
  * GEMINI_VIDEO_MODEL in .env (comma separated) goes first.
  */
 export const videoModels = () =>
-  [...new Set([...(process.env.GEMINI_VIDEO_MODEL ?? '').split(','), 'gemini-omni-1.1-flash', 'gemini-omni-flash-preview'].map((m) => m.trim()).filter(Boolean))];
+  [...new Set([...(process.env.GEMINI_VIDEO_MODEL ?? '').split(','), 'gemini-omni-1.1-flash-preview', 'gemini-omni-1.1-flash', 'gemini-omni-flash-preview'].map((m) => m.trim()).filter(Boolean))];
 
 async function authHeaders(s: Source): Promise<Record<string, string>> {
   if (s.kind === 'studio') return { 'x-goog-api-key': s.apiKey };

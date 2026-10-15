@@ -13,7 +13,7 @@ import { colors, font } from '../theme';
 
 const POLL_MS = 6000;
 /** Google usually needs one to three minutes; past this the page stops asking. */
-const GIVE_UP_MS = 8 * 60_000;
+const GIVE_UP_MS = 12 * 60_000;
 
 type Quota = { kind: 'guest'; left: number; limit: number } | { kind: 'member'; cost: number; left: number; unlimited: boolean };
 

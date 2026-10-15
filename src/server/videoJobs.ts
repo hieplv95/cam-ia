@@ -33,12 +33,18 @@ function table() {
         ip TEXT NOT NULL,
         usage_id INTEGER,
         status TEXT NOT NULL DEFAULT 'running',
-        created_at INTEGER NOT NULL
+        created_at INTEGER NOT NULL,
+        clips INTEGER NOT NULL DEFAULT 1,
+        parts TEXT
       );
       CREATE INDEX IF NOT EXISTS video_jobs_device ON video_jobs (device);
       CREATE INDEX IF NOT EXISTS video_jobs_ip_time ON video_jobs (ip, created_at);
       CREATE INDEX IF NOT EXISTS video_jobs_time ON video_jobs (created_at);
     `);
+    // Tables made before 20 / 30 second videos.
+    const cols = (db().prepare('PRAGMA table_info(video_jobs)').all() as { name: string }[]).map((c) => c.name);
+    if (!cols.includes('clips')) db().exec('ALTER TABLE video_jobs ADD COLUMN clips INTEGER NOT NULL DEFAULT 1');
+    if (!cols.includes('parts')) db().exec('ALTER TABLE video_jobs ADD COLUMN parts TEXT');
     ready = true;
   }
   return db();
@@ -48,9 +54,9 @@ const count = (sql: string, ...args: (string | number)[]) => (table().prepare(sq
 
 /** Free videos a guest has left. */
 function guestLeft(c: Caller) {
-  const byIp = count("SELECT COUNT(*) AS n FROM video_jobs WHERE user_id IS NULL AND status != 'failed' AND ip = ? AND created_at >= ?", c.ip, Date.now() - GUEST_IP_WINDOW);
+  const byIp = count("SELECT COALESCE(SUM(clips), 0) AS n FROM video_jobs WHERE user_id IS NULL AND status != 'failed' AND ip = ? AND created_at >= ?", c.ip, Date.now() - GUEST_IP_WINDOW);
   if (byIp >= GUEST_FREE_VIDEOS * GUEST_IP_FACTOR) return 0;
-  const byDevice = c.device ? count("SELECT COUNT(*) AS n FROM video_jobs WHERE user_id IS NULL AND status != 'failed' AND device = ?", c.device) : byIp;
+  const byDevice = c.device ? count("SELECT COALESCE(SUM(clips), 0) AS n FROM video_jobs WHERE user_id IS NULL AND status != 'failed' AND device = ?", c.device) : byIp;
   return Math.max(0, GUEST_FREE_VIDEOS - byDevice);
 }
 
@@ -66,17 +72,21 @@ export function videoQuota(c: Caller): VideoQuota {
 export type VideoDenied = { status: number; code: 'login_required' | 'no_points' | 'busy'; key: MessageKey; params?: Params };
 
 /**
- * Checks and reserves one video before Google is called (no await in between, so parallel requests can't overspend).
- * Returns the usage row to give back if the video fails (members only), or why it can't be made.
+ * Checks and reserves a video of `clips` clips before Google is called (no await in between, so parallel requests
+ * can't overspend). Returns the usage row to give back if the video fails (members only), or why it can't be made.
  */
-export function reserveVideo(c: Caller): { usageId: number | null } | VideoDenied {
+export function reserveVideo(c: Caller, clips = 1): { usageId: number | null } | VideoDenied {
   const admin = isAdmin(c.user);
-  const today = count("SELECT COUNT(*) AS n FROM video_jobs WHERE status != 'failed' AND created_at >= ?", Date.now() - DAY);
-  if (!admin && today >= dailyLimit()) return { status: 503, code: 'busy', key: 'video.dailyLimit' };
+  const today = count("SELECT COALESCE(SUM(clips), 0) AS n FROM video_jobs WHERE status != 'failed' AND created_at >= ?", Date.now() - DAY);
+  if (!admin && today + clips > dailyLimit()) return { status: 503, code: 'busy', key: 'video.dailyLimit' };
   if (!c.user) {
-    return guestLeft(c) > 0 ? { usageId: null } : { status: 401, code: 'login_required', key: 'video.guestOut', params: { n: GUEST_FREE_VIDEOS } };
+    const left = guestLeft(c);
+    if (left >= clips) return { usageId: null };
+    return left > 0
+      ? { status: 401, code: 'login_required', key: 'video.guestTooLong', params: { left } }
+      : { status: 401, code: 'login_required', key: 'video.guestOut', params: { n: GUEST_FREE_VIDEOS } };
   }
-  const cost = videoPoints();
+  const cost = videoPoints() * clips;
   const left = creditsOf(c).left;
   if (!admin && left < cost) return { status: 402, code: 'no_points', key: 'video.noPoints', params: { cost, left } };
   const id = table()
@@ -92,13 +102,20 @@ export function releaseVideo(usageId: number | null) {
   if (usageId) table().prepare('DELETE FROM usage WHERE id = ?').run(usageId);
 }
 
-export function recordJob(c: Caller, id: string, source: string, usageId: number | null) {
+/** One clip made by one AI source. */
+export type VideoPart = { id: string; source: string };
+
+/** A video of one clip keeps that clip's id; a longer one gets its own id and lists its clips in `parts`. */
+export function recordJob(c: Caller, id: string, parts: VideoPart[], usageId: number | null) {
   table()
-    .prepare('INSERT INTO video_jobs (id, source, user_id, device, ip, usage_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(id, source, c.user?.id ?? null, c.user ? null : c.device, c.ip, usageId, 'running', Date.now());
+    .prepare('INSERT INTO video_jobs (id, source, user_id, device, ip, usage_id, status, created_at, clips, parts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(id, parts[0].source, c.user?.id ?? null, c.user ? null : c.device, c.ip, usageId, 'running', Date.now(), parts.length, parts.length > 1 ? JSON.stringify(parts) : null);
 }
 
-type JobRow = { id: string; source: string; user_id: number | null; device: string | null; ip: string; usage_id: number | null; status: string };
+type JobRow = { id: string; source: string; user_id: number | null; device: string | null; ip: string; usage_id: number | null; status: string; clips: number; parts: string | null };
+
+/** The clips of a job, in order. */
+export const partsOf = (row: JobRow): VideoPart[] => (row.parts ? JSON.parse(row.parts) : [{ id: row.id, source: row.source }]);
 
 /** The caller's own job (a guest's by device, or by IP without one), or null. */
 export function jobOf(c: Caller, id: string): JobRow | null {

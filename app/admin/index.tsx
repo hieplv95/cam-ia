@@ -11,7 +11,7 @@ import { SettingsTab } from '@/src/admin/SettingsTab';
 import { TrafficTab } from '@/src/admin/TrafficTab';
 import { Segmented } from '@/src/admin/ui';
 import { UsersTab } from '@/src/admin/UsersTab';
-import { VideoTab } from '@/src/admin/VideoTab';
+import { VideoMaker } from '@/src/video/VideoMaker';
 
 type Tab = 'overview' | 'traffic' | 'users' | 'seo' | 'blog' | 'video' | 'system' | 'settings';
 const TABS: { id: Tab; label: string }[] = [
@@ -50,7 +50,7 @@ function Dashboard() {
       {tab === 'users' && <UsersTab refresh={refresh} />}
       {tab === 'seo' && <SeoTab refresh={refresh} />}
       {tab === 'blog' && <BlogTab refresh={refresh} />}
-      {tab === 'video' && <VideoTab />}
+      {tab === 'video' && <VideoMaker />}
       {tab === 'system' && <SystemTab refresh={refresh} />}
       {tab === 'settings' && <SettingsTab refresh={refresh} />}
     </Shell>

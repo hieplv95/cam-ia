@@ -97,12 +97,13 @@ index.web.js             Nạp Skia (WebAssembly) trước khi mở app trên we
 - Số liệu lấy từ `data/cami.db`: bảng `ai_log` (mỗi yêu cầu AI), `actives` (thiết bị mở app mỗi ngày), `events` (bộ đếm chức năng theo ngày, chỉ tên chức năng, không có ảnh hay thông tin cá nhân; app gửi qua `/api/track`), `admin_log`. Mã nằm ở `src/server/admin.ts`, `src/server/stats.ts`, giao diện ở `app/admin/` và `src/admin/`. Trang quản trị chỉ có tiếng Việt.
 - Số liệu chức năng không dùng AI chỉ có từ bản app này trở đi; ảnh AI từ trước được tính vào mục "Không rõ".
 
-## Video AI (đang chạy thử)
+## Video AI
 
-- Trang **`/video`** (hoặc trang quản trị › tab **Video AI**): chọn mẫu (Nhảy trend, Ngạc nhiên ôm đầu, Ôm camera selfie, Catwalk, Tự mô tả), thêm ảnh thú cưng nếu muốn, bật/tắt nhạc nền, bấm **Tạo video**. Trang tự hỏi máy chủ mỗi 6 giây cho tới khi xong (thường 1–3 phút), rồi phát video và cho tải về.
-- Chỉ tài khoản trong `ADMIN_EMAILS` dùng được, không trừ điểm, nhưng Google tính tiền mỗi video vào nguồn AI đang dùng.
-- Model `gemini-omni-1.1-flash` qua Interactions API của Google (`src/server/gemini.ts` › `startVideo` / `checkVideo`), đổi bằng `GEMINI_VIDEO_MODEL`. Mẫu và câu lệnh: `src/ai/video.ts`. API: `app/api/admin/video+api.ts`, giao diện: `src/admin/VideoTab.tsx`.
-- Chạy thử trên máy: `.env` có nguồn AI (Vertex hoặc `GEMINI_API_KEY`) và `ADMIN_EMAILS=email-của-bạn`, chạy `npx expo start --web`, đăng ký bằng email đó, mở `http://localhost:8081/video`.
+- Trang **`/video`** (và trang quản trị › tab **Video AI**): chọn mẫu (Nhảy trend, Ngạc nhiên ôm đầu, Ôm camera selfie, Catwalk, Tự mô tả), thêm ảnh thú cưng nếu muốn, bật/tắt nhạc nền, bấm **Tạo video**. Trang hỏi máy chủ mỗi 6 giây cho tới khi xong (thường 1–3 phút), rồi phát video và cho tải về.
+- **Không cần đăng nhập**: khách được **2 video miễn phí** mỗi máy (thêm giới hạn theo IP để xóa dữ liệu app không lấy thêm được), hết thì app mở form tạo tài khoản. Thành viên trả **`VIDEO_POINTS`** điểm mỗi video (mặc định 20, trừ vào điểm tháng). Admin không giới hạn. Cả trang tối đa **`VIDEO_DAILY_LIMIT`** video mỗi ngày (mặc định 30) để người lạ không làm cạn credit AI. Video lỗi không bị tính, điểm được trả lại.
+- Model `gemini-omni-1.1-flash` qua Interactions API của Google (`src/server/gemini.ts` › `startVideo` / `checkVideo`), đổi bằng `GEMINI_VIDEO_MODEL`. Mẫu và câu lệnh: `src/ai/video.ts`. Lượt và việc đang chạy: `src/server/videoJobs.ts` (bảng `video_jobs`). API: `app/api/video+api.ts`. Giao diện: `src/video/VideoMaker.tsx`, `app/video.tsx`.
+- Trên điện thoại (app) chưa có trình phát video: bấm Tải video để mở/chia sẻ. Trên web phát ngay trong trang.
+- Chạy thử trên máy: `.env` có nguồn AI (Vertex hoặc `GEMINI_API_KEY`), chạy `npx expo start --web`, mở `http://localhost:8081/video`.
 
 ## Ngôn ngữ
 

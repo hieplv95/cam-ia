@@ -1,14 +1,13 @@
-import { AdminGate } from '@/src/admin/AdminGate';
 import { Shell } from '@/src/admin/Shell';
-import { VideoTab } from '@/src/admin/VideoTab';
+import { useT } from '@/src/i18n';
+import { VideoMaker } from '@/src/video/VideoMaker';
 
-/** /video: the AI video trial on its own page (admin only, same as the admin page's Video AI tab). */
+/** /video: AI video for everyone (a couple of free videos without an account, see src/server/videoJobs.ts). */
 export default function VideoPage() {
+  const t = useT();
   return (
-    <AdminGate title="Video AI">
-      <Shell title="Video AI" subtitle="Chạy thử · chỉ admin">
-        <VideoTab />
-      </Shell>
-    </AdminGate>
+    <Shell title={t('video.title')}>
+      <VideoMaker />
+    </Shell>
   );
 }

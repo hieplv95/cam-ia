@@ -1,67 +1,82 @@
 import * as ImagePicker from 'expo-image-picker';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { createElement, useEffect, useRef, useState } from 'react';
+import { createElement, useCallback, useEffect, useState } from 'react';
 import { Image, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
+import { apiFetch, openAuth, useAccount } from '../account';
+import { Button, Card } from '../admin/ui';
 import { MAX_VIDEO_EXTRA, videoTemplates } from '../ai/video';
 import { encodeBase64, loadPendingPair, resizeImage } from '../editor/imageOps';
+import { useT, type MessageKey } from '../i18n';
 import { colors, font } from '../theme';
-import { checkVideo, startVideo, type VideoJob } from './api';
-import { Button, Card } from './ui';
 
 const POLL_MS = 6000;
 /** Google usually needs one to three minutes; past this the page stops asking. */
 const GIVE_UP_MS = 8 * 60_000;
 
+type Quota = { kind: 'guest'; left: number; limit: number } | { kind: 'member'; cost: number; left: number; unlimited: boolean };
+
 /**
- * Trying out AI video (Gemini Omni) before it goes into the app: pick a template, optionally a photo of a pet,
- * start it, and the page checks every few seconds until the video is ready. Admin only, no points taken.
+ * AI video (/video, and the admin page's Video AI tab): pick a template, optionally a photo of a pet, start it,
+ * and the page asks the server every few seconds until the video is ready. Guests get a couple of free videos,
+ * then the sign-up sheet opens; members pay points (the server decides, see src/server/videoJobs.ts).
  */
-export function VideoTab() {
+export function VideoMaker() {
+  const t = useT();
+  const { user } = useAccount();
   const [template, setTemplate] = useState(videoTemplates[0].id);
   const [extra, setExtra] = useState('');
   const [music, setMusic] = useState(true);
   const [photo, setPhoto] = useState<{ uri: string; base64: string } | null>(null);
-  const [job, setJob] = useState<(VideoJob & { started: number }) | null>(null);
-  const [state, setState] = useState('');
+  const [job, setJob] = useState<{ id: string; started: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [video, setVideo] = useState<{ data: string; mimeType: string; seconds: number } | null>(null);
+  const [needsAccount, setNeedsAccount] = useState(false);
+  const [video, setVideo] = useState<{ data: string; mimeType: string } | null>(null);
+  const [quota, setQuota] = useState<Quota | null>(null);
   const [now, setNow] = useState(Date.now());
   const busy = !!job;
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const loadQuota = useCallback(() => {
+    apiFetch('/api/video')
+      .then(({ ok, data }) => ok && data?.quota && setQuota(data.quota))
+      .catch(() => {});
+  }, []);
+  // Signing in or out changes the quota.
+  useEffect(loadQuota, [loadQuota, user?.id]);
 
   useEffect(() => {
     if (!job) return;
     let stopped = false;
+    const finish = (msg?: string) => {
+      if (msg) setError(msg);
+      setJob(null);
+    };
     const tick = async () => {
-      setNow(Date.now());
-      if (Date.now() - job.started > GIVE_UP_MS) {
-        setError('Quá 8 phút vẫn chưa xong, trang ngừng chờ. Xem log máy chủ (pm2 logs camia).');
-        setJob(null);
-        return;
-      }
+      // Still sending the request (no id yet): only the clock runs.
+      if (!job.id) return;
+      if (Date.now() - job.started > GIVE_UP_MS) return finish(t('video.timeout'));
       try {
-        const r = await checkVideo(job.id, job.source);
+        const { ok, data } = await apiFetch(`/api/video?id=${encodeURIComponent(job.id)}`);
         if (stopped) return;
-        if (r.status === 'running') setState(r.state);
-        else {
-          if (r.status === 'done') setVideo({ data: r.video, mimeType: r.mimeType, seconds: Math.round((Date.now() - job.started) / 1000) });
-          else setError(r.error);
-          setJob(null);
-        }
-      } catch (e) {
-        if (!stopped) setState(`đang thử lại (${e instanceof Error ? e.message : e})`);
+        if (data?.quota) setQuota(data.quota);
+        if (!ok) return finish(data?.error ?? t('common.aiError'));
+        if (data.status === 'done') {
+          setVideo({ data: data.video, mimeType: data.mimeType });
+          finish();
+        } else if (data.status === 'failed') finish(data.error);
+      } catch {
+        // No network for a moment: ask again on the next tick.
       }
     };
-    timer.current = setInterval(tick, POLL_MS);
+    const poll = setInterval(tick, POLL_MS);
     const clock = setInterval(() => setNow(Date.now()), 1000);
     return () => {
       stopped = true;
-      if (timer.current) clearInterval(timer.current);
+      clearInterval(poll);
       clearInterval(clock);
     };
-  }, [job]);
+  }, [job, t]);
 
   const pickPhoto = async () => {
     setError(null);
@@ -72,21 +87,33 @@ export function VideoTab() {
       const { image } = await loadPendingPair({ kind: 'uri', uri });
       setPhoto({ uri, base64: encodeBase64(await resizeImage(image, 1280), 90) });
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(e instanceof Error ? e.message : t('common.cantOpenPhoto'));
     }
   };
 
   const start = async () => {
     setError(null);
+    setNeedsAccount(false);
     setVideo(null);
-    setState('đang gửi');
+    const started = Date.now();
+    setNow(started);
+    setJob({ id: '', started });
     try {
-      const j = await startVideo({ template, extra: extra.trim(), music, image: photo?.base64 });
-      setJob({ ...j, started: Date.now() });
-      setState('queued');
+      const { ok, data } = await apiFetch('/api/video', { body: { template, extra: extra.trim(), music, image: photo?.base64 } });
+      if (data?.quota) setQuota(data.quota);
+      if (!ok) {
+        setJob(null);
+        setError(data?.error ?? t('common.aiError'));
+        if (data?.code === 'login_required') {
+          setNeedsAccount(true);
+          openAuth({ mode: 'register', reason: data.error });
+        }
+        return;
+      }
+      setJob({ id: data.id, started });
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setState('');
+      setJob(null);
+      setError(e instanceof Error ? e.message : t('common.aiError'));
     }
   };
 
@@ -106,56 +133,65 @@ export function VideoTab() {
 
   const elapsed = job ? Math.round((now - job.started) / 1000) : 0;
   const custom = template === 'custom';
+  const quotaText = !quota
+    ? null
+    : quota.kind === 'guest'
+      ? t('video.freeLeft', { left: quota.left, limit: quota.limit })
+      : quota.unlimited
+        ? t('video.unlimited')
+        : t('video.cost', { cost: quota.cost, left: quota.left });
 
   return (
     <View style={{ gap: 16 }}>
-      <Card
-        title="Video AI (chạy thử)"
-        subtitle="Model Gemini Omni trên nguồn AI đang dùng. Chỉ admin thấy, không trừ điểm, nhưng Google vẫn tính tiền mỗi video vào nguồn AI."
-      >
-        <Text style={styles.label}>Mẫu</Text>
+      <Card title={t('video.title')} subtitle={t('video.subtitle')} right={quotaText ? <Text style={styles.quota}>{quotaText}</Text> : undefined}>
+        <Text style={styles.label}>{t('video.template')}</Text>
         <View style={styles.chips}>
-          {videoTemplates.map((t) => (
-            <Pressable key={t.id} onPress={() => setTemplate(t.id)} disabled={busy} style={[styles.chip, template === t.id && styles.chipOn]}>
-              <Text style={[styles.chipText, template === t.id && styles.chipTextOn]}>{t.label}</Text>
+          {videoTemplates.map((v) => (
+            <Pressable key={v.id} onPress={() => setTemplate(v.id)} disabled={busy} style={[styles.chip, template === v.id && styles.chipOn]}>
+              <Text style={[styles.chipText, template === v.id && styles.chipTextOn]}>{t(`video.t.${v.id}` as MessageKey)}</Text>
             </Pressable>
           ))}
         </View>
 
-        <Text style={styles.label}>Ảnh thú cưng (không bắt buộc)</Text>
+        <Text style={styles.label}>{t('video.photo')}</Text>
         <View style={styles.photoRow}>
           {photo ? <Image source={{ uri: photo.uri }} style={styles.thumb} /> : null}
-          <Button label={photo ? 'Đổi ảnh' : 'Chọn ảnh'} icon="image-outline" onPress={pickPhoto} tone="plain" disabled={busy} />
-          {photo ? <Button label="Bỏ ảnh" icon="close" onPress={() => setPhoto(null)} tone="plain" disabled={busy} /> : null}
+          <Button label={photo ? t('video.photoChange') : t('video.photoPick')} icon="image-outline" onPress={pickPhoto} tone="plain" disabled={busy} />
+          {photo ? <Button label={t('video.photoRemove')} icon="close" onPress={() => setPhoto(null)} tone="plain" disabled={busy} /> : null}
         </View>
-        <Text style={styles.hint}>Không chọn ảnh thì AI tự vẽ hai con mèo (cam trắng và xám) như video mẫu.</Text>
+        <Text style={styles.hint}>{t('video.photoHint')}</Text>
 
-        <Text style={styles.label}>{custom ? 'Mô tả video' : 'Yêu cầu thêm (không bắt buộc)'}</Text>
+        <Text style={styles.label}>{custom ? t('video.describe') : t('video.extra')}</Text>
         <TextInput
           value={extra}
           onChangeText={setExtra}
           editable={!busy}
           maxLength={MAX_VIDEO_EXTRA}
           multiline
-          placeholder={custom ? 'VD: chú chó corgi lướt ván trên biển, quay chậm' : 'VD: nền là bãi biển lúc hoàng hôn'}
+          placeholder={custom ? t('video.describePlaceholder') : t('video.extraPlaceholder')}
           placeholderTextColor={colors.textMute}
           style={[styles.input, styles.area]}
         />
 
         <View style={styles.switchRow}>
           <Switch value={music} onValueChange={setMusic} disabled={busy} />
-          <Text style={styles.hint}>Có nhạc nền (tắt nếu định chọn nhạc trend trên TikTok)</Text>
+          <Text style={styles.hint}>{t('video.music')}</Text>
         </View>
 
         <View style={styles.actions}>
-          <Button label={busy ? `Đang tạo… ${elapsed}s` : 'Tạo video'} icon="videocam-outline" onPress={start} disabled={busy || (custom && !extra.trim())} />
-          {busy ? <Text style={styles.hint}>Trạng thái: {state || '…'} · thường mất 1–3 phút, cứ để trang mở.</Text> : null}
+          <Button label={busy ? t('video.creating', { s: elapsed }) : t('video.create')} icon="videocam-outline" onPress={start} disabled={busy || (custom && !extra.trim())} />
+          {busy ? <Text style={styles.hint}>{t('video.wait')}</Text> : null}
         </View>
         {error ? <Text style={styles.error}>{error}</Text> : null}
+        {needsAccount && !user ? (
+          <View style={styles.actions}>
+            <Button label={t('video.signUp')} icon="person-add-outline" onPress={() => openAuth({ mode: 'register' })} />
+          </View>
+        ) : null}
       </Card>
 
       {video && (
-        <Card title="Kết quả" subtitle={`Xong sau ${video.seconds} giây · ${(video.data.length * 0.75 / 1024 / 1024).toFixed(1)} MB`} right={<Button label="Tải video" icon="download-outline" onPress={save} />}>
+        <Card title={t('video.result')} right={<Button label={t('video.save')} icon="download-outline" onPress={save} />}>
           {Platform.OS === 'web' ? (
             <View style={styles.player}>
               {createElement('video', {
@@ -168,7 +204,7 @@ export function VideoTab() {
               })}
             </View>
           ) : (
-            <Text style={styles.hint}>Bấm “Tải video” để mở hoặc chia sẻ video.</Text>
+            <Text style={styles.hint}>{t('video.saveNative')}</Text>
           )}
         </Card>
       )}
@@ -179,6 +215,7 @@ export function VideoTab() {
 const styles = StyleSheet.create({
   label: { fontFamily: font.semi, fontSize: 13, color: colors.text, marginTop: 4 },
   hint: { fontFamily: font.regular, fontSize: 12, color: colors.textSoft, lineHeight: 17, flexShrink: 1 },
+  quota: { fontFamily: font.semi, fontSize: 12.5, color: colors.goldDeep },
   error: { fontFamily: font.medium, fontSize: 13, color: colors.danger },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface2 },

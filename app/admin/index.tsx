@@ -11,15 +11,17 @@ import { SettingsTab } from '@/src/admin/SettingsTab';
 import { TrafficTab } from '@/src/admin/TrafficTab';
 import { Button, Card, Segmented } from '@/src/admin/ui';
 import { UsersTab } from '@/src/admin/UsersTab';
+import { VideoTab } from '@/src/admin/VideoTab';
 import { colors, font } from '@/src/theme';
 
-type Tab = 'overview' | 'traffic' | 'users' | 'seo' | 'blog' | 'system' | 'settings';
+type Tab = 'overview' | 'traffic' | 'users' | 'seo' | 'blog' | 'video' | 'system' | 'settings';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Tổng quan' },
   { id: 'traffic', label: 'Truy cập' },
   { id: 'users', label: 'Khách hàng' },
   { id: 'seo', label: 'SEO' },
   { id: 'blog', label: 'Blog' },
+  { id: 'video', label: 'Video AI' },
   { id: 'system', label: 'Hệ thống' },
   { id: 'settings', label: 'Cài đặt' },
 ];
@@ -70,6 +72,7 @@ export default function Admin() {
       {tab === 'users' && <UsersTab refresh={refresh} />}
       {tab === 'seo' && <SeoTab refresh={refresh} />}
       {tab === 'blog' && <BlogTab refresh={refresh} />}
+      {tab === 'video' && <VideoTab />}
       {tab === 'system' && <SystemTab refresh={refresh} />}
       {tab === 'settings' && <SettingsTab refresh={refresh} />}
     </Shell>

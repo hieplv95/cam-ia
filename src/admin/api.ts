@@ -54,3 +54,12 @@ export const fetchBlogPost = (id: number) => call<{ post: BlogPost }>(`/api/admi
 /** POST /api/admin/blog { action, ... } (topics, write, image, upload, save, status, delete). */
 export const blogAction = <T>(action: string, body: Record<string, unknown> = {}) => call<T>('/api/admin/blog', { action, ...body });
 export type { BlogImagePlan, BlogJob };
+
+/* ---------- AI video (trial) ---------- */
+
+export type VideoJob = { id: string; source: string; model: string; prompt: string };
+export type VideoCheck = { status: 'running'; state: string } | { status: 'done'; video: string; mimeType: string } | { status: 'failed'; error: string };
+
+export const startVideo = (body: { template: string; extra?: string; music?: boolean; image?: string }) => call<VideoJob>('/api/admin/video', body);
+export const checkVideo = (id: string, source: string) =>
+  call<VideoCheck>(`/api/admin/video?id=${encodeURIComponent(id)}&source=${encodeURIComponent(source)}`);

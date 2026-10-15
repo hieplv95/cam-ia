@@ -97,6 +97,13 @@ index.web.js             Nạp Skia (WebAssembly) trước khi mở app trên we
 - Số liệu lấy từ `data/cami.db`: bảng `ai_log` (mỗi yêu cầu AI), `actives` (thiết bị mở app mỗi ngày), `events` (bộ đếm chức năng theo ngày, chỉ tên chức năng, không có ảnh hay thông tin cá nhân; app gửi qua `/api/track`), `admin_log`. Mã nằm ở `src/server/admin.ts`, `src/server/stats.ts`, giao diện ở `app/admin/` và `src/admin/`. Trang quản trị chỉ có tiếng Việt.
 - Số liệu chức năng không dùng AI chỉ có từ bản app này trở đi; ảnh AI từ trước được tính vào mục "Không rõ".
 
+## Video AI (đang chạy thử)
+
+- Trang quản trị › tab **Video AI**: chọn mẫu (Nhảy trend, Ngạc nhiên ôm đầu, Ôm camera selfie, Catwalk, Tự mô tả), thêm ảnh thú cưng nếu muốn, bật/tắt nhạc nền, bấm **Tạo video**. Trang tự hỏi máy chủ mỗi 6 giây cho tới khi xong (thường 1–3 phút), rồi phát video và cho tải về.
+- Chỉ tài khoản trong `ADMIN_EMAILS` dùng được, không trừ điểm, nhưng Google tính tiền mỗi video vào nguồn AI đang dùng.
+- Model `gemini-omni-1.1-flash` qua Interactions API của Google (`src/server/gemini.ts` › `startVideo` / `checkVideo`), đổi bằng `GEMINI_VIDEO_MODEL`. Mẫu và câu lệnh: `src/ai/video.ts`. API: `app/api/admin/video+api.ts`, giao diện: `src/admin/VideoTab.tsx`.
+- Chạy thử trên máy: `.env` có nguồn AI (Vertex hoặc `GEMINI_API_KEY`) và `ADMIN_EMAILS=email-của-bạn`, chạy `npx expo start --web`, đăng ký bằng email đó, mở `http://localhost:8081/admin` › Video AI.
+
 ## Ngôn ngữ
 
 - 10 ngôn ngữ (`src/i18n/languages.ts`): English, Español, Português, Tiếng Việt, Français, Deutsch, Русский, 中文（简体）, 日本語, 한국어. Lần đầu mở app tự chọn theo ngôn ngữ của máy (`expo-localization`), không có thì dùng English; đổi ở **Hồ sơ › Ngôn ngữ** (lưu trên máy).

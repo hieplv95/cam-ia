@@ -275,3 +275,111 @@ export async function testConnection(sources: RuntimeSource[]) {
     }),
   );
 }
+
+/* ---------- Video (Gemini Omni, through the Interactions API) ---------- */
+
+/** The video model; override with GEMINI_VIDEO_MODEL in .env when Google renames it. */
+export const videoModel = () => process.env.GEMINI_VIDEO_MODEL || 'gemini-omni-1.1-flash';
+
+async function interactionsUrl(s: Source, id?: string): Promise<{ url: string; headers: Record<string, string> }> {
+  const tail = `/interactions${id ? `/${encodeURIComponent(id)}` : ''}`;
+  if (s.kind === 'studio') return { url: `https://generativelanguage.googleapis.com/v1beta${tail}`, headers: { 'x-goog-api-key': s.apiKey } };
+  const host = s.location === 'global' ? 'aiplatform.googleapis.com' : `${s.location}-aiplatform.googleapis.com`;
+  const token = await s.auth.getAccessToken();
+  if (!token) throw new Error('UNAUTHENTICATED: Could not load the default credentials');
+  return { url: `https://${host}/v1beta1/projects/${s.project}/locations/${s.location}${tail}`, headers: { authorization: `Bearer ${token}` } };
+}
+
+/**
+ * Starts a video in the background (it takes one to three minutes). Returns the job id and the source that runs it,
+ * which checkVideo needs. `image`: an optional JPEG (base64) to animate.
+ */
+export async function startVideo(prompt: string, image?: string): Promise<{ id: string; source: string; model: string }> {
+  if (!hasAiSource()) throw new AiError('server.noAiSource', '', 500);
+  const all = usable();
+  if (!all.length) throw new AiError('server.aiNoCredit', 'no usable source', 503);
+  const ready = all.filter((s) => (downUntil.get(s.id) ?? 0) <= Date.now());
+  const model = videoModel();
+  const body = {
+    model,
+    input: [...(image ? [{ type: 'image', data: image, mime_type: 'image/jpeg' }] : []), { type: 'text', text: prompt }],
+    background: true,
+    store: true,
+    generation_config: { video_config: { task: image ? 'image_to_video' : 'text_to_video' } },
+  };
+  let last = '';
+  for (const s of ready.length ? ready : all) {
+    try {
+      const { url, headers } = await interactionsUrl(s);
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...headers },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(60_000),
+      });
+      const text = await res.text();
+      if (!res.ok) throw new Error(`HTTP ${res.status} ${text}`);
+      const data = JSON.parse(text);
+      if (!data?.id) throw new Error(`no interaction id: ${text.slice(0, 300)}`);
+      console.log(`[video] started ${data.id} via ${s.id} (${model}), status ${data.status}`);
+      return { id: data.id, source: s.id, model };
+    } catch (e) {
+      last = e instanceof Error ? `${e.name} ${e.message}` : String(e);
+      console.error(`[video] ${s.id} ${model} failed:`, last.slice(0, 500));
+      if (isOutOfMoney(last) || isNoAccess(last) || isRateLimit(last)) {
+        markDown(s, last);
+        continue;
+      }
+      if (isMissingModel(last) || isTimeout(last)) continue;
+      throw new AiError(friendly(last), last, 502);
+    }
+  }
+  throw new AiError(friendly(last), last, 502);
+}
+
+export type VideoCheck =
+  | { status: 'running'; state: string }
+  | { status: 'done'; video: string; mimeType: string }
+  | { status: 'failed'; error: string };
+
+/** The finished video: inline data, or a file Google stores (downloaded with the same credentials). */
+async function videoBytes(s: Source, out: { data?: string; uri?: string; mime_type?: string }) {
+  const mimeType = out.mime_type || 'video/mp4';
+  if (out.data) return { video: out.data, mimeType };
+  if (!out.uri) throw new Error('the interaction finished without a video');
+  // Vertex may answer with a Cloud Storage path; read it through the storage API.
+  const m = /^gs:\/\/([^/]+)\/(.+)$/.exec(out.uri);
+  const url = m ? `https://storage.googleapis.com/storage/v1/b/${m[1]}/o/${encodeURIComponent(m[2])}?alt=media` : out.uri;
+  const headers: Record<string, string> =
+    s.kind === 'studio' ? { 'x-goog-api-key': s.apiKey } : { authorization: `Bearer ${await s.auth.getAccessToken()}` };
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(120_000) });
+  if (!res.ok) throw new Error(`download HTTP ${res.status} ${(await res.text()).slice(0, 300)}`);
+  return { video: Buffer.from(await res.arrayBuffer()).toString('base64'), mimeType: res.headers.get('content-type')?.startsWith('video/') ? res.headers.get('content-type')! : mimeType };
+}
+
+/** Where a background video stands. */
+export async function checkVideo(id: string, sourceId: string): Promise<VideoCheck> {
+  const s = current().built.find((x) => x.id === sourceId);
+  if (!s) return { status: 'failed', error: 'Nguồn AI chạy video này không còn trong cài đặt.' };
+  const { url, headers } = await interactionsUrl(s, id);
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(60_000) });
+  const text = await res.text();
+  if (!res.ok) return { status: 'failed', error: `HTTP ${res.status} ${text.slice(0, 500)}` };
+  const data = JSON.parse(text);
+  const state: string = data?.status ?? 'unknown';
+  if (['in_progress', 'queued', 'requires_action'].includes(state)) return { status: 'running', state };
+  if (state !== 'completed') {
+    const why = (data?.errors ?? []).map((e: any) => e?.message).filter(Boolean).join('; ');
+    return { status: 'failed', error: `${state}${why ? `: ${why}` : ''}` };
+  }
+  // The video is in output_video, or in a model_output step.
+  const fromSteps = (data?.steps ?? [])
+    .flatMap((st: any) => (st?.type === 'model_output' ? (st.content ?? []) : []))
+    .find((c: any) => c?.type === 'video');
+  const out = data?.output_video ?? fromSteps;
+  if (!out) {
+    console.warn('[video] completed without a video:', text.slice(0, 1000));
+    return { status: 'failed', error: 'AI đã chạy xong nhưng không trả video (có thể bị bộ lọc an toàn chặn).' };
+  }
+  return { status: 'done', ...(await videoBytes(s, out)) };
+}

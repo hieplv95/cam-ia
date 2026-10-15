@@ -99,10 +99,10 @@ index.web.js             Nạp Skia (WebAssembly) trước khi mở app trên we
 
 ## Video AI (đang chạy thử)
 
-- Trang quản trị › tab **Video AI**: chọn mẫu (Nhảy trend, Ngạc nhiên ôm đầu, Ôm camera selfie, Catwalk, Tự mô tả), thêm ảnh thú cưng nếu muốn, bật/tắt nhạc nền, bấm **Tạo video**. Trang tự hỏi máy chủ mỗi 6 giây cho tới khi xong (thường 1–3 phút), rồi phát video và cho tải về.
+- Trang **`/video`** (hoặc trang quản trị › tab **Video AI**): chọn mẫu (Nhảy trend, Ngạc nhiên ôm đầu, Ôm camera selfie, Catwalk, Tự mô tả), thêm ảnh thú cưng nếu muốn, bật/tắt nhạc nền, bấm **Tạo video**. Trang tự hỏi máy chủ mỗi 6 giây cho tới khi xong (thường 1–3 phút), rồi phát video và cho tải về.
 - Chỉ tài khoản trong `ADMIN_EMAILS` dùng được, không trừ điểm, nhưng Google tính tiền mỗi video vào nguồn AI đang dùng.
 - Model `gemini-omni-1.1-flash` qua Interactions API của Google (`src/server/gemini.ts` › `startVideo` / `checkVideo`), đổi bằng `GEMINI_VIDEO_MODEL`. Mẫu và câu lệnh: `src/ai/video.ts`. API: `app/api/admin/video+api.ts`, giao diện: `src/admin/VideoTab.tsx`.
-- Chạy thử trên máy: `.env` có nguồn AI (Vertex hoặc `GEMINI_API_KEY`) và `ADMIN_EMAILS=email-của-bạn`, chạy `npx expo start --web`, đăng ký bằng email đó, mở `http://localhost:8081/admin` › Video AI.
+- Chạy thử trên máy: `.env` có nguồn AI (Vertex hoặc `GEMINI_API_KEY`) và `ADMIN_EMAILS=email-của-bạn`, chạy `npx expo start --web`, đăng ký bằng email đó, mở `http://localhost:8081/video`.
 
 ## Ngôn ngữ
 

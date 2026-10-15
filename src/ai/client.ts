@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { accountState, apiFetch, openAuth } from '../account';
 import { pointsFor } from './credits';
 import { DEFAULT_IMAGE_MODEL, isImageModel, modelInfo, type ImageModelId } from './models';
+import type { CombineRatio } from './combine';
 import type { GenerateRatio, GenerateStyleId } from './generate';
 import type { AiPresetId } from './presets';
 import type { RetouchOptionId } from './retouch';
@@ -93,4 +94,9 @@ export function aiStudio(
 /** Creates a brand-new picture from a text description. */
 export function aiGenerate(prompt: string, style: GenerateStyleId, aspectRatio: GenerateRatio): Promise<AiResult> {
   return callAi({ mode: 'generate', prompt, style, aspectRatio });
+}
+
+/** "Ghép ảnh": merges 2–3 JPEGs (base64, in order) into one picture, following the optional request. */
+export function aiCombine(images: string[], prompt: string, aspectRatio: CombineRatio): Promise<AiResult> {
+  return callAi({ mode: 'combine', images, prompt, aspectRatio });
 }

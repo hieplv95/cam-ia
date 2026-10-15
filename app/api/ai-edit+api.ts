@@ -1,3 +1,4 @@
+import { aspectOf, combinePrompt, isCombineRatio, MAX_COMBINE, MAX_COMBINE_PROMPT, MIN_COMBINE } from '@/src/ai/combine';
 import { generateStyles, isGenerateRatio } from '@/src/ai/generate';
 import { pointsFor } from '@/src/ai/credits';
 import { getPlan } from '@/src/server/plan';
@@ -49,8 +50,10 @@ export async function POST(request: Request) {
     prompt?: string;
     options?: unknown;
     model?: unknown;
-    /** 'generate' = create a new picture from the prompt (no input image). */
+    /** 'generate' = create a new picture from the prompt (no input image); 'combine' = merge `images` into one. */
     mode?: string;
+    /** "Ghép ảnh": 2–3 JPEGs (base64), in the order the user put them. */
+    images?: unknown;
     style?: unknown;
     aspectRatio?: unknown;
     /** 'studio' = one of the featured tools (restore, hairstyle & makeup, product, logo). */
@@ -82,15 +85,17 @@ export async function POST(request: Request) {
   const tool =
     body.mode === 'generate'
       ? 'generate'
-      : body.mode === 'studio'
-        ? `studio.${studioTool(body.tool)?.id ?? 'unknown'}`
-        : aiPresets.some((p) => p.id === body.preset)
-          ? `preset.${body.preset}`
-          : body.target === 'logo'
-            ? 'logo-edit'
-            : body.erase === true
-              ? 'erase-brush'
-              : 'prompt';
+      : body.mode === 'combine'
+        ? 'combine'
+        : body.mode === 'studio'
+          ? `studio.${studioTool(body.tool)?.id ?? 'unknown'}`
+          : aiPresets.some((p) => p.id === body.preset)
+            ? `preset.${body.preset}`
+            : body.target === 'logo'
+              ? 'logo-edit'
+              : body.erase === true
+                ? 'erase-brush'
+                : 'prompt';
   const paid = (run: () => ReturnType<typeof editImage>) => respond(request, who, modelId, tool, run);
   const blocked = (key: 'server.blocked' | 'server.blockedName') => {
     logAi(who, { tool, model: modelId, status: 'blocked', error: 'blocked' });
@@ -105,6 +110,16 @@ export async function POST(request: Request) {
     const ratio = isGenerateRatio(body.aspectRatio) ? body.aspectRatio : '1:1';
     const instruction = `${style.prompt} of: "${wish}" (the description may be in any language). Beautiful composition, flattering light, no text or watermark.`;
     return paid(() => editImage(null, instruction, SAFETY_INSTRUCTION, model, ratio));
+  }
+
+  if (body.mode === 'combine') {
+    const images = Array.isArray(body.images) ? body.images : [];
+    const valid = images.every((i) => typeof i === 'string' && i && i.length <= MAX_BASE64_LENGTH);
+    if (!valid || images.length < MIN_COMBINE || images.length > MAX_COMBINE) return json({ error: tr(request, 'server.badImage') }, 400);
+    const wish = (body.prompt ?? '').trim().slice(0, MAX_COMBINE_PROMPT);
+    if (wish && isBlocked(wish)) return blocked('server.blocked');
+    const ratio = isCombineRatio(body.aspectRatio) ? aspectOf(body.aspectRatio) : undefined;
+    return paid(() => editImage(images as string[], combinePrompt(images.length, wish), SAFETY_INSTRUCTION, model, ratio));
   }
 
   if (body.mode === 'studio') {

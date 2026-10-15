@@ -8,7 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MAX_SIDE } from './editor/imageOps';
 import { notify } from './notify';
-import { setPendingPhoto, type EditorIntent, type PendingPhoto } from './pendingPhoto';
+import { MAX_COMBINE } from './ai/combine';
+import { setPendingCombine, setPendingPhoto, type EditorIntent, type PendingPhoto } from './pendingPhoto';
 import { photoUrl, type PhotoKey } from './photos';
 import { bronzeGradient, cardShadow, colors, font } from './theme';
 import { track } from './track';
@@ -92,6 +93,26 @@ export function PhotoSourceProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  /** "Ghép ảnh": picks up to 3 photos at once, then opens the screen that merges them (AI or collage). */
+  const combine = async () => {
+    setVisible(false);
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.9,
+        allowsMultipleSelection: true,
+        selectionLimit: MAX_COMBINE,
+        orderedSelection: true,
+      });
+      if (res.canceled || !res.assets?.length) return;
+      track('combine_open');
+      setPendingCombine(res.assets.slice(0, MAX_COMBINE).map((a) => a.uri));
+      router.push('/combine');
+    } catch (e: any) {
+      notify(e?.message ?? t('common.cantOpenPhoto'));
+    }
+  };
+
   const createCanvas = () => {
     const b = backgrounds.find((x) => x.id === bg) ?? backgrounds[1];
     const s = sizes.find((x) => x.id === size)!;
@@ -148,6 +169,19 @@ export function PhotoSourceProvider({ children }: { children: ReactNode }) {
                 photos={['portraitFlowers', 'heroCurls', 'portraitRose']}
                 onPress={() => fromPicker('camera')}
               />
+              {!intent && (
+                <SourceCard
+                  icon="albums-outline"
+                  tint={['#EFF8F2', '#DFF1E6']}
+                  iconBg="#D2EDDC"
+                  iconColor="#3E8E5E"
+                  title={t('source.combine')}
+                  desc={t('source.combineDesc', { n: MAX_COMBINE })}
+                  photos={['portraitRose', 'coast', 'hat']}
+                  badge={t('source.combineBadge')}
+                  onPress={combine}
+                />
+              )}
 
               {!intent && (
                 <>
@@ -264,6 +298,7 @@ function SourceCard({
   title,
   desc,
   photos,
+  badge,
   onPress,
 }: {
   icon: IconName;
@@ -273,6 +308,8 @@ function SourceCard({
   title: string;
   desc: string;
   photos: [PhotoKey, PhotoKey, PhotoKey];
+  /** Small label next to the title (e.g. "Mới"). */
+  badge?: string;
   onPress: () => void;
 }) {
   return (
@@ -280,6 +317,11 @@ function SourceCard({
       <LinearGradient colors={tint} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
         <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
           <Ionicons name={icon} size={22} color={iconColor} />
+          {badge ? (
+            <View style={styles.newBadge}>
+              <Text style={styles.newText}>{badge}</Text>
+            </View>
+          ) : null}
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.cardTitle}>{title}</Text>
@@ -402,6 +444,8 @@ const styles = StyleSheet.create({
   canvasTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   pro: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   proText: { fontFamily: font.bold, fontSize: 9.5, color: '#FFFFFF', letterSpacing: 0.6 },
+  newBadge: { position: 'absolute', top: -7, left: -6, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1, backgroundColor: '#3E8E5E' },
+  newText: { fontFamily: font.bold, fontSize: 9.5, color: '#FFFFFF', letterSpacing: 0.4 },
   art: { width: 70, height: 70, marginRight: -4 },
   sheetArt: { position: 'absolute', width: 46, height: 58, borderRadius: 6, borderWidth: 1.5, borderColor: '#FFFFFF', overflow: 'hidden' },
   sheetBack: { left: 0, top: 8, transform: [{ rotate: '-10deg' }], backgroundColor: '#FFFFFF' },

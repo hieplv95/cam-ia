@@ -49,3 +49,16 @@ export const takePendingExport = () => {
   pendingExport = null;
   return img;
 };
+
+/** Photos picked for "Ghép ảnh" (several at once), handed to that screen. */
+let pendingCombine: string[] = [];
+
+export const setPendingCombine = (uris: string[]) => {
+  pendingCombine = uris;
+};
+
+export const takePendingCombine = () => {
+  const uris = pendingCombine;
+  pendingCombine = [];
+  return uris;
+};

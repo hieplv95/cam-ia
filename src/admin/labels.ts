@@ -12,6 +12,7 @@ export function toolLabel(tool: string) {
   if (tool === 'generate') return vi('generate.title', 'Tạo ảnh AI');
   if (tool === 'prompt') return 'Yêu cầu tự viết';
   if (tool === 'logo-edit') return 'Sửa logo bằng mô tả';
+  if (tool === 'combine') return vi('combine.title', 'Ghép ảnh');
   if (tool === 'erase-brush') return 'Xóa vật thể (tô vùng / mô tả)';
   const [kind, id] = tool.split('.');
   if (kind === 'preset') return `Phép AI: ${vi(`aiPreset.${id}`, id)}`;

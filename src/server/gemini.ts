@@ -140,10 +140,11 @@ export type EditResult = { image: string; mimeType: string; model: string; sourc
 
 /**
  * Edits one JPEG with an instruction, or creates a new picture from text when imageBase64 is null.
+ * Several JPEGs (e.g. "Ghép ảnh") are sent in order, before the instruction.
  * Tries every source and model until one returns an image.
  */
 export async function editImage(
-  imageBase64: string | null,
+  imageBase64: string | readonly string[] | null,
   instruction: string,
   systemInstruction: string,
   preferredModel?: string,
@@ -156,12 +157,13 @@ export async function editImage(
   const ready = all.filter((s) => (downUntil.get(s.id) ?? 0) <= Date.now());
   const order = ready.length ? ready : all;
 
+  const images = imageBase64 === null ? [] : typeof imageBase64 === 'string' ? [imageBase64] : imageBase64;
   const body = {
     systemInstruction: { parts: [{ text: systemInstruction }] },
     contents: [
       {
         role: 'user',
-        parts: imageBase64 ? [{ inlineData: { mimeType: 'image/jpeg', data: imageBase64 } }, { text: instruction }] : [{ text: instruction }],
+        parts: [...images.map((data) => ({ inlineData: { mimeType: 'image/jpeg', data } })), { text: instruction }],
       },
     ],
     generationConfig: { responseModalities: ['TEXT', 'IMAGE'], ...(aspectRatio && { imageConfig: { aspectRatio } }) },

@@ -107,6 +107,17 @@ export default function AiTools() {
 
       <Text style={styles.sectionTitle}>{t('ai.more')}</Text>
       <View style={styles.list}>
+        {/* "Ghép ảnh": 2–3 photos into one (picked on that screen). */}
+        <Pressable onPress={() => router.push('/combine')} style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}>
+          <View style={styles.rowIcon}>
+            <Ionicons name="albums-outline" size={20} color={colors.gold} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle}>{t('combine.title')}</Text>
+            <Text style={styles.rowSub}>{t('source.combineDesc', { n: 3 })}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMute} />
+        </Pressable>
         {moreTools.map((p) => (
           <Pressable key={p.id} onPress={() => startAi(p.id)} style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}>
             <View style={styles.rowIcon}>

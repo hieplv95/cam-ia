@@ -777,6 +777,7 @@ const de: Messages = {
   'video.extraPlaceholder': 'Z. B. am Strand bei Sonnenuntergang',
   'video.describePlaceholder': 'Z. B. ein Corgi surft am Strand',
   'video.music': 'Hintergrundmusik (aus, wenn du auf TikTok einen Trend-Sound wählst)',
+  'video.length': 'Länge (max. etwa 10 Sekunden pro Video)',
   'video.create': 'Video erstellen',
   'video.creating': 'Wird erstellt … {s} s',
   'video.wait': 'Dauert meist 1–3 Minuten, lass die Seite offen.',

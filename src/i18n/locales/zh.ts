@@ -777,6 +777,7 @@ const zh: Messages = {
   'video.extraPlaceholder': '例如：日落时的海滩',
   'video.describePlaceholder': '例如：一只柯基在海边冲浪',
   'video.music': '背景音乐（如果要在 TikTok 上选热门音乐就关掉）',
+  'video.length': '时长（每个视频最多约 10 秒）',
   'video.create': '生成视频',
   'video.creating': '生成中… {s} 秒',
   'video.wait': '通常需要 1–3 分钟，请保持页面打开。',

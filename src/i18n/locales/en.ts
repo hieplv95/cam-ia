@@ -795,6 +795,7 @@ const en: Messages = {
   'video.extraPlaceholder': 'E.g. on a beach at sunset',
   'video.describePlaceholder': 'E.g. a corgi surfing at the beach',
   'video.music': 'Background music (turn off if you will pick a trending sound on TikTok)',
+  'video.length': 'Length (about 10 seconds max per video)',
   'video.create': 'Create video',
   'video.creating': 'Creating… {s}s',
   'video.wait': 'It usually takes 1–3 minutes, keep this page open.',

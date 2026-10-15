@@ -3,7 +3,17 @@
  * the server builds the English instruction here. Template names are translated (video.t.<id>).
  */
 
-export const MAX_VIDEO_EXTRA = 400;
+export const MAX_VIDEO_EXTRA = 2000;
+
+/** One generation is one clip; the model makes about 10 seconds at most (longer videos would need several clips joined). */
+export const VIDEO_SECONDS = [5, 8, 10] as const;
+export type VideoSeconds = (typeof VIDEO_SECONDS)[number];
+export const DEFAULT_VIDEO_SECONDS: VideoSeconds = 10;
+export const cleanSeconds = (v: unknown): VideoSeconds => (VIDEO_SECONDS as readonly unknown[]).includes(v) ? (v as VideoSeconds) : DEFAULT_VIDEO_SECONDS;
+
+/** The templates' scene timings are written for 10 seconds; shorter videos get them scaled down. */
+const scaleShots = (shots: string, seconds: number) =>
+  seconds === 10 ? shots : shots.replace(/\((\d+)-(\d+)s\)/g, (_, a, b) => `(${Math.round((a * seconds) / 10)}-${Math.round((b * seconds) / 10)}s)`);
 
 export type VideoTemplate = {
   id: string;
@@ -45,20 +55,29 @@ export const videoTemplates: VideoTemplate[] = [
 export const videoTemplate = (id: unknown) => videoTemplates.find((t) => t.id === id);
 
 /** The instruction sent to the video model. */
-export function videoPrompt(template: VideoTemplate, opts: { hasImage: boolean; extra?: string; music: boolean }) {
+export function videoPrompt(template: VideoTemplate, opts: { hasImage: boolean; extra?: string; music: boolean; seconds?: VideoSeconds }) {
   const extra = opts.extra?.trim();
+  const seconds = opts.seconds ?? DEFAULT_VIDEO_SECONDS;
+  const custom = !template.shots;
   const subject = opts.hasImage
     ? 'Animate the animal or animals from the attached photo as the stars of the video. Keep exactly their look: species, breed, fur colors and markings, eye color and size. ' +
       'If the photo shows only one animal, it is the only star.'
-    : 'Two fluffy cats, one orange-and-white and one grey British shorthair.';
+    : // Their own description says who is in it.
+      custom
+      ? ''
+      : 'Two fluffy cats, one orange-and-white and one grey British shorthair.';
   const scenes = template.shots
-    ? `They stand on their hind legs like humans and act in this funny, energetic short video with fast cuts on the beat. ${template.shots}`
+    ? `They stand on their hind legs like humans and act in this funny, energetic short video with fast cuts on the beat. ${scaleShots(template.shots, seconds)}`
     : '';
   return [
-    'Vertical 9:16 video, about 10 seconds, photorealistic, sharp, natural light.',
+    `Vertical 9:16 video, ${seconds} seconds long, photorealistic, sharp, natural light.`,
     subject,
     scenes,
-    extra ? `Request from the user (may be in any language): "${extra}".` : '',
+    extra
+      ? custom
+        ? `The user's description of the video (may be in any language; follow it closely): "${extra}".`
+        : `Request from the user (may be in any language; it takes priority over the scenes above): "${extra}".`
+      : '',
     opts.music ? 'Audio: upbeat, catchy, funny dance music.' : 'Audio: no music, only natural sounds.',
     'No text, no captions, no watermark. Friendly and wholesome.',
   ]

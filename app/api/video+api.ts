@@ -1,4 +1,4 @@
-import { MAX_VIDEO_EXTRA, videoPrompt, videoTemplate } from '@/src/ai/video';
+import { cleanSeconds, MAX_VIDEO_EXTRA, videoPrompt, videoTemplate } from '@/src/ai/video';
 import { caller, creditsOf } from '@/src/server/account';
 import { isAdmin } from '@/src/server/admins';
 import { AiError, checkVideo, hasAiSource, startVideo } from '@/src/server/gemini';
@@ -11,7 +11,7 @@ const json = (body: unknown, status = 200) => Response.json(body, { status });
 
 /**
  * AI video (/video). Guests get a couple of free videos, then sign up; members pay points per video (videoJobs.ts).
- * POST { template, extra?, music?, image? } starts one in the background;
+ * POST { template, extra?, music?, seconds?, image? } starts one in the background;
  * GET ?id=… says where it stands and returns it when done; GET with no id returns the caller's quota.
  */
 export async function POST(request: Request) {
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const appToken = process.env.APP_TOKEN;
   if (appToken && request.headers.get('x-app-token') !== appToken) return json({ error: tr(request, 'server.forbidden') }, 401);
 
-  const body = (await request.json().catch(() => ({}))) as { template?: unknown; extra?: unknown; music?: unknown; image?: unknown };
+  const body = (await request.json().catch(() => ({}))) as { template?: unknown; extra?: unknown; music?: unknown; seconds?: unknown; image?: unknown };
   const template = videoTemplate(body.template);
   if (!template) return json({ error: tr(request, 'server.badRequest') }, 400);
   const extra = typeof body.extra === 'string' ? body.extra.replace(/["“”\n\r]/g, ' ').trim().slice(0, MAX_VIDEO_EXTRA) : '';
@@ -31,7 +31,8 @@ export async function POST(request: Request) {
   const held = reserveVideo(who);
   if (isVideoDenied(held)) return json({ error: tr(request, held.key, held.params), code: held.code, quota: videoQuota(who) }, held.status);
   try {
-    const job = await startVideo(videoPrompt(template, { hasImage: !!image, extra, music: body.music !== false }), image);
+    const seconds = cleanSeconds(body.seconds);
+    const job = await startVideo(videoPrompt(template, { hasImage: !!image, extra, music: body.music !== false, seconds }), image, seconds);
     recordJob(who, job.id, job.source, held.usageId);
     console.log(`[video] ${job.id} for ${who.user ? `user ${who.user.id}` : 'guest'} (${template.id}${image ? ', photo' : ''})`);
     return json({ id: job.id, quota: videoQuota(who), credits: creditsOf(who) });

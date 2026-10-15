@@ -777,6 +777,7 @@ const ru: Messages = {
   'video.extraPlaceholder': 'Напр.: на пляже на закате',
   'video.describePlaceholder': 'Напр.: корги катается на сёрфе',
   'video.music': 'Фоновая музыка (выключите, если выберете трендовый звук в TikTok)',
+  'video.length': 'Длительность (до ~10 секунд на видео)',
   'video.create': 'Создать видео',
   'video.creating': 'Создаём… {s} с',
   'video.wait': 'Обычно 1–3 минуты, не закрывайте страницу.',

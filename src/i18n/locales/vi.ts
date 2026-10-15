@@ -803,6 +803,7 @@ const vi = {
   'video.extraPlaceholder': 'VD: nền là bãi biển lúc hoàng hôn',
   'video.describePlaceholder': 'VD: chú chó corgi lướt ván trên biển',
   'video.music': 'Có nhạc nền (tắt nếu bạn muốn chọn nhạc trend khi đăng TikTok)',
+  'video.length': 'Độ dài (tối đa khoảng 10 giây mỗi video)',
   'video.create': 'Tạo video',
   'video.creating': 'Đang tạo… {s}s',
   'video.wait': 'Thường mất 1–3 phút, cứ để trang mở nhé.',

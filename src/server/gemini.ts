@@ -340,11 +340,11 @@ function videoPart(data: any): { data?: string; uri?: string; mime_type?: string
 type Method = 'lro' | 'int' | 'gc';
 
 /** Asks one source to start a video with one method; returns the job id (prefixed with the method). */
-async function startWith(s: Source, method: Method, model: string, prompt: string, image?: string): Promise<string> {
+async function startWith(s: Source, method: Method, model: string, prompt: string, image?: string, seconds?: number): Promise<string> {
   if (method === 'lro') {
     const op = await send(s, `${modelUrl(s, model)}:predictLongRunning`, {
       instances: [{ prompt, ...(image && { image: { bytesBase64Encoded: image, mimeType: 'image/jpeg' } }) }],
-      parameters: { aspectRatio: '9:16', sampleCount: 1, generateAudio: true },
+      parameters: { aspectRatio: '9:16', sampleCount: 1, generateAudio: true, ...(seconds && { durationSeconds: seconds }) },
     });
     if (!op?.name) throw new Error(`no operation name: ${JSON.stringify(op).slice(0, 300)}`);
     return `lro|${model}|${op.name}`;
@@ -390,7 +390,7 @@ const isWrongMethod = (t: string) => /not supported|not found|"code":\s*(400|404
  * Starts a video in the background (it takes one to three minutes). Returns the job id and the source that runs it,
  * which checkVideo needs. `image`: an optional JPEG (base64) to animate.
  */
-export async function startVideo(prompt: string, image?: string): Promise<{ id: string; source: string; model: string }> {
+export async function startVideo(prompt: string, image?: string, seconds?: number): Promise<{ id: string; source: string; model: string }> {
   if (!hasAiSource()) throw new AiError('server.noAiSource', '', 500);
   const all = usable();
   if (!all.length) throw new AiError('server.aiNoCredit', 'no usable source', 503);
@@ -404,7 +404,7 @@ export async function startVideo(prompt: string, image?: string): Promise<{ id: 
     for (const method of methods) {
       for (const model of models) {
         try {
-          const id = await startWith(s, method, model, prompt, image);
+          const id = await startWith(s, method, model, prompt, image, seconds);
           console.log(`[video] started ${id.slice(0, 120)} via ${s.id} (${model}, ${method})`);
           return { id, source: s.id, model };
         } catch (e) {

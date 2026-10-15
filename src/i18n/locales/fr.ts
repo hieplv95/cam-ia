@@ -777,6 +777,7 @@ const fr: Messages = {
   'video.extraPlaceholder': 'Ex. : sur une plage au coucher du soleil',
   'video.describePlaceholder': 'Ex. : un corgi qui surfe à la plage',
   'video.music': 'Musique de fond (désactivez-la si vous choisissez un son tendance sur TikTok)',
+  'video.length': 'Durée (environ 10 secondes max par vidéo)',
   'video.create': 'Créer la vidéo',
   'video.creating': 'Création… {s} s',
   'video.wait': 'Cela prend souvent 1 à 3 minutes, gardez cette page ouverte.',

@@ -6,7 +6,7 @@ import { Image, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View }
 
 import { apiFetch, openAuth, useAccount } from '../account';
 import { Button, Card } from '../admin/ui';
-import { MAX_VIDEO_EXTRA, videoTemplates } from '../ai/video';
+import { DEFAULT_VIDEO_SECONDS, MAX_VIDEO_EXTRA, VIDEO_SECONDS, videoTemplates, type VideoSeconds } from '../ai/video';
 import { encodeBase64, loadPendingPair, resizeImage } from '../editor/imageOps';
 import { useT, type MessageKey } from '../i18n';
 import { colors, font } from '../theme';
@@ -28,6 +28,7 @@ export function VideoMaker() {
   const [template, setTemplate] = useState(videoTemplates[0].id);
   const [extra, setExtra] = useState('');
   const [music, setMusic] = useState(true);
+  const [seconds, setSeconds] = useState<VideoSeconds>(DEFAULT_VIDEO_SECONDS);
   const [photo, setPhoto] = useState<{ uri: string; base64: string } | null>(null);
   const [job, setJob] = useState<{ id: string; started: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +100,7 @@ export function VideoMaker() {
     setNow(started);
     setJob({ id: '', started });
     try {
-      const { ok, data } = await apiFetch('/api/video', { body: { template, extra: extra.trim(), music, image: photo?.base64 } });
+      const { ok, data } = await apiFetch('/api/video', { body: { template, extra: extra.trim(), music, seconds, image: photo?.base64 } });
       if (data?.quota) setQuota(data.quota);
       if (!ok) {
         setJob(null);
@@ -172,6 +173,16 @@ export function VideoMaker() {
           placeholderTextColor={colors.textMute}
           style={[styles.input, styles.area]}
         />
+        <Text style={[styles.hint, styles.counter]}>{extra.length}/{MAX_VIDEO_EXTRA}</Text>
+
+        <Text style={styles.label}>{t('video.length')}</Text>
+        <View style={styles.chips}>
+          {VIDEO_SECONDS.map((n) => (
+            <Pressable key={n} onPress={() => setSeconds(n)} disabled={busy} style={[styles.chip, seconds === n && styles.chipOn]}>
+              <Text style={[styles.chipText, seconds === n && styles.chipTextOn]}>{n} s</Text>
+            </Pressable>
+          ))}
+        </View>
 
         <View style={styles.switchRow}>
           <Switch value={music} onValueChange={setMusic} disabled={busy} />
@@ -236,7 +247,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
   },
-  area: { minHeight: 72, textAlignVertical: 'top' },
+  area: { minHeight: 120, maxHeight: 320, textAlignVertical: 'top' },
+  counter: { alignSelf: 'flex-end', marginTop: -6 },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   actions: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginTop: 4 },
   player: { alignItems: 'center' },

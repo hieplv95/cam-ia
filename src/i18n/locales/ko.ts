@@ -777,6 +777,7 @@ const ko: Messages = {
   'video.extraPlaceholder': '예: 노을 진 해변에서',
   'video.describePlaceholder': '예: 해변에서 서핑하는 코기',
   'video.music': '배경 음악(틱톡에서 인기 음원을 고를 거면 끄세요)',
+  'video.length': '길이(동영상 1개당 최대 약 10초)',
   'video.create': '동영상 만들기',
   'video.creating': '만드는 중… {s}초',
   'video.wait': '보통 1~3분 걸려요. 페이지를 열어 두세요.',

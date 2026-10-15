@@ -777,6 +777,7 @@ const ja: Messages = {
   'video.extraPlaceholder': '例：夕暮れのビーチで',
   'video.describePlaceholder': '例：ビーチでサーフィンするコーギー',
   'video.music': 'BGMあり（TikTokでトレンドの音源を選ぶならオフ）',
+  'video.length': '長さ（1本あたり最大約10秒）',
   'video.create': '動画を作成',
   'video.creating': '作成中… {s}秒',
   'video.wait': 'ふつう1〜3分かかります。このページは開いたままにしてください。',

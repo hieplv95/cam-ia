@@ -777,6 +777,7 @@ const pt: Messages = {
   'video.extraPlaceholder': 'Ex.: numa praia ao pôr do sol',
   'video.describePlaceholder': 'Ex.: um corgi surfando na praia',
   'video.music': 'Música de fundo (desligue se for escolher um som viral no TikTok)',
+  'video.length': 'Duração (máx. cerca de 10 segundos por vídeo)',
   'video.create': 'Criar vídeo',
   'video.creating': 'Criando… {s} s',
   'video.wait': 'Costuma levar 1–3 minutos, deixe esta página aberta.',

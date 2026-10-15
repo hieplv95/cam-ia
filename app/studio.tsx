@@ -346,6 +346,8 @@ export default function Studio() {
                 maxLength={MAX_TAGLINE}
                 style={styles.input}
               />
+              {/* The description of the wanted logo, right under the brand name and business. */}
+              {extraInput}
             </View>
           )}
 
@@ -400,8 +402,6 @@ export default function Studio() {
                   );
                 })}
               </HScroll>
-              {/* Logo maker: the description of the wanted logo sits right under the business ideas. */}
-              {isLogo && g.id === 'idea' && extraInput}
             </View>
           ))}
 
@@ -607,7 +607,7 @@ const styles = StyleSheet.create({
   saveAllText: { fontFamily: font.semi, fontSize: 13, color: colors.goldDeep },
   extra: { minHeight: 46, maxHeight: 90, textAlignVertical: 'top' },
   // Room for the three-line hint of the logo description.
-  logoExtra: { minHeight: 82, maxHeight: 110, marginTop: 2 },
+  logoExtra: { minHeight: 82, maxHeight: 110 },
   refineRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   refineBox: {
     flex: 1,

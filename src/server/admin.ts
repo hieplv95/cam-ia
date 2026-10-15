@@ -7,6 +7,7 @@ import {
 } from '../ai/credits';
 import { DEFAULT_IMAGE_MODEL, imageModels } from '../ai/models';
 import { caller, memberPoints } from './account';
+import { adminEmails, isAdmin } from './admins';
 import { getPlan } from './plan';
 import { getRewardPoints } from './rewards';
 import { db, dbFile, SCHEMA } from './db';
@@ -17,17 +18,11 @@ import { dayLabel, dayOf, lastDays, monthWindow, periodOf, startOfDay, timeZone 
 
 /**
  * The admin dashboard: statistics, customer accounts and server health.
- * Admins are the accounts whose email is listed in ADMIN_EMAILS (comma separated); they sign in like any user.
+ * Admins are the accounts whose email is listed in ADMIN_EMAILS (admins.ts); they sign in like any user.
  * Nothing here returns password hashes, session tokens, IPs or API keys.
  */
 
-export const adminEmails = () =>
-  (process.env.ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-
-export const isAdmin = (u: AccountUser | null): u is AccountUser => !!u && adminEmails().includes(u.email.toLowerCase());
+export { adminEmails, isAdmin };
 
 /** The signed-in admin, or the error response to send back. */
 export function adminOf(request: Request): AccountUser | Response {

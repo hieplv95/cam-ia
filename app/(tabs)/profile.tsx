@@ -7,7 +7,7 @@ import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native
 
 import { deleteAccount, openAuth, refreshAccount, signOut, useAccount } from '@/src/account';
 import { useAiModel } from '@/src/ai/client';
-import { pointsFor } from '@/src/ai/credits';
+import { pointsFor, pointsLeftLabel } from '@/src/ai/credits';
 import { modelInfo } from '@/src/ai/models';
 import { Dialog } from '@/src/Dialog';
 import { getLanguage, languageName, t, useT } from '@/src/i18n';
@@ -105,7 +105,7 @@ export default function Profile() {
           <Text style={styles.statLabel}>{t('profile.savedPhotos')}</Text>
         </View>
         <View style={styles.stat}>
-          <Text style={styles.statValue}>{credits ? credits.left : '–'}</Text>
+          <Text style={styles.statValue}>{credits ? pointsLeftLabel(credits) : '–'}</Text>
           <Text style={styles.statLabel}>
             {credits?.kind === 'member' ? t('profile.pointsLeft', { day: resetDay }) : t('profile.freeLeft')}
           </Text>
@@ -123,8 +123,8 @@ export default function Profile() {
             credits
               ? credits.kind === 'member'
                 ? credits.bonus
-                  ? t('profile.pointsValueBonus', { n: credits.left, bonus: credits.bonus })
-                  : t('profile.pointsValue', { n: credits.left })
+                  ? t('profile.pointsValueBonus', { n: pointsLeftLabel(credits), bonus: credits.bonus })
+                  : t('profile.pointsValue', { n: pointsLeftLabel(credits) })
                 : t('profile.triesValue', { left: credits.left, limit: credits.limit })
               : undefined
           }

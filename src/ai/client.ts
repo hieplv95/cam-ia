@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
 import { accountState, apiFetch, openAuth } from '../account';
-import { pointsFor } from './credits';
+import { pointsFor, pointsLeftLabel } from './credits';
 import { DEFAULT_IMAGE_MODEL, isImageModel, modelInfo, type ImageModelId } from './models';
 import type { CombineRatio } from './combine';
 import type { GenerateRatio, GenerateStyleId } from './generate';
@@ -72,7 +72,7 @@ async function callAi(payload: Record<string, unknown>): Promise<AiResult> {
   const name = used?.name ?? data.model;
   const fallback = data.model && data.model !== requested ? t('credits.summaryBusy', { model: modelInfo(requested)?.name ?? requested }) : '';
   const c = data.credits;
-  const left = !c ? '' : c.kind === 'guest' ? t('credits.summaryGuest', { n: c.left }) : t('credits.summaryMember', { cost: pointsFor(accountState().plan, data.model ?? requested), n: c.left });
+  const left = !c ? '' : c.kind === 'guest' ? t('credits.summaryGuest', { n: c.left }) : t('credits.summaryMember', { cost: pointsFor(accountState().plan, data.model ?? requested), n: pointsLeftLabel(c) });
   return { image: data.image, model: data.model ?? requested, summary: `${fallback}${name}${left}` };
 }
 

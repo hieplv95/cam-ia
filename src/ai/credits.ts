@@ -55,7 +55,13 @@ export const pointsFor = (plan: CreditPlan, model: string) => plan.modelPoints[m
 /** What the app shows about the user's remaining AI use. */
 export type Credits =
   | { kind: 'guest'; left: number; limit: number }
-  /** left includes `bonus`; resetAt: when the monthly part renews; resetLabel: that day as "1/11" in the server's time zone. */
-  | { kind: 'member'; left: number; limit: number; bonus: number; resetAt: number; resetLabel: string };
+  /**
+   * left includes `bonus`; resetAt: when the monthly part renews; resetLabel: that day as "1/11" in the server's time zone.
+   * unlimited: an admin account, never stopped for lack of points (its use is still counted).
+   */
+  | { kind: 'member'; left: number; limit: number; bonus: number; resetAt: number; resetLabel: string; unlimited?: boolean };
 
 export type AccountUser = { id: number; email: string; name: string };
+
+/** Points left as shown to the user ("∞" for admins). */
+export const pointsLeftLabel = (c: Credits) => (c.kind === 'member' && c.unlimited ? '∞' : c.left);

@@ -3,6 +3,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { pointsFor, type AccountUser, type Credits } from '../ai/credits';
 import { DEFAULT_IMAGE_MODEL } from '../ai/models';
 import type { MessageKey, Params } from '../i18n/core';
+import { isAdmin } from './admins';
 import { db } from './db';
 import { hashPassword, verifyPassword } from './password';
 import { allowanceFor, getPlan, rememberAllowance } from './plan';
@@ -117,7 +118,15 @@ export function creditsOf(c: Caller): Credits {
   }
   const { end } = monthWindow();
   const { monthly, bonus } = memberPoints(c.user.id);
-  return { kind: 'member', left: monthly + bonus, limit: allowanceFor(periodOf()), bonus, resetAt: end, resetLabel: dayLabel(end) };
+  return {
+    kind: 'member',
+    left: monthly + bonus,
+    limit: allowanceFor(periodOf()),
+    bonus,
+    resetAt: end,
+    resetLabel: dayLabel(end),
+    ...(isAdmin(c.user) && { unlimited: true }),
+  };
 }
 
 /** `key`/`params`: the message, translated by the API route. */
@@ -134,7 +143,8 @@ export function charge(c: Caller, model: string): { usageId: number } | Denied {
   if (c.user) rememberAllowance();
   const credits = creditsOf(c);
   const cost = c.user ? pointsFor(plan, model) : 1;
-  if (credits.left < cost) {
+  // Admins (ADMIN_EMAILS) are never stopped; their use is still recorded for the statistics.
+  if (credits.left < cost && !(credits.kind === 'member' && credits.unlimited)) {
     if (credits.kind === 'guest') {
       return { status: 401, code: 'login_required', key: 'server.guestOut', params: { tries: plan.guestFreeTries, points: plan.monthlyPoints } };
     }

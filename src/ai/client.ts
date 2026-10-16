@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { accountState, apiFetch, openAuth } from '../account';
 import { pointsFor } from './credits';
 import { DEFAULT_IMAGE_MODEL, isImageModel, modelInfo, type ImageModelId } from './models';
+import type { CombineRatio } from './combine';
 import type { GenerateRatio, GenerateStyleId } from './generate';
 import type { AiPresetId } from './presets';
 import type { RetouchOptionId } from './retouch';
@@ -88,6 +89,11 @@ export function aiStudio(
   text: { brand?: string; tagline?: string; extra?: string; part?: { index: number; count: number } } = {},
 ) {
   return callAi({ mode: 'studio', tool, choices, image: imageBase64 ?? undefined, ...text });
+}
+
+/** "Ghép ảnh AI": puts 2–4 photos (JPEG base64, in order) together as the description says. */
+export function aiCombine(images: string[], prompt: string, ratio: CombineRatio): Promise<AiResult> {
+  return callAi({ mode: 'combine', images, prompt, aspectRatio: ratio === 'auto' ? undefined : ratio });
 }
 
 /** Creates a brand-new picture from a text description. */

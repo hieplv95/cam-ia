@@ -139,16 +139,19 @@ async function callOnce(s: Source, model: string, body: unknown, method?: string
 export type EditResult = { image: string; mimeType: string; model: string; source: string };
 
 /**
- * Edits one JPEG with an instruction, or creates a new picture from text when imageBase64 is null.
+ * Edits one JPEG with an instruction (several JPEGs for "Ghép ảnh AI", numbered Photo 1, 2…), or creates a new picture from text when imageBase64 is null.
  * Tries every source and model until one returns an image.
  */
 export async function editImage(
-  imageBase64: string | null,
+  imageBase64: string | string[] | null,
   instruction: string,
   systemInstruction: string,
   preferredModel?: string,
   aspectRatio?: string,
 ): Promise<EditResult> {
+  const images = imageBase64 === null ? [] : Array.isArray(imageBase64) ? imageBase64 : [imageBase64];
+  const jpeg = (data: string) => ({ inlineData: { mimeType: 'image/jpeg', data } });
+  const pictures = images.length > 1 ? images.flatMap((data, i) => [{ text: `Photo ${i + 1}:` }, jpeg(data)]) : images.map(jpeg);
   if (!hasAiSource()) throw new AiError('server.noAiSource', '', 500);
   const all = usable();
   // Every source is turned off or out of the credit entered for it.
@@ -161,7 +164,7 @@ export async function editImage(
     contents: [
       {
         role: 'user',
-        parts: imageBase64 ? [{ inlineData: { mimeType: 'image/jpeg', data: imageBase64 } }, { text: instruction }] : [{ text: instruction }],
+        parts: [...pictures, { text: instruction }],
       },
     ],
     generationConfig: { responseModalities: ['TEXT', 'IMAGE'], ...(aspectRatio && { imageConfig: { aspectRatio } }) },

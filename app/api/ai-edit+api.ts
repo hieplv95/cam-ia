@@ -1,3 +1,4 @@
+import { combinePrompt, MAX_COMBINE, MAX_COMBINE_PROMPT, MIN_COMBINE } from '@/src/ai/combine';
 import { generateStyles, isGenerateRatio } from '@/src/ai/generate';
 import { pointsFor } from '@/src/ai/credits';
 import { getPlan } from '@/src/server/plan';
@@ -48,8 +49,9 @@ export async function POST(request: Request) {
     prompt?: string;
     options?: unknown;
     model?: unknown;
-    /** 'generate' = create a new picture from the prompt (no input image). */
+    /** 'generate' = create a new picture from the prompt (no input image); 'combine' = put `images` together as `prompt` says. */
     mode?: string;
+    images?: unknown;
     style?: unknown;
     aspectRatio?: unknown;
     /** 'studio' = one of the featured tools (restore, hairstyle & makeup, product, logo). */
@@ -81,7 +83,9 @@ export async function POST(request: Request) {
   const tool =
     body.mode === 'generate'
       ? 'generate'
-      : body.mode === 'studio'
+      : body.mode === 'combine'
+        ? 'combine'
+        : body.mode === 'studio'
         ? `studio.${studioTool(body.tool)?.id ?? 'unknown'}`
         : aiPresets.some((p) => p.id === body.preset)
           ? `preset.${body.preset}`
@@ -104,6 +108,17 @@ export async function POST(request: Request) {
     const ratio = isGenerateRatio(body.aspectRatio) ? body.aspectRatio : '1:1';
     const instruction = `${style.prompt} of: "${wish}" (the description may be in any language). Beautiful composition, flattering light, no text or watermark.`;
     return paid(() => editImage(null, instruction, SAFETY_INSTRUCTION, model, ratio));
+  }
+
+  if (body.mode === 'combine') {
+    const images = Array.isArray(body.images) ? body.images : [];
+    const valid = images.every((i) => typeof i === 'string' && i && i.length <= MAX_BASE64_LENGTH);
+    if (images.length < MIN_COMBINE || images.length > MAX_COMBINE || !valid) return json({ error: tr(request, 'server.badImage') }, 400);
+    const wish = (body.prompt ?? '').replace(/["“”]/g, "'").trim().slice(0, MAX_COMBINE_PROMPT);
+    if (!wish) return json({ error: tr(request, 'server.describeEdit') }, 400);
+    if (isBlocked(wish)) return blocked('server.blocked');
+    const ratio = isGenerateRatio(body.aspectRatio) ? body.aspectRatio : undefined;
+    return paid(() => editImage(images as string[], combinePrompt(images.length, wish), SAFETY_INSTRUCTION, model, ratio));
   }
 
   if (body.mode === 'studio') {

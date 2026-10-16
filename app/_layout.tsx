@@ -67,6 +67,7 @@ export default function RootLayout() {
               <Stack.Screen name="export" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="generate" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="studio" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="combine" options={{ animation: 'slide_from_right' }} />
             </Stack>
             <PresencePing />
           </PhotoSourceProvider>

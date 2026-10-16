@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { CLIP_SECONDS, cleanSeconds, clipsFor, MAX_VIDEO_EXTRA, videoPrompt, videoTemplate } from '@/src/ai/video';
+import { CLIP_SECONDS, cleanSeconds, clipsFor, MAX_VIDEO_PROMPT, videoPrompt } from '@/src/ai/video';
 import { caller, creditsOf } from '@/src/server/account';
 import { isAdmin } from '@/src/server/admins';
 import { AiError, checkVideo, hasAiSource, startVideo, type VideoCheck } from '@/src/server/gemini';
@@ -14,7 +14,7 @@ const json = (body: unknown, status = 200) => Response.json(body, { status });
 
 /**
  * AI video (/video). Guests get a couple of free videos, then sign up; members pay points per video (videoJobs.ts).
- * POST { template, extra?, music?, seconds?, image? } starts one in the background;
+ * POST { prompt, music?, seconds?, image? } starts one in the background;
  * GET ?id=… says where it stands and returns it when done; GET with no id returns the caller's quota.
  */
 export async function POST(request: Request) {
@@ -22,11 +22,9 @@ export async function POST(request: Request) {
   const appToken = process.env.APP_TOKEN;
   if (appToken && request.headers.get('x-app-token') !== appToken) return json({ error: tr(request, 'server.forbidden') }, 401);
 
-  const body = (await request.json().catch(() => ({}))) as { template?: unknown; extra?: unknown; music?: unknown; seconds?: unknown; image?: unknown };
-  const template = videoTemplate(body.template);
-  if (!template) return json({ error: tr(request, 'server.badRequest') }, 400);
-  const extra = typeof body.extra === 'string' ? body.extra.replace(/["“”\n\r]/g, ' ').trim().slice(0, MAX_VIDEO_EXTRA) : '';
-  if (template.id === 'custom' && !extra) return json({ error: tr(request, 'video.describeFirst') }, 400);
+  const body = (await request.json().catch(() => ({}))) as { prompt?: unknown; music?: unknown; seconds?: unknown; image?: unknown };
+  const prompt = typeof body.prompt === 'string' ? body.prompt.replace(/["“”]/g, "'").replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, MAX_VIDEO_PROMPT) : '';
+  if (!prompt) return json({ error: tr(request, 'video.describeFirst') }, 400);
   const image = typeof body.image === 'string' && body.image ? body.image : undefined;
   if (image && image.length > MAX_BASE64_LENGTH) return json({ error: tr(request, 'server.badImage') }, 400);
 
@@ -40,7 +38,7 @@ export async function POST(request: Request) {
     const music = body.music !== false;
     const started = await Promise.allSettled(
       Array.from({ length: clips }, (_, index) =>
-        startVideo(videoPrompt(template, { hasImage: !!image, extra, music, seconds, part: { index, count: clips } }), image, Math.min(seconds, CLIP_SECONDS)),
+        startVideo(videoPrompt(prompt, { hasImage: !!image, music, seconds, part: { index, count: clips } }), image, Math.min(seconds, CLIP_SECONDS)),
       ),
     );
     const failed = started.find((r): r is PromiseRejectedResult => r.status === 'rejected');
@@ -51,7 +49,7 @@ export async function POST(request: Request) {
     });
     const id = parts.length > 1 ? `multi|${randomUUID()}` : parts[0].id;
     recordJob(who, id, parts, held.usageId);
-    console.log(`[video] ${id.slice(0, 80)} for ${who.user ? `user ${who.user.id}` : 'guest'} (${template.id}, ${seconds}s${image ? ', photo' : ''})`);
+    console.log(`[video] ${id.slice(0, 80)} for ${who.user ? `user ${who.user.id}` : 'guest'} (${seconds}s${image ? ', photo' : ''})`);
     return json({ id, quota: videoQuota(who), credits: creditsOf(who) });
   } catch (e) {
     releaseVideo(held.usageId);

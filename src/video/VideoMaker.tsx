@@ -6,9 +6,9 @@ import { Image, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View }
 
 import { apiFetch, openAuth, useAccount } from '../account';
 import { Button, Card } from '../admin/ui';
-import { DEFAULT_VIDEO_SECONDS, MAX_VIDEO_EXTRA, VIDEO_SECONDS, videoTemplates, type VideoSeconds } from '../ai/video';
+import { DEFAULT_VIDEO_SECONDS, MAX_VIDEO_PROMPT, VIDEO_SECONDS, type VideoSeconds } from '../ai/video';
 import { encodeBase64, loadPendingPair, resizeImage } from '../editor/imageOps';
-import { useT, type MessageKey } from '../i18n';
+import { useT } from '../i18n';
 import { colors, font } from '../theme';
 
 const POLL_MS = 6000;
@@ -18,14 +18,13 @@ const GIVE_UP_MS = 12 * 60_000;
 type Quota = { kind: 'guest'; left: number; limit: number } | { kind: 'member'; cost: number; left: number; unlimited: boolean };
 
 /**
- * AI video (/video, and the admin page's Video AI tab): pick a template, optionally a photo of a pet, start it,
+ * AI video (/video, and the admin page's Video AI tab): describe the video, optionally add a photo to start from, start it,
  * and the page asks the server every few seconds until the video is ready. Guests get a couple of free videos,
  * then the sign-up sheet opens; members pay points (the server decides, see src/server/videoJobs.ts).
  */
 export function VideoMaker() {
   const t = useT();
   const { user } = useAccount();
-  const [template, setTemplate] = useState(videoTemplates[0].id);
   const [extra, setExtra] = useState('');
   const [music, setMusic] = useState(true);
   const [seconds, setSeconds] = useState<VideoSeconds>(DEFAULT_VIDEO_SECONDS);
@@ -100,7 +99,7 @@ export function VideoMaker() {
     setNow(started);
     setJob({ id: '', started });
     try {
-      const { ok, data } = await apiFetch('/api/video', { body: { template, extra: extra.trim(), music, seconds, image: photo?.base64 } });
+      const { ok, data } = await apiFetch('/api/video', { body: { prompt: extra.trim(), music, seconds, image: photo?.base64 } });
       if (data?.quota) setQuota(data.quota);
       if (!ok) {
         setJob(null);
@@ -133,7 +132,6 @@ export function VideoMaker() {
   };
 
   const elapsed = job ? Math.round((now - job.started) / 1000) : 0;
-  const custom = template === 'custom';
   const quotaText = !quota
     ? null
     : quota.kind === 'guest'
@@ -145,14 +143,18 @@ export function VideoMaker() {
   return (
     <View style={{ gap: 16 }}>
       <Card title={t('video.title')} subtitle={t('video.subtitle')} right={quotaText ? <Text style={styles.quota}>{quotaText}</Text> : undefined}>
-        <Text style={styles.label}>{t('video.template')}</Text>
-        <View style={styles.chips}>
-          {videoTemplates.map((v) => (
-            <Pressable key={v.id} onPress={() => setTemplate(v.id)} disabled={busy} style={[styles.chip, template === v.id && styles.chipOn]}>
-              <Text style={[styles.chipText, template === v.id && styles.chipTextOn]}>{t(`video.t.${v.id}` as MessageKey)}</Text>
-            </Pressable>
-          ))}
-        </View>
+        <Text style={styles.label}>{t('video.describe')}</Text>
+        <TextInput
+          value={extra}
+          onChangeText={setExtra}
+          editable={!busy}
+          maxLength={MAX_VIDEO_PROMPT}
+          multiline
+          placeholder={t('video.describePlaceholder')}
+          placeholderTextColor={colors.textMute}
+          style={[styles.input, styles.area]}
+        />
+        <Text style={[styles.hint, styles.counter]}>{extra.length}/{MAX_VIDEO_PROMPT}</Text>
 
         <Text style={styles.label}>{t('video.photo')}</Text>
         <View style={styles.photoRow}>
@@ -161,19 +163,6 @@ export function VideoMaker() {
           {photo ? <Button label={t('video.photoRemove')} icon="close" onPress={() => setPhoto(null)} tone="plain" disabled={busy} /> : null}
         </View>
         <Text style={styles.hint}>{t('video.photoHint')}</Text>
-
-        <Text style={styles.label}>{custom ? t('video.describe') : t('video.extra')}</Text>
-        <TextInput
-          value={extra}
-          onChangeText={setExtra}
-          editable={!busy}
-          maxLength={MAX_VIDEO_EXTRA}
-          multiline
-          placeholder={custom ? t('video.describePlaceholder') : t('video.extraPlaceholder')}
-          placeholderTextColor={colors.textMute}
-          style={[styles.input, styles.area]}
-        />
-        <Text style={[styles.hint, styles.counter]}>{extra.length}/{MAX_VIDEO_EXTRA}</Text>
 
         <Text style={styles.label}>{t('video.length')}</Text>
         <View style={styles.chips}>
@@ -190,7 +179,7 @@ export function VideoMaker() {
         </View>
 
         <View style={styles.actions}>
-          <Button label={busy ? t('video.creating', { s: elapsed }) : t('video.create')} icon="videocam-outline" onPress={start} disabled={busy || (custom && !extra.trim())} />
+          <Button label={busy ? t('video.creating', { s: elapsed }) : t('video.create')} icon="videocam-outline" onPress={start} disabled={busy || !extra.trim()} />
           {busy ? <Text style={styles.hint}>{t('video.wait')}</Text> : null}
         </View>
         {error ? <Text style={styles.error}>{error}</Text> : null}

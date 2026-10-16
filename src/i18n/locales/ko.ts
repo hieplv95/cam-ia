@@ -651,6 +651,8 @@ const ko: Messages = {
   'studio.brandOptional': '브랜드 이름(선택: AI가 이미지에서 읽어요)',
   'studio.taglinePlaceholder': '업종 / 짧은 설명(선택)',
   'studio.again': '다시 하기',
+  'studio.another': '하나 더 만들기',
+  'studio.home': '홈으로',
   'studio.restore.title': '오래된 사진 복원',
   'studio.restore.desc': '오래된 사진의 노이즈 제거, 선명하게, 컬러 복원',
   'studio.restore.action': '사진 복원',

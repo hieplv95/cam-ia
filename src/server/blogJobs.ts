@@ -31,6 +31,42 @@ const state = (g.__camiBlogJobs ??= { running: new Set<number>(), queue: [] as n
 
 const all = <T>(sql: string, ...args: SQLInputValue[]) => db().prepare(sql).all(...args) as T[];
 
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Pictures are drawn one at a time across all jobs: three articles drawing at once trip the image model's rate limit.
+ * Kept on globalThis like the jobs, so a dev reload doesn't start a second line.
+ */
+const lane = globalThis as unknown as { __camiBlogDraw?: Promise<unknown> };
+function oneAtATime<T>(work: () => Promise<T>): Promise<T> {
+  const next = (lane.__camiBlogDraw ?? Promise.resolve()).then(work, work);
+  lane.__camiBlogDraw = next.catch(() => {});
+  return next;
+}
+
+/**
+ * One picture, with retries: a busy model gets two more tries after a pause; a picture the model refuses to draw
+ * gets one more try from a plain description of the spot.
+ */
+async function drawWithRetry(plan: { prompt: string; alt: string }, onRetry: (n: number) => void) {
+  let prompt = plan.prompt;
+  let simplified = false;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await oneAtATime(() => drawBlogImage(prompt));
+    } catch (e) {
+      const key = e instanceof AiError ? e.key : '';
+      if ((key === 'server.aiBusy' || key === 'server.aiTimeout') && attempt < 3) {
+        onRetry(attempt);
+        await wait(attempt * 20_000);
+      } else if (key === 'server.aiCantDo' && !simplified) {
+        simplified = true;
+        prompt = `A bright, realistic photograph about: "${plan.alt || 'editing photos on a phone'}". No people's faces in close-up. No text, no letters, no logos, no watermarks.`;
+      } else throw e;
+    }
+  }
+}
+
 function update(id: number, patch: { status?: BlogJob['status']; step?: string; postId?: number; error?: string }) {
   db()
     .prepare('UPDATE blog_jobs SET status = COALESCE(?, status), step = COALESCE(?, step), post_id = COALESCE(?, post_id), error = COALESCE(?, error), updated_at = ? WHERE id = ?')
@@ -93,13 +129,14 @@ async function run(id: number) {
     let content = post.content;
     let cover = '';
     const failed: number[] = [];
+    let why = '';
     for (let i = 0; i < a.images.length; i++) {
       const plan = a.images[i];
       const tag = `[[IMAGE ${i + 1}]]`;
       started = Date.now();
       try {
-        update(id, { step: `Đang vẽ ảnh ${i + 1}/${a.images.length}… (20–30 giây mỗi ảnh)` });
-        const drawn = await drawBlogImage(plan.prompt);
+        update(id, { step: `Đang vẽ ảnh ${i + 1}/${a.images.length}… (20–30 giây mỗi ảnh, các bài vẽ lần lượt)` });
+        const drawn = await drawWithRetry(plan, (n) => update(id, { step: `Ảnh ${i + 1}/${a.images.length}: AI đang bận, thử lại lần ${n}…` }));
         logAi(who, { tool: 'blog.image', model: drawn.model, status: 'ok', ms: Date.now() - started, source: drawn.source });
         const name = saveImage(await stampJpeg(drawn.image, req.logo));
         if (!cover) cover = name;
@@ -107,6 +144,7 @@ async function run(id: number) {
         content = content.includes(tag) ? content.replace(tag, md) : `${content}\n\n${md}`;
       } catch (e) {
         failed.push(i + 1);
+        why = e instanceof AiError ? translate('vi', e.key) : e instanceof Error ? e.message : '';
         logAi(who, { tool: 'blog.image', model: 'image', status: 'error', error: e instanceof AiError ? e.key : 'unexpected', ms: Date.now() - started });
         console.error('[blog job] picture', id, i + 1, e);
       }
@@ -120,7 +158,7 @@ async function run(id: number) {
     audit(admin, 'blog', null, `AI viết bài #${post.id} (${req.lang}): ${post.title}`);
     update(id, {
       status: 'done',
-      step: `${post.status === 'published' ? 'Đã đăng' : 'Xong, đang là bản nháp'}${failed.length ? ` · không vẽ được ảnh ${failed.join(', ')}` : ''}`,
+      step: `${post.status === 'published' ? 'Đã đăng' : 'Xong, đang là bản nháp'}${failed.length ? ` · không vẽ được ảnh ${failed.join(', ')}${why ? ` (${why.slice(0, 160)})` : ''}` : ''}`,
     });
   } catch (e) {
     if (!(e instanceof Error && e.message.startsWith('AI trả về'))) {

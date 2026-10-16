@@ -651,6 +651,8 @@ const de: Messages = {
   'studio.brandOptional': 'Markenname (optional: die KI liest ihn aus dem Bild)',
   'studio.taglinePlaceholder': 'Branche / kurze Beschreibung (optional)',
   'studio.again': 'Nochmal',
+  'studio.another': 'Noch eins erstellen',
+  'studio.home': 'Startseite',
   'studio.restore.title': 'Alte Fotos restaurieren',
   'studio.restore.desc': 'Alte Fotos entrauschen, schärfen und kolorieren',
   'studio.restore.action': 'Foto restaurieren',

@@ -669,6 +669,8 @@ const en: Messages = {
   'studio.brandOptional': 'Brand name (optional: the AI reads it from the image)',
   'studio.taglinePlaceholder': 'Business / short description (optional)',
   'studio.again': 'Try again',
+  'studio.another': 'Make another',
+  'studio.home': 'Home',
   'studio.restore.title': 'Restore old photos',
   'studio.restore.desc': 'Remove noise, sharpen and colorize old photos',
   'studio.restore.action': 'Restore photo',

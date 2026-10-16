@@ -677,6 +677,8 @@ const vi = {
   'studio.brandOptional': 'Tên thương hiệu (không bắt buộc: AI đọc từ ảnh mẫu)',
   'studio.taglinePlaceholder': 'Ngành / mô tả ngắn (không bắt buộc)',
   'studio.again': 'Tạo lại',
+  'studio.another': 'Tạo ảnh mới',
+  'studio.home': 'Về trang chủ',
   'studio.restore.title': 'Phục hồi ảnh cũ',
   'studio.restore.desc': 'Khử nhiễu, làm nét và tô màu ảnh cũ',
   'studio.restore.action': 'Phục hồi ảnh',

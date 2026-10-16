@@ -651,6 +651,8 @@ const ru: Messages = {
   'studio.brandOptional': 'Название бренда (необязательно: ИИ прочитает его с изображения)',
   'studio.taglinePlaceholder': 'Сфера / краткое описание (необязательно)',
   'studio.again': 'Ещё раз',
+  'studio.another': 'Создать ещё',
+  'studio.home': 'На главную',
   'studio.restore.title': 'Реставрация старых фото',
   'studio.restore.desc': 'Убирает шум, повышает резкость и раскрашивает старые фото',
   'studio.restore.action': 'Восстановить фото',

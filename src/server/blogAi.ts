@@ -63,14 +63,26 @@ function parseJson<T>(text: string): T {
     .trim()
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/```\s*$/, '');
-  try {
-    return JSON.parse(clean) as T;
-  } catch {
-    const start = clean.indexOf('{');
-    const end = start < 0 ? -1 : objectEnd(clean, start);
-    if (end < 0) throw new Error('AI không trả về đúng định dạng, thử lại nhé.');
-    return JSON.parse(clean.slice(start, end)) as T;
+  const start = clean.indexOf('{');
+  const candidates = start > 0 ? [clean, clean.slice(start)] : [clean];
+  for (const text of candidates) {
+    try {
+      return JSON.parse(text) as T;
+    } catch (e) {
+      // "Unexpected non-whitespace character after JSON at position N": a whole object, then something else.
+      const after = /after JSON at position (\d+)/.exec(e instanceof Error ? e.message : '');
+      if (after) {
+        try {
+          return JSON.parse(text.slice(0, Number(after[1]))) as T;
+        } catch {}
+      }
+    }
   }
+  const end = start < 0 ? -1 : objectEnd(clean, start);
+  try {
+    if (end > 0) return JSON.parse(clean.slice(start, end)) as T;
+  } catch {}
+  throw new Error('AI không trả về đúng định dạng, thử viết lại bài nhé.');
 }
 
 /** How people of each market really type searches (so keywords are local, not translated from English). */
@@ -189,7 +201,41 @@ export async function writeArticle(req: BlogWriteRequest) {
   if (!article.title || !article.content) throw new Error('AI trả về bài viết thiếu tiêu đề hoặc nội dung.');
   // An H1 in the body would compete with the page title.
   article.content = article.content.replace(/^# (.+)$/gm, '## $1');
+  if (images && (article.images.length < images || !article.content.includes('[[IMAGE 1]]'))) {
+    console.warn(`[blog] AI gave ${article.images.length}/${images} picture(s) for "${article.title}": filling in`);
+    fillImages(article, images);
+  }
   return { article, model: r.model, source: r.source, usd: textCost(r.model, r.inTokens, r.outTokens) };
+}
+
+/** Sections a picture can go before: the H2s, minus the FAQ and the conclusion. */
+const pictureSpots = (content: string) =>
+  [...content.matchAll(/^## (.+)$/gm)].filter((m) => !/faq|pregunta|pergunta|question|câu hỏi|conclus|kết luận|fazit|итог|まとめ|결론|总结/i.test(m[1]));
+
+/**
+ * When the model leaves out pictures (no descriptions, or no [[IMAGE n]] in the text), the missing ones are described
+ * from the article's own headings and placed before its sections, so an article asked with pictures always gets them.
+ */
+function fillImages(article: WrittenArticle, count: number) {
+  if (!count) return;
+  const spots = pictureSpots(article.content);
+  for (let i = article.images.length; i < count; i++) {
+    const heading = spots[i % Math.max(1, spots.length)]?.[1].replace(/[*_`#]/g, '').trim() || article.title;
+    article.images.push({
+      prompt: `A realistic, attractive, bright photograph illustrating "${heading}" for a blog article titled "${article.title}". No text, no letters, no logos, no watermarks.`,
+      alt: heading.slice(0, 150),
+    });
+  }
+  // Pictures without a [[IMAGE n]] spot go before an H2 (spread over the article), or at the end.
+  const missing = article.images.map((_, i) => i + 1).filter((n) => !article.content.includes(`[[IMAGE ${n}]]`));
+  if (!missing.length) return;
+  const heads = pictureSpots(article.content).map((m) => m.index!);
+  const step = heads.length / (missing.length + 1);
+  const inserts = missing.map((n, k) => ({ n, at: heads.length ? heads[Math.min(heads.length - 1, Math.floor(step * (k + 1)))] : -1 }));
+  // From the end, so earlier positions stay valid.
+  for (const { n, at } of inserts.sort((a, b) => b.at - a.at || b.n - a.n)) {
+    article.content = at < 0 ? `${article.content}\n\n[[IMAGE ${n}]]` : `${article.content.slice(0, at)}[[IMAGE ${n}]]\n\n${article.content.slice(at)}`;
+  }
 }
 
 /** One 16:9 picture for an article (JPEG/PNG base64). Flash by default: half the price of Pro, plenty for a blog. */

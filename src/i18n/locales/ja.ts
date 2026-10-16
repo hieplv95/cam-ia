@@ -651,6 +651,8 @@ const ja: Messages = {
   'studio.brandOptional': 'ブランド名（任意：AI が画像から読み取ります）',
   'studio.taglinePlaceholder': '業種／ひとこと説明（任意）',
   'studio.again': 'もう一度',
+  'studio.another': 'もう1枚作る',
+  'studio.home': 'ホームへ',
   'studio.restore.title': '古い写真を復元',
   'studio.restore.desc': '古い写真のノイズ除去、シャープ化、カラー化',
   'studio.restore.action': '写真を復元',

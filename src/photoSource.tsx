@@ -17,7 +17,7 @@ import { t, useT, type MessageKey } from './i18n';
 
 type PhotoSource = {
   /** Asks where the photo comes from, then opens the editor with the given intent. */
-  choose: (intent?: EditorIntent) => void;
+  choose: (intent?: EditorIntent, options?: { replace?: boolean }) => void;
   /** Opens the editor directly with an already-known photo. */
   open: (photo: PendingPhoto) => void;
 };
@@ -62,16 +62,19 @@ export function PhotoSourceProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [intent, setIntent] = useState<EditorIntent | undefined>();
+  // Started from a result screen ("make another"): the new screen takes its place instead of stacking on it.
+  const [replace, setReplace] = useState(false);
   const [visible, setVisible] = useState(false);
   const [bg, setBg] = useState('white');
   const [size, setSize] = useState<SizeId>('post');
   const [custom, setCustom] = useState({ w: '1200', h: '1500' });
 
-  const open = (photo: PendingPhoto) => {
+  const open = (photo: PendingPhoto, inPlace = false) => {
     setPendingPhoto(photo);
     const intent = photo.intent;
-    if (intent?.type === 'studio') router.push({ pathname: '/studio', params: { tool: intent.tool } });
-    else router.push(intent?.type === 'retouch' ? '/retouch' : intent?.type === 'adjust' ? '/adjust' : '/editor');
+    const go = inPlace ? router.replace : router.push;
+    if (intent?.type === 'studio') go({ pathname: '/studio', params: { tool: intent.tool } });
+    else go(intent?.type === 'retouch' ? '/retouch' : intent?.type === 'adjust' ? '/adjust' : '/editor');
   };
 
   const fromPicker = async (source: 'camera' | 'library') => {
@@ -86,7 +89,7 @@ export function PhotoSourceProvider({ children }: { children: ReactNode }) {
         source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
       if (!res.canceled && res.assets?.[0]) {
         track(source === 'camera' ? 'photo_camera' : 'photo_library');
-        open({ kind: 'uri', uri: res.assets[0].uri, intent });
+        open({ kind: 'uri', uri: res.assets[0].uri, intent }, replace);
       }
     } catch (e: any) {
       notify(e?.message ?? t('common.cantOpenPhoto'));
@@ -119,16 +122,17 @@ export function PhotoSourceProvider({ children }: { children: ReactNode }) {
     const [width, height] = size === 'free' ? [clampSide(custom.w), clampSide(custom.h)] : [s.w, s.h];
     setVisible(false);
     track('canvas_create');
-    open({ kind: 'blank', color: b.color, gradient: b.gradient, width, height, intent });
+    open({ kind: 'blank', color: b.color, gradient: b.gradient, width, height, intent }, replace);
   };
 
-  const choose = (next?: EditorIntent) => {
+  const choose = (next?: EditorIntent, options?: { replace?: boolean }) => {
     setIntent(next);
+    setReplace(!!options?.replace);
     setVisible(true);
   };
 
   return (
-    <Ctx.Provider value={{ choose, open }}>
+    <Ctx.Provider value={{ choose, open: (photo) => open(photo) }}>
       {children}
       <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
         <Pressable style={styles.backdrop} onPress={() => setVisible(false)}>

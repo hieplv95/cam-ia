@@ -651,6 +651,8 @@ const zh: Messages = {
   'studio.brandOptional': '品牌名称（可选：AI 会从图片中读取）',
   'studio.taglinePlaceholder': '行业 / 简短描述（可选）',
   'studio.again': '再来一次',
+  'studio.another': '再做一张',
+  'studio.home': '回到首页',
   'studio.restore.title': '修复老照片',
   'studio.restore.desc': '为老照片降噪、锐化和上色',
   'studio.restore.action': '修复照片',

@@ -30,6 +30,7 @@ import { featuredImages } from '@/src/featuredImages';
 import { HScroll } from '@/src/HScroll';
 import { ModelChip } from '@/src/ModelPicker';
 import { notify } from '@/src/notify';
+import { usePhotoSource } from '@/src/photoSource';
 import { saveImage } from '@/src/save';
 import { setPendingExport, setPendingPhoto, takePendingPhoto } from '@/src/pendingPhoto';
 import { colors, font, goldGradient } from '@/src/theme';
@@ -73,6 +74,18 @@ export default function Studio() {
     setTimeout(() => setToast(null), 3200);
   };
   const leave = () => (router.canGoBack() ? router.back() : router.replace('/'));
+  const { choose } = usePhotoSource();
+
+  /** After a result: the same tool again, with a new photo (the logo tool, which has no photo, just clears its result). */
+  const another = () => {
+    if (busy) return;
+    if (tool.needsPhoto) return choose({ type: 'studio', tool: tool.id }, { replace: true });
+    setResults([]);
+    setActive(0);
+    setPrevious([]);
+    setRefine('');
+  };
+  const home = () => (router.canDismiss() ? router.dismissTo('/') : router.replace('/'));
 
   useEffect(() => {
     if (!tool.needsPhoto) return;
@@ -476,6 +489,23 @@ export default function Studio() {
             </LinearGradient>
           </Pressable>
         )}
+
+        {results.length > 0 && (
+          <View style={styles.nextRow}>
+            <Pressable onPress={another} disabled={!!busy} style={({ pressed }) => [styles.nextBtn, (pressed || !!busy) && { opacity: 0.6 }]}>
+              <Ionicons name={tool.needsPhoto ? 'images-outline' : 'add-circle-outline'} size={16} color={colors.textSoft} />
+              <Text style={styles.nextText} numberOfLines={1}>
+                {t('studio.another')}
+              </Text>
+            </Pressable>
+            <Pressable onPress={home} disabled={!!busy} style={({ pressed }) => [styles.nextBtn, (pressed || !!busy) && { opacity: 0.6 }]}>
+              <Ionicons name="home-outline" size={16} color={colors.textSoft} />
+              <Text style={styles.nextText} numberOfLines={1}>
+                {t('studio.home')}
+              </Text>
+            </Pressable>
+          </View>
+        )}
       </View>
 
       {toast && (
@@ -654,6 +684,9 @@ const styles = StyleSheet.create({
   chipTextActive: { color: colors.onGold },
   problem: { fontFamily: font.regular, fontSize: 12, color: colors.textSoft, textAlign: 'center', marginBottom: -4 },
   actions: { flexDirection: 'row', gap: 10 },
+  nextRow: { flexDirection: 'row', gap: 10, marginTop: -4 },
+  nextBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8, borderRadius: 999 },
+  nextText: { fontFamily: font.medium, fontSize: 13, color: colors.textSoft },
   secondary: {
     flex: 1,
     flexDirection: 'row',

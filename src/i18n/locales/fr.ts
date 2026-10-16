@@ -651,6 +651,8 @@ const fr: Messages = {
   'studio.brandOptional': 'Nom de la marque (facultatif : l’IA le lit sur l’image)',
   'studio.taglinePlaceholder': 'Activité / courte description (facultatif)',
   'studio.again': 'Recommencer',
+  'studio.another': 'En créer une autre',
+  'studio.home': 'Accueil',
   'studio.restore.title': 'Restaurer de vieilles photos',
   'studio.restore.desc': 'Débruite, rend plus net et colorise les vieilles photos',
   'studio.restore.action': 'Restaurer la photo',

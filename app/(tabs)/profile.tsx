@@ -136,6 +136,8 @@ export default function Profile() {
           title={t('profile.clearRecents')}
           onPress={() => confirm(t('profile.clearRecentsConfirm'), () => clearRecents().then(reload))}
         />
+        <Row icon="shield-checkmark-outline" title={t('legal.privacy')} onPress={() => router.push('/privacy')} />
+        <Row icon="document-text-outline" title={t('legal.terms')} onPress={() => router.push('/terms')} />
         <Row icon="information-circle-outline" title={t('profile.version')} value={Constants.expoConfig?.version ?? '1.0.0'} />
         {/* Only for the team (emails in ADMIN_EMAILS); the admin page is in Vietnamese. */}
         {admin && <Row icon="stats-chart-outline" title="Quản trị" onPress={() => router.push('/admin')} />}

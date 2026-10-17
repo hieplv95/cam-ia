@@ -68,6 +68,7 @@ import { useDocHistory } from '@/src/editor/useDocHistory';
 import { aiPresetLabel, Icon, type IconSpec } from '@/src/icons';
 import { notify } from '@/src/notify';
 import { setPendingExport, setPendingPhoto, takePendingPhoto } from '@/src/pendingPhoto';
+import { ReportAi } from '@/src/ReportAi';
 import { bronzeGradient, cardShadow, font, paintColors } from '@/src/theme';
 import { BRAND_BROWN, CamiLogo } from '@/src/ui';
 import { track, trackPreset } from '@/src/track';
@@ -206,6 +207,13 @@ export default function Editor() {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   };
+  // The latest AI result, reportable for a short while (Google Play's AI-generated content policy).
+  const [lastAi, setLastAi] = useState<{ image: SkImage; tool: string; prompt: string; at: number } | null>(null);
+  const offerReport = (image: SkImage, tool: string, prompt = '') => {
+    const at = Date.now();
+    setLastAi({ image, tool, prompt, at });
+    setTimeout(() => setLastAi((cur) => (cur?.at === at ? null : cur)), 30_000);
+  };
   const leave = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   /** Runs an operation on the flattened picture and replaces the doc with the result. */
@@ -267,7 +275,9 @@ export default function Editor() {
       if ('preset' in req && req.preset === 'expand') input = await resizeImage(await padImage(input), 1024);
       const result = await aiEdit(encodeBase64(input, 88), req);
       summary = result.summary;
-      return imageFromBase64(result.image);
+      const out = await imageFromBase64(result.image);
+      offerReport(out, 'preset' in req ? `preset.${req.preset}` : 'prompt', 'prompt' in req ? req.prompt : '');
+      return out;
     });
     if (ok) showToast(`Xong ✨ ${summary}`);
   };
@@ -299,7 +309,9 @@ export default function Editor() {
         : flat;
       const result = await aiEdit(encodeBase64(await resizeImage(marked, 1024), 90), { erase: true, marked: marks.length > 0, ...(text && { prompt: text }) });
       summary = result.summary;
-      return imageFromBase64(result.image);
+      const out = await imageFromBase64(result.image);
+      offerReport(out, 'erase-brush', text);
+      return out;
     });
     if (ok) {
       setEraseMarks([]);
@@ -945,6 +957,12 @@ export default function Editor() {
         </View>
       )}
 
+      {lastAi && !busy && !toast && (
+        <View style={styles.reportPill}>
+          <ReportAi tool={lastAi.tool} image={lastAi.image} prompt={lastAi.prompt} />
+        </View>
+      )}
+
       {busy && (
         <View style={styles.overlay}>
           <View style={styles.busyCard}>
@@ -1095,6 +1113,7 @@ const styles = StyleSheet.create({
     maxWidth: '90%',
   },
   toastText: { fontFamily: font.medium, color: ec.text, fontSize: 14, textAlign: 'center' },
+  reportPill: { position: 'absolute', top: 70, alignSelf: 'center', backgroundColor: ec.surface2, borderRadius: 999, paddingHorizontal: 6 },
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
   busyCard: {
     backgroundColor: ec.surface,

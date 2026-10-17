@@ -27,6 +27,7 @@ import { HScroll } from '@/src/HScroll';
 import { ModelChip } from '@/src/ModelPicker';
 import { notify } from '@/src/notify';
 import { setPendingExport, setPendingPhoto, takePendingCombine } from '@/src/pendingPhoto';
+import { ReportAi } from '@/src/ReportAi';
 import { colors, font, goldGradient } from '@/src/theme';
 import { track } from '@/src/track';
 import { HomeButton, IconButton, Swatches } from '@/src/ui';
@@ -387,6 +388,7 @@ export default function Combine() {
             <Text style={styles.redoText}>{t('combine.again')}</Text>
           </Pressable>
         )}
+        {mode === 'ai' && fresh && result && !busy && <ReportAi tool="combine" image={result.image} prompt={prompt} />}
       </View>
 
       {toast && (

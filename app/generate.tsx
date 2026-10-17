@@ -11,6 +11,7 @@ import { useIllustration } from '@/src/aiIllustrations';
 import { imageFromBase64 } from '@/src/editor/imageOps';
 import { ModelChip } from '@/src/ModelPicker';
 import { setPendingExport, setPendingPhoto } from '@/src/pendingPhoto';
+import { ReportAi } from '@/src/ReportAi';
 import { cardShadow, colors, font, goldGradient } from '@/src/theme';
 import { HomeButton, IconButton } from '@/src/ui';
 import { HScroll } from '@/src/HScroll';
@@ -110,6 +111,7 @@ export default function Generate() {
             </Pressable>
           </View>
         )}
+        {result && !busy && <ReportAi tool="generate" b64={result} prompt={prompt} />}
 
         <Text style={styles.label}>{t('generate.describe')}</Text>
         <TextInput

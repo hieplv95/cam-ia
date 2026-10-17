@@ -69,6 +69,9 @@ export default function RootLayout() {
               <Stack.Screen name="studio" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="combine" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="video" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="privacy" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="terms" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="delete-account" options={{ animation: 'slide_from_right' }} />
             </Stack>
             <PresencePing />
           </PhotoSourceProvider>

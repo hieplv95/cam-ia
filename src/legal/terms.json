@@ -1,0 +1,319 @@
+{
+  "contact": "hieplv1995@gmail.com",
+  "es": {
+    "title": "Términos de uso",
+    "updated": "Última actualización: 17 de octubre de 2026",
+    "intro": "Estos términos regulan el uso de CamIA, el editor de fotos con IA disponible en https://camia.app y en la app para Android (app.camia). Al usar CamIA aceptas estos términos y nuestra Política de privacidad (https://camia.app/privacy). Si no estás de acuerdo, no uses el servicio.",
+    "sections": [
+      {
+        "title": "1. El servicio",
+        "paragraphs": [
+          "CamIA te permite editar fotos con herramientas manuales y con inteligencia artificial (IA): restaurar fotos antiguas, quitar objetos o el fondo, crear fotos de producto, logos, peinados y maquillaje, unir fotos, crear imágenes y videos a partir de una descripción, entre otras. Podemos agregar, cambiar o quitar funciones en cualquier momento."
+        ]
+      },
+      {
+        "title": "2. Tu cuenta",
+        "bullets": [
+          "Debes tener al menos 13 años para usar CamIA. Si eres menor de edad en tu país, necesitas el permiso de tu madre, padre o tutor.",
+          "Da información verdadera, cuida tu contraseña y no compartas tu cuenta. Eres responsable de lo que se haga con ella.",
+          "Puedes eliminar tu cuenta cuando quieras desde Perfil → Eliminar cuenta (https://camia.app/delete-account)."
+        ]
+      },
+      {
+        "title": "3. Tus fotos y tu contenido",
+        "bullets": [
+          "Las fotos que subes y los resultados que creas siguen siendo tuyos. Nos das permiso para procesarlos solo con el fin de prestarte el servicio (por ejemplo, enviarlos a la IA para crear el resultado).",
+          "Solo sube fotos que tengas derecho a usar. Si en la foto aparecen otras personas, debes tener su permiso, sobre todo para cambiar su apariencia o crear contenido con su imagen.",
+          "Eres responsable de cómo usas y compartes los resultados."
+        ]
+      },
+      {
+        "title": "4. Lo que no está permitido",
+        "bullets": [
+          "Crear o subir contenido sexual o desnudos, y cualquier contenido que sexualice a menores (lo reportaremos a las autoridades).",
+          "Contenido violento, sangriento, de odio, acoso o que humille a otras personas.",
+          "Suplantar a una persona real o crear imágenes falsas (deepfakes) para engañar, estafar, difamar o desinformar.",
+          "Infringir derechos de autor, marcas u otros derechos de terceros.",
+          "Usar CamIA para actividades ilegales o peligrosas.",
+          "Abusar del servicio: usar programas automáticos, crear cuentas falsas para obtener puntos o intentos gratis, o intentar saltarse los límites o la seguridad."
+        ],
+        "paragraphs": [
+          "Nuestras herramientas tienen filtros, pero si ves un resultado inapropiado, toca \"Reportar\" debajo del resultado para avisarnos."
+        ]
+      },
+      {
+        "title": "5. Resultados de la IA",
+        "paragraphs": [
+          "La IA puede cometer errores o crear resultados distintos a lo que esperabas. Revisa cada resultado antes de usarlo. Las fotos restauradas o editadas con IA son una recreación y no un registro exacto de la realidad. Cuando la ley o la plataforma donde publiques lo pidan, indica que la imagen fue creada o editada con IA."
+        ]
+      },
+      {
+        "title": "6. Puntos",
+        "bullets": [
+          "Las cuentas reciben puntos gratis cada mes para usar la IA; los invitados tienen algunos intentos gratis. También puedes ganar puntos extra invitando amigos o compartiendo.",
+          "Los puntos no tienen valor en dinero, no se pueden vender, transferir ni canjear por dinero, y los puntos del mes no se acumulan.",
+          "Podemos cambiar la cantidad de puntos o el costo de cada función, y quitar puntos obtenidos con trampas."
+        ]
+      },
+      {
+        "title": "7. Suspensión de cuentas",
+        "paragraphs": [
+          "Podemos suspender o cerrar cuentas que incumplan estos términos o pongan en riesgo el servicio o a otras personas, y borrar el contenido relacionado."
+        ]
+      },
+      {
+        "title": "8. Garantías y responsabilidad",
+        "paragraphs": [
+          "CamIA se ofrece \"tal cual\" y \"según disponibilidad\". Hacemos lo posible para que funcione bien, pero no garantizamos que esté siempre disponible o sin errores. En la medida que lo permita la ley, CamIA no se hace responsable de daños indirectos ni de pérdidas por el uso o la imposibilidad de usar el servicio. Nada de esto limita los derechos que te da la ley de protección al consumidor de tu país."
+        ]
+      },
+      {
+        "title": "9. Cambios a estos términos",
+        "paragraphs": [
+          "Si cambiamos estos términos, actualizaremos la fecha de arriba y, si el cambio es importante, lo avisaremos en la app. Si sigues usando CamIA después del cambio, aceptas los nuevos términos."
+        ]
+      },
+      {
+        "title": "10. Contacto",
+        "paragraphs": ["Preguntas sobre estos términos: {contact}"]
+      }
+    ]
+  },
+  "en": {
+    "title": "Terms of Use",
+    "updated": "Last updated: October 17, 2026",
+    "intro": "These terms govern the use of CamIA, the AI photo editor at https://camia.app and in the Android app (app.camia). By using CamIA you accept these terms and our Privacy Policy (https://camia.app/privacy). If you do not agree, do not use the service.",
+    "sections": [
+      {
+        "title": "1. The service",
+        "paragraphs": [
+          "CamIA lets you edit photos with manual tools and with artificial intelligence (AI): restore old photos, remove objects or backgrounds, create product photos, logos, hairstyles and makeup, combine photos, and create images and videos from a description, among others. We may add, change or remove features at any time."
+        ]
+      },
+      {
+        "title": "2. Your account",
+        "bullets": [
+          "You must be at least 13 years old to use CamIA. If you are a minor in your country, you need permission from a parent or guardian.",
+          "Give true information, keep your password safe and do not share your account. You are responsible for what is done with it.",
+          "You can delete your account at any time in Profile → Delete account (https://camia.app/delete-account)."
+        ]
+      },
+      {
+        "title": "3. Your photos and content",
+        "bullets": [
+          "The photos you upload and the results you create remain yours. You allow us to process them only to provide the service (for example, sending them to the AI to create the result).",
+          "Only upload photos you have the right to use. If other people appear in a photo, you must have their permission, especially to change how they look or create content with their image.",
+          "You are responsible for how you use and share the results."
+        ]
+      },
+      {
+        "title": "4. What is not allowed",
+        "bullets": [
+          "Creating or uploading sexual content or nudity, and any content that sexualizes minors (we will report it to the authorities).",
+          "Violent, gory, hateful or harassing content, or content that humiliates other people.",
+          "Impersonating a real person or creating fake images (deepfakes) to deceive, scam, defame or mislead.",
+          "Infringing copyrights, trademarks or other people's rights.",
+          "Using CamIA for illegal or dangerous activities.",
+          "Abusing the service: using automated programs, creating fake accounts to get points or free tries, or trying to get around limits or security."
+        ],
+        "paragraphs": [
+          "Our tools have filters, but if you see an inappropriate result, tap \"Report\" under the result to let us know."
+        ]
+      },
+      {
+        "title": "5. AI results",
+        "paragraphs": [
+          "AI can make mistakes or create results different from what you expected. Check every result before using it. Photos restored or edited with AI are a recreation, not an exact record of reality. Where the law or the platform you post on requires it, say that the image was created or edited with AI."
+        ]
+      },
+      {
+        "title": "6. Points",
+        "bullets": [
+          "Accounts get free points every month to use the AI; guests get a few free tries. You can also earn bonus points by inviting friends or sharing.",
+          "Points have no cash value and cannot be sold, transferred or exchanged for money, and monthly points do not roll over.",
+          "We may change the amount of points or the cost of each feature, and remove points obtained by cheating."
+        ]
+      },
+      {
+        "title": "7. Account suspension",
+        "paragraphs": [
+          "We may suspend or close accounts that break these terms or put the service or other people at risk, and delete the related content."
+        ]
+      },
+      {
+        "title": "8. Warranties and liability",
+        "paragraphs": [
+          "CamIA is provided \"as is\" and \"as available\". We do our best to keep it working well, but we do not guarantee it will always be available or free of errors. To the extent the law allows, CamIA is not liable for indirect damages or losses from using or being unable to use the service. Nothing here limits the rights consumer protection law gives you in your country."
+        ]
+      },
+      {
+        "title": "9. Changes to these terms",
+        "paragraphs": [
+          "If we change these terms, we will update the date above and, if the change is significant, announce it in the app. If you keep using CamIA after the change, you accept the new terms."
+        ]
+      },
+      {
+        "title": "10. Contact",
+        "paragraphs": ["Questions about these terms: {contact}"]
+      }
+    ]
+  },
+  "pt": {
+    "title": "Termos de uso",
+    "updated": "Última atualização: 17 de outubro de 2026",
+    "intro": "Estes termos regulam o uso do CamIA, o editor de fotos com IA em https://camia.app e no app para Android (app.camia). Ao usar o CamIA você aceita estes termos e nossa Política de privacidade (https://camia.app/privacy). Se não concordar, não use o serviço.",
+    "sections": [
+      {
+        "title": "1. O serviço",
+        "paragraphs": [
+          "O CamIA permite editar fotos com ferramentas manuais e com inteligência artificial (IA): restaurar fotos antigas, remover objetos ou o fundo, criar fotos de produto, logos, penteados e maquiagem, juntar fotos e criar imagens e vídeos a partir de uma descrição, entre outras. Podemos adicionar, mudar ou remover funções a qualquer momento."
+        ]
+      },
+      {
+        "title": "2. Sua conta",
+        "bullets": [
+          "Você precisa ter pelo menos 13 anos para usar o CamIA. Se for menor de idade no seu país, precisa da permissão dos pais ou responsáveis.",
+          "Informe dados verdadeiros, proteja sua senha e não compartilhe sua conta. Você é responsável pelo que for feito com ela.",
+          "Você pode excluir sua conta quando quiser em Perfil → Excluir conta (https://camia.app/delete-account)."
+        ]
+      },
+      {
+        "title": "3. Suas fotos e seu conteúdo",
+        "bullets": [
+          "As fotos que você envia e os resultados que cria continuam sendo seus. Você nos permite processá-los apenas para prestar o serviço (por exemplo, enviá-los à IA para criar o resultado).",
+          "Envie apenas fotos que você tem direito de usar. Se outras pessoas aparecem na foto, você precisa da permissão delas, principalmente para mudar a aparência delas ou criar conteúdo com a imagem delas.",
+          "Você é responsável por como usa e compartilha os resultados."
+        ]
+      },
+      {
+        "title": "4. O que não é permitido",
+        "bullets": [
+          "Criar ou enviar conteúdo sexual ou nudez, e qualquer conteúdo que sexualize menores (vamos denunciar às autoridades).",
+          "Conteúdo violento, sangrento, de ódio, assédio ou que humilhe outras pessoas.",
+          "Se passar por uma pessoa real ou criar imagens falsas (deepfakes) para enganar, aplicar golpes, difamar ou desinformar.",
+          "Violar direitos autorais, marcas ou outros direitos de terceiros.",
+          "Usar o CamIA para atividades ilegais ou perigosas.",
+          "Abusar do serviço: usar programas automáticos, criar contas falsas para ganhar pontos ou tentativas grátis, ou tentar burlar limites ou a segurança."
+        ],
+        "paragraphs": [
+          "Nossas ferramentas têm filtros, mas se você vir um resultado inapropriado, toque em \"Denunciar\" abaixo do resultado para nos avisar."
+        ]
+      },
+      {
+        "title": "5. Resultados da IA",
+        "paragraphs": [
+          "A IA pode errar ou criar resultados diferentes do que você esperava. Confira cada resultado antes de usar. Fotos restauradas ou editadas com IA são uma recriação, não um registro exato da realidade. Quando a lei ou a plataforma onde você publicar exigir, informe que a imagem foi criada ou editada com IA."
+        ]
+      },
+      {
+        "title": "6. Pontos",
+        "bullets": [
+          "As contas recebem pontos grátis todo mês para usar a IA; visitantes têm algumas tentativas grátis. Você também pode ganhar pontos extras convidando amigos ou compartilhando.",
+          "Os pontos não têm valor em dinheiro, não podem ser vendidos, transferidos nem trocados por dinheiro, e os pontos do mês não acumulam.",
+          "Podemos mudar a quantidade de pontos ou o custo de cada função, e remover pontos obtidos com trapaças."
+        ]
+      },
+      {
+        "title": "7. Suspensão de contas",
+        "paragraphs": [
+          "Podemos suspender ou encerrar contas que violem estes termos ou coloquem em risco o serviço ou outras pessoas, e apagar o conteúdo relacionado."
+        ]
+      },
+      {
+        "title": "8. Garantias e responsabilidade",
+        "paragraphs": [
+          "O CamIA é oferecido \"no estado em que se encontra\" e \"conforme disponível\". Fazemos o possível para que funcione bem, mas não garantimos que estará sempre disponível ou sem erros. Na medida permitida pela lei, o CamIA não se responsabiliza por danos indiretos nem por perdas decorrentes do uso ou da impossibilidade de usar o serviço. Nada aqui limita os direitos que o Código de Defesa do Consumidor ou a lei do seu país lhe garantem."
+        ]
+      },
+      {
+        "title": "9. Mudanças nestes termos",
+        "paragraphs": [
+          "Se mudarmos estes termos, atualizaremos a data acima e, se a mudança for importante, avisaremos no app. Se continuar usando o CamIA depois da mudança, você aceita os novos termos."
+        ]
+      },
+      {
+        "title": "10. Contato",
+        "paragraphs": ["Dúvidas sobre estes termos: {contact}"]
+      }
+    ]
+  },
+  "vi": {
+    "title": "Điều khoản sử dụng",
+    "updated": "Cập nhật lần cuối: 17/10/2026",
+    "intro": "Các điều khoản này áp dụng khi bạn dùng CamIA, ứng dụng chỉnh ảnh bằng AI tại https://camia.app và trên Android (app.camia). Khi dùng CamIA, bạn đồng ý với các điều khoản này và Chính sách quyền riêng tư (https://camia.app/privacy). Nếu không đồng ý, vui lòng không sử dụng dịch vụ.",
+    "sections": [
+      {
+        "title": "1. Dịch vụ",
+        "paragraphs": [
+          "CamIA cho phép bạn chỉnh ảnh bằng công cụ thủ công và trí tuệ nhân tạo (AI): phục hồi ảnh cũ, xóa vật thể hoặc xóa nền, tạo ảnh sản phẩm, logo, thử kiểu tóc và trang điểm, ghép ảnh, tạo ảnh và video từ mô tả, cùng nhiều tính năng khác. Chúng tôi có thể thêm, thay đổi hoặc gỡ tính năng bất kỳ lúc nào."
+        ]
+      },
+      {
+        "title": "2. Tài khoản của bạn",
+        "bullets": [
+          "Bạn phải từ 13 tuổi trở lên để dùng CamIA. Nếu chưa đủ tuổi thành niên ở nước bạn, bạn cần sự đồng ý của cha mẹ hoặc người giám hộ.",
+          "Cung cấp thông tin đúng, giữ kín mật khẩu và không chia sẻ tài khoản. Bạn chịu trách nhiệm về mọi hoạt động trên tài khoản của mình.",
+          "Bạn có thể xóa tài khoản bất cứ lúc nào tại Hồ sơ → Xóa tài khoản (https://camia.app/delete-account)."
+        ]
+      },
+      {
+        "title": "3. Ảnh và nội dung của bạn",
+        "bullets": [
+          "Ảnh bạn tải lên và kết quả bạn tạo vẫn thuộc về bạn. Bạn cho phép chúng tôi xử lý chúng chỉ để cung cấp dịch vụ (ví dụ gửi cho AI để tạo kết quả).",
+          "Chỉ tải lên ảnh bạn có quyền sử dụng. Nếu trong ảnh có người khác, bạn phải được họ đồng ý, nhất là khi thay đổi ngoại hình của họ hoặc tạo nội dung bằng hình ảnh của họ.",
+          "Bạn chịu trách nhiệm về cách sử dụng và chia sẻ kết quả."
+        ]
+      },
+      {
+        "title": "4. Những điều không được phép",
+        "bullets": [
+          "Tạo hoặc tải lên nội dung khiêu dâm, khỏa thân, và bất kỳ nội dung nào tình dục hóa trẻ vị thành niên (chúng tôi sẽ báo cho cơ quan chức năng).",
+          "Nội dung bạo lực, ghê rợn, thù ghét, quấy rối hoặc làm nhục người khác.",
+          "Giả mạo người thật hoặc tạo ảnh giả (deepfake) để lừa dối, lừa đảo, bôi nhọ hoặc đưa tin sai.",
+          "Vi phạm bản quyền, nhãn hiệu hoặc quyền của người khác.",
+          "Dùng CamIA cho hoạt động phạm pháp hoặc nguy hiểm.",
+          "Lạm dụng dịch vụ: dùng chương trình tự động, tạo tài khoản giả để lấy điểm hoặc lượt dùng thử, hoặc tìm cách vượt giới hạn hay cơ chế bảo mật."
+        ],
+        "paragraphs": [
+          "Các công cụ của chúng tôi có bộ lọc, nhưng nếu bạn thấy kết quả không phù hợp, hãy bấm \"Báo cáo\" bên dưới kết quả để báo cho chúng tôi."
+        ]
+      },
+      {
+        "title": "5. Kết quả do AI tạo",
+        "paragraphs": [
+          "AI có thể sai hoặc tạo kết quả khác với mong đợi. Hãy kiểm tra từng kết quả trước khi sử dụng. Ảnh được AI phục hồi hoặc chỉnh sửa là bản tái tạo, không phải bản ghi chính xác của thực tế. Khi pháp luật hoặc nền tảng bạn đăng yêu cầu, hãy ghi rõ ảnh được tạo hoặc chỉnh bằng AI."
+        ]
+      },
+      {
+        "title": "6. Điểm",
+        "bullets": [
+          "Tài khoản được tặng điểm miễn phí mỗi tháng để dùng AI; khách có một số lượt dùng thử miễn phí. Bạn cũng có thể nhận thêm điểm thưởng khi mời bạn bè hoặc chia sẻ.",
+          "Điểm không có giá trị quy đổi thành tiền, không được bán, chuyển nhượng hay đổi lấy tiền, và điểm hằng tháng không cộng dồn.",
+          "Chúng tôi có thể thay đổi số điểm hoặc chi phí của từng tính năng, và thu hồi điểm có được do gian lận."
+        ]
+      },
+      {
+        "title": "7. Khóa tài khoản",
+        "paragraphs": [
+          "Chúng tôi có thể tạm khóa hoặc đóng tài khoản vi phạm các điều khoản này hoặc gây nguy hiểm cho dịch vụ hay người khác, và xóa nội dung liên quan."
+        ]
+      },
+      {
+        "title": "8. Bảo đảm và trách nhiệm",
+        "paragraphs": [
+          "CamIA được cung cấp \"nguyên trạng\" và \"tùy theo khả năng sẵn có\". Chúng tôi cố gắng để dịch vụ hoạt động tốt nhưng không bảo đảm dịch vụ luôn sẵn sàng hoặc không có lỗi. Trong phạm vi pháp luật cho phép, CamIA không chịu trách nhiệm về thiệt hại gián tiếp hoặc tổn thất do việc sử dụng hay không thể sử dụng dịch vụ. Điều này không giới hạn các quyền mà luật bảo vệ người tiêu dùng tại nước bạn dành cho bạn."
+        ]
+      },
+      {
+        "title": "9. Thay đổi điều khoản",
+        "paragraphs": [
+          "Khi thay đổi các điều khoản này, chúng tôi sẽ cập nhật ngày ở trên và thông báo trong ứng dụng nếu thay đổi quan trọng. Nếu bạn tiếp tục dùng CamIA sau khi thay đổi, nghĩa là bạn đồng ý với điều khoản mới."
+        ]
+      },
+      {
+        "title": "10. Liên hệ",
+        "paragraphs": ["Câu hỏi về các điều khoản này: {contact}"]
+      }
+    ]
+  }
+}

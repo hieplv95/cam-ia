@@ -33,6 +33,7 @@ import { notify } from '@/src/notify';
 import { usePhotoSource } from '@/src/photoSource';
 import { saveImage } from '@/src/save';
 import { setPendingExport, setPendingPhoto, takePendingPhoto } from '@/src/pendingPhoto';
+import { ReportAi } from '@/src/ReportAi';
 import { colors, font, goldGradient } from '@/src/theme';
 import { HomeButton, IconButton } from '@/src/ui';
 import { useT, type MessageKey } from '@/src/i18n';
@@ -506,6 +507,7 @@ export default function Studio() {
             </Pressable>
           </View>
         )}
+        {result && !busy && <ReportAi tool={`studio.${tool.id}`} image={result.image} prompt={[brand, tagline, extra].filter((s) => s.trim()).join(' · ')} style={{ marginTop: -6 }} />}
       </View>
 
       {toast && (

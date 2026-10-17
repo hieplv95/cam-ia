@@ -4,6 +4,7 @@ import { useAccount } from '@/src/account';
 import { AdminGate } from '@/src/admin/AdminGate';
 import { BlogTab } from '@/src/admin/BlogTab';
 import { OverviewTab } from '@/src/admin/OverviewTab';
+import { ReportsTab } from '@/src/admin/ReportsTab';
 import { Shell } from '@/src/admin/Shell';
 import { SystemTab } from '@/src/admin/SystemTab';
 import { SeoTab } from '@/src/admin/SeoTab';
@@ -13,11 +14,12 @@ import { Segmented } from '@/src/admin/ui';
 import { UsersTab } from '@/src/admin/UsersTab';
 import { VideoMaker } from '@/src/video/VideoMaker';
 
-type Tab = 'overview' | 'traffic' | 'users' | 'seo' | 'blog' | 'video' | 'system' | 'settings';
+type Tab = 'overview' | 'traffic' | 'users' | 'reports' | 'seo' | 'blog' | 'video' | 'system' | 'settings';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Tổng quan' },
   { id: 'traffic', label: 'Truy cập' },
   { id: 'users', label: 'Khách hàng' },
+  { id: 'reports', label: 'Báo cáo' },
   { id: 'seo', label: 'SEO' },
   { id: 'blog', label: 'Blog' },
   { id: 'video', label: 'Video AI' },
@@ -48,6 +50,7 @@ function Dashboard() {
       {tab === 'overview' && <OverviewTab refresh={refresh} />}
       {tab === 'traffic' && <TrafficTab refresh={refresh} />}
       {tab === 'users' && <UsersTab refresh={refresh} />}
+      {tab === 'reports' && <ReportsTab refresh={refresh} />}
       {tab === 'seo' && <SeoTab refresh={refresh} />}
       {tab === 'blog' && <BlogTab refresh={refresh} />}
       {tab === 'video' && <VideoMaker />}

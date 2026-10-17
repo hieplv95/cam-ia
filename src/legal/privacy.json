@@ -1,0 +1,335 @@
+{
+  "contact": "hieplv1995@gmail.com",
+  "es": {
+    "title": "Política de privacidad",
+    "updated": "Última actualización: 17 de octubre de 2026",
+    "intro": "CamIA (\"CamIA\", \"nosotros\") es un editor de fotos con inteligencia artificial disponible en https://camia.app y como app para Android (app.camia). Esta política explica qué datos recopilamos, para qué los usamos, con quién los compartimos y qué opciones tienes. Si tienes preguntas, escríbenos a {contact}.",
+    "sections": [
+      {
+        "title": "1. Datos que recopilamos",
+        "bullets": [
+          "Cuenta (solo si te registras): tu correo electrónico, el nombre que escribas y tu contraseña, que guardamos únicamente como un hash seguro (nunca en texto legible). Para mantener tu sesión abierta, tu dispositivo guarda un token; en nuestro servidor solo guardamos un hash de ese token.",
+          "Fotos, videos y textos que envías a las funciones de IA: las fotos que eliges y la descripción que escribes se envían a nuestro servidor y a la IA Gemini de Google para crear el resultado. Se procesan en memoria y no se guardan en nuestro servidor después de devolverte el resultado (los archivos temporales que usamos para unir clips de video se borran al terminar).",
+          "Puntos y uso de la IA: qué función usaste, cuándo, con qué modelo, cuántos puntos gastaste y si salió bien o hubo un error. No guardamos el contenido de tus fotos.",
+          "Identificador del dispositivo: un código aleatorio que la app crea en tu dispositivo para contar los intentos gratis de los invitados y medir las visitas. No es tu ID de publicidad, IMEI ni número de teléfono.",
+          "Dirección IP: la usamos para evitar abusos (por ejemplo, limitar intentos gratis y registros). Solo guardamos una versión cifrada de un solo sentido (hash), nunca la dirección real.",
+          "Actividad en la app: visitas, tiempo en cada pantalla y conteos diarios anónimos de funciones usadas (por ejemplo, cuántas fotos se guardaron).",
+          "Invitaciones y enlaces compartidos: tu código de invitación, quién se registró con él y las visitas a los enlaces que compartes, para darte puntos extra.",
+          "Reportes: si reportas un resultado de IA como inapropiado, guardamos una copia pequeña de ese resultado, el motivo, tu comentario y el texto que escribiste, para que nuestro equipo lo revise.",
+          "Permisos: la cámara solo se usa cuando eliges tomar una foto, y la app solo guarda fotos en tu galería (sin leerla). Para elegir fotos usamos el selector de fotos del sistema, así que la app no tiene acceso a toda tu galería."
+        ],
+        "paragraphs": [
+          "No recopilamos tu ubicación, contactos, ID de publicidad ni datos de pago. CamIA no muestra anuncios y no usa herramientas de análisis o publicidad de terceros."
+        ]
+      },
+      {
+        "title": "2. Cómo usamos los datos",
+        "bullets": [
+          "Para darte el servicio: editar tus fotos con IA, mantener tu cuenta y llevar la cuenta de tus puntos.",
+          "Para proteger el servicio contra abusos, fraude y uso automatizado.",
+          "Para entender cómo se usa la app y mejorarla, con estadísticas agrupadas.",
+          "Para responder a tus mensajes y cumplir con la ley."
+        ],
+        "paragraphs": [
+          "No vendemos tus datos y no usamos tus fotos para entrenar modelos de IA."
+        ]
+      },
+      {
+        "title": "3. Con quién compartimos datos",
+        "bullets": [
+          "Google (API de Gemini / Vertex AI): procesa las fotos y textos que envías a las funciones de IA, solo para crear el resultado, según sus condiciones de servicio. Política de privacidad de Google: https://policies.google.com/privacy",
+          "Proveedor de alojamiento: nuestro servidor está en un servidor privado virtual (VPS) alquilado en Estados Unidos, que guarda los datos por cuenta nuestra.",
+          "Otras apps (por ejemplo, Facebook o WhatsApp): solo cuando tú decides compartir una foto o un enlace desde la función de compartir de tu dispositivo.",
+          "Autoridades: si la ley nos obliga."
+        ]
+      },
+      {
+        "title": "4. Dónde se guardan y cuánto tiempo",
+        "paragraphs": [
+          "Los datos se guardan en nuestro servidor en Estados Unidos y viajan cifrados (HTTPS). Las contraseñas y las direcciones IP se guardan solo como hash y el acceso al servidor está limitado a los administradores de CamIA.",
+          "Las imágenes de los resultados reportados se borran como máximo 90 días después del reporte.",
+          "Guardamos los datos de tu cuenta hasta que la elimines. Al eliminarla, también se borran tus puntos, invitaciones e historial de uso, o quedan sin ninguna relación contigo. Los datos de invitados (identificador del dispositivo, IP cifrada y conteo de uso) no incluyen tu nombre ni tu correo; puedes pedirnos que los borremos por correo. Las estadísticas agrupadas, que no identifican a nadie, pueden conservarse."
+        ]
+      },
+      {
+        "title": "5. Cómo eliminar tu cuenta y tus datos",
+        "bullets": [
+          "Desde la app o desde https://camia.app: abre Perfil → Eliminar cuenta y confirma con tu contraseña. Tu cuenta y sus datos se borran al instante.",
+          "O escríbenos a {contact} desde el correo de tu cuenta con el asunto \"Eliminar mi cuenta\". Lo haremos en un máximo de 30 días.",
+          "Para borrar el identificador del dispositivo, borra los datos de la app o desinstálala."
+        ],
+        "paragraphs": [
+          "También puedes pedirnos acceso a tus datos, corregirlos, oponerte a su uso o recibir una copia, según las leyes de tu país (por ejemplo, la ley de protección de datos de México, Colombia, Argentina, Perú, Chile, la LGPD de Brasil o el RGPD europeo). Si no estás conforme con nuestra respuesta, puedes acudir a la autoridad de protección de datos de tu país.",
+          "Más información: Términos de uso (https://camia.app/terms) y Cómo eliminar tu cuenta (https://camia.app/delete-account)."
+        ]
+      },
+      {
+        "title": "6. Menores de edad",
+        "paragraphs": [
+          "CamIA no está dirigida a niños menores de 13 años y no recopilamos a sabiendas datos de ellos. Si eres madre, padre o tutor y crees que un menor nos dio datos, escríbenos y los borraremos."
+        ]
+      },
+      {
+        "title": "7. Cambios a esta política",
+        "paragraphs": [
+          "Si cambiamos esta política, actualizaremos la fecha de arriba. Si el cambio es importante, también lo avisaremos en la app."
+        ]
+      },
+      {
+        "title": "8. Contacto",
+        "paragraphs": [
+          "Para cualquier pregunta sobre privacidad o tus datos: {contact}"
+        ]
+      }
+    ]
+  },
+  "en": {
+    "title": "Privacy Policy",
+    "updated": "Last updated: October 17, 2026",
+    "intro": "CamIA (\"CamIA\", \"we\") is an AI photo editor available at https://camia.app and as an Android app (app.camia). This policy explains what data we collect, how we use it, who we share it with and the choices you have. Questions? Write to us at {contact}.",
+    "sections": [
+      {
+        "title": "1. Data we collect",
+        "bullets": [
+          "Account (only if you sign up): your email address, the name you enter and your password, which we store only as a secure hash (never readable). To keep you signed in, your device keeps a token; our server stores only a hash of it.",
+          "Photos, videos and text you send to AI features: the photos you choose and the description you write are sent to our server and to Google's Gemini AI to create the result. They are processed in memory and are not stored on our server after the result is returned (temporary files used to join video clips are deleted when done).",
+          "Points and AI usage: which feature you used, when, with which model, how many points you spent and whether it worked or failed. We do not keep the content of your photos.",
+          "Device identifier: a random code the app creates on your device to count free tries for guests and to measure visits. It is not your advertising ID, IMEI or phone number.",
+          "IP address: used to prevent abuse (for example, to limit free tries and sign-ups). We store only a one-way scrambled form (hash), never the real address.",
+          "App activity: visits, time on each screen and anonymous daily counts of features used (for example, how many photos were saved).",
+          "Invites and shared links: your invite code, who signed up with it and visits to links you share, to give you bonus points.",
+          "Reports: if you report an AI result as inappropriate, we keep a small copy of that result, the reason, your comment and the text you wrote, so our team can review it.",
+          "Permissions: the camera is used only when you choose to take a photo, and the app only saves photos to your gallery (it does not read it). Photos are picked with the system photo picker, so the app has no access to your whole gallery."
+        ],
+        "paragraphs": [
+          "We do not collect your location, contacts, advertising ID or payment details. CamIA shows no ads and uses no third-party analytics or advertising tools."
+        ]
+      },
+      {
+        "title": "2. How we use data",
+        "bullets": [
+          "To provide the service: editing your photos with AI, keeping your account and counting your points.",
+          "To protect the service against abuse, fraud and automated use.",
+          "To understand how the app is used and improve it, with aggregated statistics.",
+          "To answer your messages and comply with the law."
+        ],
+        "paragraphs": [
+          "We do not sell your data and we do not use your photos to train AI models."
+        ]
+      },
+      {
+        "title": "3. Who we share data with",
+        "bullets": [
+          "Google (Gemini API / Vertex AI): processes the photos and text you send to AI features, only to create the result, under its terms of service. Google's privacy policy: https://policies.google.com/privacy",
+          "Hosting provider: our server runs on a rented virtual private server (VPS) in the United States, which stores the data on our behalf.",
+          "Other apps (for example Facebook or WhatsApp): only when you choose to share a photo or link with your device's share feature.",
+          "Authorities: when the law requires it."
+        ]
+      },
+      {
+        "title": "4. Where data is kept and for how long",
+        "paragraphs": [
+          "Data is stored on our server in the United States and travels encrypted (HTTPS). Passwords and IP addresses are stored only as hashes, and server access is limited to CamIA administrators.",
+          "Pictures of reported results are deleted at most 90 days after the report.",
+          "We keep your account data until you delete your account. When you do, your points, invites and usage history are deleted too, or no longer linked to you. Guest data (device identifier, hashed IP and usage counts) does not include your name or email; you can ask us by email to delete it. Aggregated statistics that identify no one may be kept."
+        ]
+      },
+      {
+        "title": "5. How to delete your account and data",
+        "bullets": [
+          "In the app or at https://camia.app: open Profile → Delete account and confirm with your password. Your account and its data are deleted immediately.",
+          "Or email {contact} from your account's email address with the subject \"Delete my account\". We will do it within 30 days.",
+          "To remove the device identifier, clear the app's data or uninstall it."
+        ],
+        "paragraphs": [
+          "You can also ask us to access, correct or receive a copy of your data, or object to its use, under the laws of your country (for example the GDPR, Brazil's LGPD or Latin American data protection laws). If you are not satisfied with our answer, you can contact your local data protection authority.",
+          "More: Terms of Use (https://camia.app/terms) and How to delete your account (https://camia.app/delete-account)."
+        ]
+      },
+      {
+        "title": "6. Children",
+        "paragraphs": [
+          "CamIA is not directed at children under 13 and we do not knowingly collect their data. If you are a parent or guardian and believe a child gave us data, write to us and we will delete it."
+        ]
+      },
+      {
+        "title": "7. Changes to this policy",
+        "paragraphs": [
+          "If we change this policy, we will update the date above. If the change is significant, we will also announce it in the app."
+        ]
+      },
+      {
+        "title": "8. Contact",
+        "paragraphs": [
+          "For any question about privacy or your data: {contact}"
+        ]
+      }
+    ]
+  },
+  "pt": {
+    "title": "Política de privacidade",
+    "updated": "Última atualização: 17 de outubro de 2026",
+    "intro": "O CamIA (\"CamIA\", \"nós\") é um editor de fotos com inteligência artificial disponível em https://camia.app e como app para Android (app.camia). Esta política explica quais dados coletamos, como os usamos, com quem os compartilhamos e quais escolhas você tem. Dúvidas? Escreva para {contact}.",
+    "sections": [
+      {
+        "title": "1. Dados que coletamos",
+        "bullets": [
+          "Conta (só se você se cadastrar): seu e-mail, o nome que você digitar e sua senha, que guardamos apenas como um hash seguro (nunca legível). Para manter você conectado, seu aparelho guarda um token; nosso servidor guarda só um hash dele.",
+          "Fotos, vídeos e textos enviados às funções de IA: as fotos que você escolhe e a descrição que escreve são enviadas ao nosso servidor e à IA Gemini do Google para criar o resultado. Elas são processadas em memória e não ficam guardadas no nosso servidor depois que o resultado é devolvido (os arquivos temporários usados para juntar clipes de vídeo são apagados ao final).",
+          "Pontos e uso da IA: qual função você usou, quando, com qual modelo, quantos pontos gastou e se deu certo ou houve erro. Não guardamos o conteúdo das suas fotos.",
+          "Identificador do aparelho: um código aleatório que o app cria no seu aparelho para contar as tentativas grátis de visitantes e medir visitas. Não é seu ID de publicidade, IMEI nem número de telefone.",
+          "Endereço IP: usado para evitar abusos (por exemplo, limitar tentativas grátis e cadastros). Guardamos só uma versão embaralhada de mão única (hash), nunca o endereço real.",
+          "Atividade no app: visitas, tempo em cada tela e contagens diárias anônimas das funções usadas (por exemplo, quantas fotos foram salvas).",
+          "Convites e links compartilhados: seu código de convite, quem se cadastrou com ele e as visitas aos links que você compartilha, para dar pontos extras.",
+          "Denúncias: se você denunciar um resultado de IA como inapropriado, guardamos uma cópia pequena desse resultado, o motivo, seu comentário e o texto que você escreveu, para nossa equipe analisar.",
+          "Permissões: a câmera só é usada quando você escolhe tirar uma foto, e o app apenas salva fotos na sua galeria (sem lê-la). As fotos são escolhidas pelo seletor de fotos do sistema, então o app não tem acesso à sua galeria inteira."
+        ],
+        "paragraphs": [
+          "Não coletamos sua localização, contatos, ID de publicidade nem dados de pagamento. O CamIA não mostra anúncios e não usa ferramentas de análise ou publicidade de terceiros."
+        ]
+      },
+      {
+        "title": "2. Como usamos os dados",
+        "bullets": [
+          "Para oferecer o serviço: editar suas fotos com IA, manter sua conta e contar seus pontos.",
+          "Para proteger o serviço contra abusos, fraudes e uso automatizado.",
+          "Para entender como o app é usado e melhorá-lo, com estatísticas agrupadas.",
+          "Para responder suas mensagens e cumprir a lei."
+        ],
+        "paragraphs": [
+          "Não vendemos seus dados e não usamos suas fotos para treinar modelos de IA."
+        ]
+      },
+      {
+        "title": "3. Com quem compartilhamos dados",
+        "bullets": [
+          "Google (API Gemini / Vertex AI): processa as fotos e textos enviados às funções de IA, apenas para criar o resultado, conforme seus termos de serviço. Política de privacidade do Google: https://policies.google.com/privacy",
+          "Provedor de hospedagem: nosso servidor fica em um servidor privado virtual (VPS) alugado nos Estados Unidos, que guarda os dados em nosso nome.",
+          "Outros apps (por exemplo, Facebook ou WhatsApp): só quando você decide compartilhar uma foto ou link pela função de compartilhar do seu aparelho.",
+          "Autoridades: quando a lei exigir."
+        ]
+      },
+      {
+        "title": "4. Onde os dados ficam e por quanto tempo",
+        "paragraphs": [
+          "Os dados ficam no nosso servidor nos Estados Unidos e trafegam criptografados (HTTPS). Senhas e endereços IP são guardados apenas como hash, e o acesso ao servidor é limitado aos administradores do CamIA.",
+          "As imagens dos resultados denunciados são apagadas no máximo 90 dias depois da denúncia.",
+          "Guardamos os dados da sua conta até você excluí-la. Ao excluir, seus pontos, convites e histórico de uso também são apagados ou deixam de estar ligados a você. Os dados de visitantes (identificador do aparelho, IP em hash e contagem de uso) não incluem seu nome nem e-mail; você pode pedir por e-mail que os apaguemos. Estatísticas agrupadas, que não identificam ninguém, podem ser mantidas."
+        ]
+      },
+      {
+        "title": "5. Como excluir sua conta e seus dados",
+        "bullets": [
+          "No app ou em https://camia.app: abra Perfil → Excluir conta e confirme com sua senha. Sua conta e seus dados são apagados na hora.",
+          "Ou escreva para {contact} a partir do e-mail da sua conta com o assunto \"Excluir minha conta\". Faremos isso em até 30 dias.",
+          "Para apagar o identificador do aparelho, limpe os dados do app ou desinstale-o."
+        ],
+        "paragraphs": [
+          "Você também pode pedir acesso aos seus dados, correção, oposição ao uso ou uma cópia, conforme as leis do seu país (por exemplo, a LGPD no Brasil). Se não ficar satisfeito com nossa resposta, pode procurar a autoridade de proteção de dados do seu país (no Brasil, a ANPD).",
+          "Mais informações: Termos de uso (https://camia.app/terms) e Como excluir sua conta (https://camia.app/delete-account)."
+        ]
+      },
+      {
+        "title": "6. Crianças",
+        "paragraphs": [
+          "O CamIA não é direcionado a crianças menores de 13 anos e não coletamos dados delas intencionalmente. Se você é responsável e acredita que uma criança nos enviou dados, escreva para nós e vamos apagá-los."
+        ]
+      },
+      {
+        "title": "7. Mudanças nesta política",
+        "paragraphs": [
+          "Se mudarmos esta política, atualizaremos a data acima. Se a mudança for importante, também avisaremos no app."
+        ]
+      },
+      {
+        "title": "8. Contato",
+        "paragraphs": [
+          "Para qualquer dúvida sobre privacidade ou seus dados: {contact}"
+        ]
+      }
+    ]
+  },
+  "vi": {
+    "title": "Chính sách quyền riêng tư",
+    "updated": "Cập nhật lần cuối: 17/10/2026",
+    "intro": "CamIA (\"CamIA\", \"chúng tôi\") là ứng dụng chỉnh ảnh bằng trí tuệ nhân tạo tại https://camia.app và trên Android (app.camia). Chính sách này giải thích chúng tôi thu thập dữ liệu gì, dùng để làm gì, chia sẻ với ai và bạn có những lựa chọn nào. Nếu có câu hỏi, hãy viết cho chúng tôi tại {contact}.",
+    "sections": [
+      {
+        "title": "1. Dữ liệu chúng tôi thu thập",
+        "bullets": [
+          "Tài khoản (chỉ khi bạn đăng ký): email, tên bạn nhập và mật khẩu, mật khẩu chỉ được lưu dưới dạng mã băm an toàn (không ai đọc được). Để giữ bạn đăng nhập, thiết bị của bạn giữ một mã phiên; máy chủ chỉ lưu mã băm của nó.",
+          "Ảnh, video và mô tả bạn gửi cho các tính năng AI: ảnh bạn chọn và mô tả bạn viết được gửi đến máy chủ của chúng tôi và AI Gemini của Google để tạo kết quả. Chúng được xử lý trong bộ nhớ và không lưu lại trên máy chủ sau khi trả kết quả (các tệp tạm để ghép đoạn video được xóa ngay khi xong).",
+          "Điểm và lượt dùng AI: bạn dùng tính năng nào, lúc nào, model nào, tốn bao nhiêu điểm, thành công hay lỗi. Chúng tôi không lưu nội dung ảnh của bạn.",
+          "Mã thiết bị: một mã ngẫu nhiên do ứng dụng tạo trên máy bạn, để đếm lượt dùng thử miễn phí của khách và đo lượt truy cập. Đây không phải mã quảng cáo, IMEI hay số điện thoại.",
+          "Địa chỉ IP: dùng để chống lạm dụng (ví dụ giới hạn lượt dùng thử và lượt đăng ký). Chúng tôi chỉ lưu dạng băm một chiều, không bao giờ lưu địa chỉ thật.",
+          "Hoạt động trong ứng dụng: lượt truy cập, thời gian ở mỗi màn hình và số đếm ẩn danh theo ngày của các tính năng được dùng (ví dụ số ảnh đã lưu).",
+          "Lời mời và liên kết chia sẻ: mã mời của bạn, ai đăng ký bằng mã đó và lượt mở các liên kết bạn chia sẻ, để tặng điểm thưởng.",
+          "Báo cáo: nếu bạn báo cáo một kết quả AI là không phù hợp, chúng tôi lưu một bản nhỏ của kết quả đó, lý do, ghi chú và mô tả bạn đã viết để đội ngũ xem xét.",
+          "Quyền truy cập: camera chỉ dùng khi bạn chọn chụp ảnh, và ứng dụng chỉ lưu ảnh vào thư viện (không đọc thư viện). Ảnh được chọn qua trình chọn ảnh của hệ thống nên ứng dụng không truy cập toàn bộ thư viện ảnh của bạn."
+        ],
+        "paragraphs": [
+          "Chúng tôi không thu thập vị trí, danh bạ, mã quảng cáo hay thông tin thanh toán. CamIA không hiển thị quảng cáo và không dùng công cụ phân tích hay quảng cáo của bên thứ ba."
+        ]
+      },
+      {
+        "title": "2. Chúng tôi dùng dữ liệu để làm gì",
+        "bullets": [
+          "Cung cấp dịch vụ: chỉnh ảnh bằng AI, duy trì tài khoản và tính điểm của bạn.",
+          "Bảo vệ dịch vụ khỏi lạm dụng, gian lận và truy cập tự động.",
+          "Hiểu cách ứng dụng được dùng để cải thiện, bằng thống kê tổng hợp.",
+          "Trả lời tin nhắn của bạn và tuân thủ pháp luật."
+        ],
+        "paragraphs": [
+          "Chúng tôi không bán dữ liệu của bạn và không dùng ảnh của bạn để huấn luyện mô hình AI."
+        ]
+      },
+      {
+        "title": "3. Chúng tôi chia sẻ dữ liệu với ai",
+        "bullets": [
+          "Google (Gemini API / Vertex AI): xử lý ảnh và mô tả bạn gửi cho các tính năng AI, chỉ để tạo kết quả, theo điều khoản dịch vụ của Google. Chính sách quyền riêng tư của Google: https://policies.google.com/privacy",
+          "Nhà cung cấp máy chủ: máy chủ của chúng tôi là một máy chủ ảo (VPS) thuê tại Hoa Kỳ, lưu dữ liệu thay cho chúng tôi.",
+          "Ứng dụng khác (ví dụ Facebook, WhatsApp): chỉ khi bạn chọn chia sẻ ảnh hoặc liên kết bằng chức năng chia sẻ của thiết bị.",
+          "Cơ quan chức năng: khi pháp luật yêu cầu."
+        ]
+      },
+      {
+        "title": "4. Dữ liệu được lưu ở đâu và bao lâu",
+        "paragraphs": [
+          "Dữ liệu được lưu trên máy chủ của chúng tôi tại Hoa Kỳ và được truyền qua kết nối mã hóa (HTTPS). Mật khẩu và địa chỉ IP chỉ được lưu dưới dạng băm; chỉ quản trị viên CamIA mới truy cập được máy chủ.",
+          "Ảnh của các kết quả bị báo cáo được xóa chậm nhất 90 ngày sau khi báo cáo.",
+          "Dữ liệu tài khoản được giữ đến khi bạn xóa tài khoản. Khi xóa, điểm, lời mời và lịch sử sử dụng cũng bị xóa hoặc không còn gắn với bạn. Dữ liệu của khách (mã thiết bị, IP đã băm và số lượt dùng) không có tên hay email của bạn; bạn có thể gửi email yêu cầu chúng tôi xóa. Thống kê tổng hợp không nhận diện được ai có thể được giữ lại."
+        ]
+      },
+      {
+        "title": "5. Cách xóa tài khoản và dữ liệu",
+        "bullets": [
+          "Trong ứng dụng hoặc tại https://camia.app: mở Hồ sơ → Xóa tài khoản và nhập mật khẩu để xác nhận. Tài khoản và dữ liệu bị xóa ngay lập tức.",
+          "Hoặc gửi email đến {contact} từ email tài khoản của bạn với tiêu đề \"Xóa tài khoản của tôi\". Chúng tôi sẽ xử lý trong tối đa 30 ngày.",
+          "Để xóa mã thiết bị, hãy xóa dữ liệu ứng dụng hoặc gỡ cài đặt."
+        ],
+        "paragraphs": [
+          "Bạn cũng có thể yêu cầu xem, sửa, nhận bản sao dữ liệu hoặc phản đối việc sử dụng dữ liệu của mình theo luật của nước bạn. Nếu không hài lòng với phản hồi của chúng tôi, bạn có thể liên hệ cơ quan bảo vệ dữ liệu tại nước mình.",
+          "Xem thêm: Điều khoản sử dụng (https://camia.app/terms) và Cách xóa tài khoản (https://camia.app/delete-account)."
+        ]
+      },
+      {
+        "title": "6. Trẻ em",
+        "paragraphs": [
+          "CamIA không dành cho trẻ em dưới 13 tuổi và chúng tôi không cố ý thu thập dữ liệu của trẻ. Nếu bạn là cha mẹ hoặc người giám hộ và cho rằng trẻ đã gửi dữ liệu cho chúng tôi, hãy liên hệ để chúng tôi xóa."
+        ]
+      },
+      {
+        "title": "7. Thay đổi chính sách",
+        "paragraphs": [
+          "Khi thay đổi chính sách này, chúng tôi sẽ cập nhật ngày ở trên. Nếu thay đổi quan trọng, chúng tôi cũng sẽ thông báo trong ứng dụng."
+        ]
+      },
+      {
+        "title": "8. Liên hệ",
+        "paragraphs": [
+          "Mọi câu hỏi về quyền riêng tư hoặc dữ liệu của bạn: {contact}"
+        ]
+      }
+    ]
+  }
+}

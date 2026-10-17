@@ -93,7 +93,20 @@ export function BlogFooter() {
             </Link>
           </View>
         </View>
-        <Text style={styles.rights}>{t('blog.footer.rights', { year: new Date().getFullYear() })}</Text>
+        <View style={styles.rights}>
+          <Text style={styles.rightsText}>{t('blog.footer.rights', { year: new Date().getFullYear() })}</Text>
+          <View style={styles.legal}>
+            <Link href="/privacy" style={styles.rightsText}>
+              {t('legal.privacy')}
+            </Link>
+            <Link href="/terms" style={styles.rightsText}>
+              {t('legal.terms')}
+            </Link>
+            <Link href="/delete-account" style={styles.rightsText}>
+              {t('legal.deleteAccount')}
+            </Link>
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -117,5 +130,7 @@ const styles = StyleSheet.create({
   langOn: { backgroundColor: colors.gold },
   langText: { fontFamily: font.medium, fontSize: 12, color: BRAND_BROWN },
   langTextOn: { color: '#FFFFFF' },
-  rights: { fontFamily: font.regular, fontSize: 12, color: '#8A7A69', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E0D2BE', paddingTop: 12 },
+  rights: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E0D2BE', paddingTop: 12 },
+  rightsText: { fontFamily: font.regular, fontSize: 12, color: '#8A7A69' },
+  legal: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
 });

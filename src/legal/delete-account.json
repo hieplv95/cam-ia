@@ -1,0 +1,183 @@
+{
+  "contact": "hieplv1995@gmail.com",
+  "es": {
+    "title": "Cómo eliminar tu cuenta de CamIA",
+    "updated": "Última actualización: 17 de octubre de 2026",
+    "intro": "Esta página explica cómo eliminar tu cuenta de CamIA (app para Android app.camia y web https://camia.app) y qué datos se borran. No necesitas reinstalar la app para hacerlo.",
+    "sections": [
+      {
+        "title": "Opción 1: desde la app o la web (inmediato)",
+        "bullets": [
+          "Abre la app CamIA o entra a https://camia.app e inicia sesión.",
+          "Ve a la pestaña Perfil.",
+          "Toca \"Eliminar cuenta\".",
+          "Escribe tu contraseña y confirma. Tu cuenta se elimina al instante y se cierra tu sesión."
+        ]
+      },
+      {
+        "title": "Opción 2: por correo (si no puedes entrar)",
+        "paragraphs": [
+          "Escribe a {contact} desde el correo de tu cuenta, con el asunto \"Eliminar mi cuenta\". Para proteger tu cuenta, solo atendemos pedidos enviados desde ese correo. La eliminaremos en un máximo de 30 días y te avisaremos."
+        ]
+      },
+      {
+        "title": "Datos que se borran",
+        "bullets": [
+          "Tu correo, tu nombre y tu contraseña (hash).",
+          "Tus sesiones abiertas en todos tus dispositivos.",
+          "Tus puntos, puntos extra, código de invitación y el registro de invitaciones y visitas a tus enlaces.",
+          "Tu historial de uso de la IA y de videos vinculado a tu cuenta."
+        ]
+      },
+      {
+        "title": "Datos que se conservan",
+        "bullets": [
+          "Estadísticas de uso que ya no se pueden relacionar contigo (por ejemplo, cuántas veces se usó una herramienta un día), para entender cómo se usa la app.",
+          "Reportes de contenido que hayas enviado, sin relación con tu cuenta; sus imágenes se borran como máximo 90 días después del reporte.",
+          "Las fotos que editaste no se guardan en nuestros servidores, así que no hay fotos tuyas que borrar. Las fotos que guardaste en tu teléfono siguen ahí."
+        ]
+      },
+      {
+        "title": "Borrar solo algunos datos",
+        "paragraphs": [
+          "Si quieres que borremos algunos datos sin eliminar tu cuenta, o los datos de tu dispositivo como invitado, escríbenos a {contact}. Para borrar el identificador del dispositivo tú mismo, borra los datos de la app o desinstálala. Más información en la Política de privacidad: https://camia.app/privacy"
+        ]
+      }
+    ]
+  },
+  "en": {
+    "title": "How to delete your CamIA account",
+    "updated": "Last updated: October 17, 2026",
+    "intro": "This page explains how to delete your CamIA account (Android app app.camia and web https://camia.app) and which data is deleted. You do not need to reinstall the app to do it.",
+    "sections": [
+      {
+        "title": "Option 1: in the app or on the web (immediate)",
+        "bullets": [
+          "Open the CamIA app or go to https://camia.app and sign in.",
+          "Go to the Profile tab.",
+          "Tap \"Delete account\".",
+          "Enter your password and confirm. Your account is deleted immediately and you are signed out."
+        ]
+      },
+      {
+        "title": "Option 2: by email (if you cannot sign in)",
+        "paragraphs": [
+          "Write to {contact} from your account's email address with the subject \"Delete my account\". To protect your account, we only act on requests sent from that address. We will delete it within 30 days and let you know."
+        ]
+      },
+      {
+        "title": "Data that is deleted",
+        "bullets": [
+          "Your email, name and password (hash).",
+          "Your sign-in sessions on all your devices.",
+          "Your points, bonus points, invite code and the record of invites and visits to your links.",
+          "Your AI and video usage history linked to your account."
+        ]
+      },
+      {
+        "title": "Data that is kept",
+        "bullets": [
+          "Usage statistics that can no longer be linked to you (for example, how many times a tool was used on a day), to understand how the app is used.",
+          "Content reports you sent, no longer linked to your account; their pictures are deleted at most 90 days after the report.",
+          "Photos you edited are not stored on our servers, so there are no photos of yours to delete. Photos you saved on your phone stay there."
+        ]
+      },
+      {
+        "title": "Deleting only some data",
+        "paragraphs": [
+          "If you want us to delete some data without deleting your account, or your device's guest data, write to {contact}. To remove the device identifier yourself, clear the app's data or uninstall it. More in the Privacy Policy: https://camia.app/privacy"
+        ]
+      }
+    ]
+  },
+  "pt": {
+    "title": "Como excluir sua conta do CamIA",
+    "updated": "Última atualização: 17 de outubro de 2026",
+    "intro": "Esta página explica como excluir sua conta do CamIA (app para Android app.camia e web https://camia.app) e quais dados são apagados. Você não precisa reinstalar o app para isso.",
+    "sections": [
+      {
+        "title": "Opção 1: no app ou na web (imediato)",
+        "bullets": [
+          "Abra o app CamIA ou acesse https://camia.app e entre na sua conta.",
+          "Vá até a aba Perfil.",
+          "Toque em \"Excluir conta\".",
+          "Digite sua senha e confirme. Sua conta é excluída na hora e você sai da conta."
+        ]
+      },
+      {
+        "title": "Opção 2: por e-mail (se não conseguir entrar)",
+        "paragraphs": [
+          "Escreva para {contact} a partir do e-mail da sua conta, com o assunto \"Excluir minha conta\". Para proteger sua conta, só atendemos pedidos enviados desse e-mail. Vamos excluí-la em até 30 dias e avisar você."
+        ]
+      },
+      {
+        "title": "Dados que são apagados",
+        "bullets": [
+          "Seu e-mail, nome e senha (hash).",
+          "Suas sessões abertas em todos os seus aparelhos.",
+          "Seus pontos, pontos extras, código de convite e o registro de convites e visitas aos seus links.",
+          "Seu histórico de uso da IA e de vídeos ligado à sua conta."
+        ]
+      },
+      {
+        "title": "Dados que são mantidos",
+        "bullets": [
+          "Estatísticas de uso que não podem mais ser ligadas a você (por exemplo, quantas vezes uma ferramenta foi usada num dia), para entender como o app é usado.",
+          "Denúncias de conteúdo que você enviou, sem ligação com sua conta; as imagens são apagadas no máximo 90 dias depois da denúncia.",
+          "As fotos que você editou não ficam guardadas nos nossos servidores, então não há fotos suas para apagar. As fotos salvas no seu celular continuam lá."
+        ]
+      },
+      {
+        "title": "Apagar apenas alguns dados",
+        "paragraphs": [
+          "Se quiser que apaguemos alguns dados sem excluir sua conta, ou os dados do seu aparelho como visitante, escreva para {contact}. Para apagar o identificador do aparelho você mesmo, limpe os dados do app ou desinstale-o. Mais informações na Política de privacidade: https://camia.app/privacy"
+        ]
+      }
+    ]
+  },
+  "vi": {
+    "title": "Cách xóa tài khoản CamIA",
+    "updated": "Cập nhật lần cuối: 17/10/2026",
+    "intro": "Trang này hướng dẫn cách xóa tài khoản CamIA (ứng dụng Android app.camia và web https://camia.app) và cho biết dữ liệu nào bị xóa. Bạn không cần cài lại ứng dụng để làm việc này.",
+    "sections": [
+      {
+        "title": "Cách 1: trong ứng dụng hoặc trên web (xóa ngay)",
+        "bullets": [
+          "Mở ứng dụng CamIA hoặc vào https://camia.app và đăng nhập.",
+          "Vào tab Hồ sơ.",
+          "Bấm \"Xóa tài khoản\".",
+          "Nhập mật khẩu và xác nhận. Tài khoản bị xóa ngay và bạn được đăng xuất."
+        ]
+      },
+      {
+        "title": "Cách 2: qua email (nếu không đăng nhập được)",
+        "paragraphs": [
+          "Gửi email đến {contact} từ email tài khoản của bạn với tiêu đề \"Xóa tài khoản của tôi\". Để bảo vệ tài khoản, chúng tôi chỉ xử lý yêu cầu gửi từ đúng email đó. Chúng tôi sẽ xóa trong tối đa 30 ngày và báo lại cho bạn."
+        ]
+      },
+      {
+        "title": "Dữ liệu bị xóa",
+        "bullets": [
+          "Email, tên và mật khẩu (dạng băm) của bạn.",
+          "Các phiên đăng nhập trên mọi thiết bị.",
+          "Điểm, điểm thưởng, mã mời và lịch sử lời mời, lượt mở liên kết của bạn.",
+          "Lịch sử dùng AI và video gắn với tài khoản."
+        ]
+      },
+      {
+        "title": "Dữ liệu được giữ lại",
+        "bullets": [
+          "Thống kê sử dụng không còn liên kết được với bạn (ví dụ một công cụ được dùng bao nhiêu lần trong ngày), để hiểu cách ứng dụng được sử dụng.",
+          "Các báo cáo nội dung bạn đã gửi, không còn gắn với tài khoản; ảnh trong báo cáo bị xóa chậm nhất 90 ngày sau khi báo cáo.",
+          "Ảnh bạn đã chỉnh không được lưu trên máy chủ nên không có ảnh nào của bạn cần xóa. Ảnh bạn đã lưu trong điện thoại vẫn còn nguyên."
+        ]
+      },
+      {
+        "title": "Chỉ xóa một phần dữ liệu",
+        "paragraphs": [
+          "Nếu bạn muốn chúng tôi xóa một số dữ liệu mà không xóa tài khoản, hoặc dữ liệu khách trên thiết bị của bạn, hãy gửi email đến {contact}. Để tự xóa mã thiết bị, hãy xóa dữ liệu ứng dụng hoặc gỡ cài đặt. Xem thêm Chính sách quyền riêng tư: https://camia.app/privacy"
+        ]
+      }
+    ]
+  }
+}

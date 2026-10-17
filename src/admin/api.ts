@@ -1,5 +1,6 @@
 import { apiFetch } from '../account';
 import type { CreditPlan, RewardPoints } from '../ai/credits';
+import type { ReportList } from '../ai/report';
 import type { BlogTopic, ClusterCoverage } from '../blog/clusters';
 import type { BlogImagePlan, BlogJob, BlogPost, BlogSummary } from '../blog/types';
 import type { SeoSettings } from '../seo';
@@ -33,6 +34,11 @@ export const fetchAi = () => call<AiReply>('/api/admin/ai');
 export const aiAction = (action: string, body: Record<string, unknown> = {}) => call<AiReply>('/api/admin/ai', { action, ...body });
 
 export type { NewSource };
+
+/* ---------- Reported AI results ---------- */
+
+export const fetchReports = (status: 'open' | 'done', offset = 0) => call<ReportList>(`/api/admin/reports?status=${status}&offset=${offset}`);
+export const actOnReport = (id: number, action: 'done' | 'reopen' | 'delete') => call<{ ok: true }>('/api/admin/reports', { id, action });
 
 /* ---------- Reward amounts ---------- */
 

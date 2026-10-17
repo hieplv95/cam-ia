@@ -9,6 +9,7 @@ import { Button, Card } from '../admin/ui';
 import { DEFAULT_VIDEO_SECONDS, MAX_VIDEO_PROMPT, VIDEO_SECONDS, type VideoSeconds } from '../ai/video';
 import { encodeBase64, loadPendingPair, resizeImage } from '../editor/imageOps';
 import { useT } from '../i18n';
+import { ReportAi } from '../ReportAi';
 import { colors, font } from '../theme';
 
 const POLL_MS = 6000;
@@ -206,6 +207,7 @@ export function VideoMaker() {
           ) : (
             <Text style={styles.hint}>{t('video.saveNative')}</Text>
           )}
+          <ReportAi tool="video" prompt={extra} />
         </Card>
       )}
     </View>

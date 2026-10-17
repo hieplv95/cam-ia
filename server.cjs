@@ -68,7 +68,7 @@ const expo = createRequestHandler({ build: SERVER });
 /* ---------- SEO: texts from the admin SEO tab, written into every page ---------- */
 
 /** Pages search engines should list; the others (editor, export, admin…) need a photo or an account. */
-const INDEXED = ['/', '/ai', '/presets', '/blog'];
+const INDEXED = ['/', '/ai', '/presets', '/blog', '/privacy', '/terms', '/delete-account'];
 const LANGS = ['es', 'pt', 'en', 'vi', 'fr', 'de', 'ru', 'zh', 'ja', 'ko'];
 const OG_LOCALE = { es: 'es_LA', pt: 'pt_BR', en: 'en_US', vi: 'vi_VN', fr: 'fr_FR', de: 'de_DE', ru: 'ru_RU', zh: 'zh_CN', ja: 'ja_JP', ko: 'ko_KR' };
 /** Changes saved on the admin page show up after at most this long. */
@@ -107,6 +107,31 @@ function originOf(req) {
   if (fixed) return fixed;
   const proto = req.headers['x-forwarded-proto'] ?? 'http';
   return `${proto}://${req.headers.host ?? 'localhost'}`;
+}
+
+/** Privacy policy, terms of use and account deletion page (es, en, pt, vi), shared with src/legal/LegalPage.tsx. */
+const LEGAL = {
+  '/privacy': require('./src/legal/privacy.json'),
+  '/terms': require('./src/legal/terms.json'),
+  '/delete-account': require('./src/legal/delete-account.json'),
+};
+
+/** A legal page as HTML: {contact} becomes a mailto link and https:// addresses become links. */
+function legalHtml(docs, lang, nav) {
+  const doc = docs[lang] ?? docs.en;
+  const text = (t) =>
+    esc(t)
+      .replace(/https:\/\/[^\s)<]*[^\s).,<]/g, (url) => `<a href="${url}">${url}</a>`)
+      .replace(/\{contact\}/g, `<a href="mailto:${esc(docs.contact)}">${esc(docs.contact)}</a>`);
+  const sections = doc.sections
+    .map(
+      (sec) =>
+        `<h2>${esc(sec.title)}</h2>` +
+        (sec.bullets ? `<ul>${sec.bullets.map((b) => `<li>${text(b)}</li>`).join('')}</ul>` : '') +
+        (sec.paragraphs ?? []).map((p) => `<p>${text(p)}</p>`).join(''),
+    )
+    .join('');
+  return `<main><h1>${esc(doc.title)}</h1><p>${esc(doc.updated)}</p><p>${text(doc.intro)}</p>${sections}${nav}</main>`;
 }
 
 /** Title of the blog list page in each language. */
@@ -388,6 +413,11 @@ async function pageMeta(seo, lang, pathname, origin) {
       ].filter(Boolean),
       bodyHtml: `<main><h1>${esc(t.title)}</h1><p>${esc(t.description)}</p>${paragraphs(geo.about?.[lang])}${faqHtml(faq, lang)}${posts.length ? `<h2>Blog</h2>${postListHtml(posts, origin)}` : ''}${nav}</main>`,
     };
+  }
+  if (LEGAL[pathname]) {
+    const docs = LEGAL[pathname];
+    const doc = docs[lang] ?? docs.en;
+    return { ...base, title: `${doc.title} · CamIA`, description: doc.intro.replace('{contact}', docs.contact).slice(0, 155), bodyHtml: legalHtml(docs, lang, nav) };
   }
   if (pathname === '/blog') {
     const title = BLOG_TITLE[lang] ?? BLOG_TITLE.es;

@@ -14,6 +14,7 @@ export function toolLabel(tool: string) {
   if (tool === 'logo-edit') return 'Sửa logo bằng mô tả';
   if (tool === 'combine') return vi('combine.title', 'Ghép ảnh');
   if (tool === 'erase-brush') return 'Xóa vật thể (tô vùng / mô tả)';
+  if (tool === 'video') return 'Video AI';
   const [kind, id] = tool.split('.');
   if (kind === 'preset') return `Phép AI: ${vi(`aiPreset.${id}`, id)}`;
   if (kind === 'studio') return vi(`studio.${id}.title`, id);

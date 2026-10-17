@@ -15,6 +15,7 @@ import { Icon, type IconSpec } from '@/src/icons';
 import { notify } from '@/src/notify';
 import { ModelChip } from '@/src/ModelPicker';
 import { setPendingPhoto, takePendingPhoto } from '@/src/pendingPhoto';
+import { ReportAi } from '@/src/ReportAi';
 import { colors, font, goldGradient } from '@/src/theme';
 import { HomeButton, IconButton } from '@/src/ui';
 import { useT } from '@/src/i18n';
@@ -174,6 +175,7 @@ export default function Retouch() {
             </LinearGradient>
           </Pressable>
         </View>
+        {result && !busy && <ReportAi tool="preset.retouch" image={result} style={{ marginTop: -6 }} />}
       </View>
 
       {toast && (

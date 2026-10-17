@@ -21,7 +21,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.hieplevan.cami"
+      "package": "app.camia"
     },
     "web": {
       "output": "server",

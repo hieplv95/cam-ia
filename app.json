@@ -65,7 +65,8 @@
           "isAccessMediaLocationEnabled": false
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      "./plugins/withReleaseSigning"
     ],
     "experiments": {
       "typedRoutes": true,

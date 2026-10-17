@@ -2,7 +2,7 @@
   "contact": "hieplv1995@gmail.com",
   "es": {
     "title": "Términos de uso",
-    "updated": "Última actualización: 17 de octubre de 2026",
+    "updated": "Última actualización: 18 de octubre de 2026",
     "intro": "Estos términos regulan el uso de CamIA, el editor de fotos con IA disponible en https://camia.app y en la app para Android (app.camia). Al usar CamIA aceptas estos términos y nuestra Política de privacidad (https://camia.app/privacy). Si no estás de acuerdo, no uses el servicio.",
     "sections": [
       {
@@ -14,7 +14,7 @@
       {
         "title": "2. Tu cuenta",
         "bullets": [
-          "Debes tener al menos 13 años para usar CamIA. Si eres menor de edad en tu país, necesitas el permiso de tu madre, padre o tutor.",
+          "Debes tener al menos 18 años para usar CamIA.",
           "Da información verdadera, cuida tu contraseña y no compartas tu cuenta. Eres responsable de lo que se haga con ella.",
           "Puedes eliminar tu cuenta cuando quieras desde Perfil → Eliminar cuenta (https://camia.app/delete-account)."
         ]
@@ -81,7 +81,7 @@
   },
   "en": {
     "title": "Terms of Use",
-    "updated": "Last updated: October 17, 2026",
+    "updated": "Last updated: October 18, 2026",
     "intro": "These terms govern the use of CamIA, the AI photo editor at https://camia.app and in the Android app (app.camia). By using CamIA you accept these terms and our Privacy Policy (https://camia.app/privacy). If you do not agree, do not use the service.",
     "sections": [
       {
@@ -93,7 +93,7 @@
       {
         "title": "2. Your account",
         "bullets": [
-          "You must be at least 13 years old to use CamIA. If you are a minor in your country, you need permission from a parent or guardian.",
+          "You must be at least 18 years old to use CamIA.",
           "Give true information, keep your password safe and do not share your account. You are responsible for what is done with it.",
           "You can delete your account at any time in Profile → Delete account (https://camia.app/delete-account)."
         ]
@@ -160,7 +160,7 @@
   },
   "pt": {
     "title": "Termos de uso",
-    "updated": "Última atualização: 17 de outubro de 2026",
+    "updated": "Última atualização: 18 de outubro de 2026",
     "intro": "Estes termos regulam o uso do CamIA, o editor de fotos com IA em https://camia.app e no app para Android (app.camia). Ao usar o CamIA você aceita estes termos e nossa Política de privacidade (https://camia.app/privacy). Se não concordar, não use o serviço.",
     "sections": [
       {
@@ -172,7 +172,7 @@
       {
         "title": "2. Sua conta",
         "bullets": [
-          "Você precisa ter pelo menos 13 anos para usar o CamIA. Se for menor de idade no seu país, precisa da permissão dos pais ou responsáveis.",
+          "Você precisa ter pelo menos 18 anos para usar o CamIA.",
           "Informe dados verdadeiros, proteja sua senha e não compartilhe sua conta. Você é responsável pelo que for feito com ela.",
           "Você pode excluir sua conta quando quiser em Perfil → Excluir conta (https://camia.app/delete-account)."
         ]
@@ -239,7 +239,7 @@
   },
   "vi": {
     "title": "Điều khoản sử dụng",
-    "updated": "Cập nhật lần cuối: 17/10/2026",
+    "updated": "Cập nhật lần cuối: 18/10/2026",
     "intro": "Các điều khoản này áp dụng khi bạn dùng CamIA, ứng dụng chỉnh ảnh bằng AI tại https://camia.app và trên Android (app.camia). Khi dùng CamIA, bạn đồng ý với các điều khoản này và Chính sách quyền riêng tư (https://camia.app/privacy). Nếu không đồng ý, vui lòng không sử dụng dịch vụ.",
     "sections": [
       {
@@ -251,7 +251,7 @@
       {
         "title": "2. Tài khoản của bạn",
         "bullets": [
-          "Bạn phải từ 13 tuổi trở lên để dùng CamIA. Nếu chưa đủ tuổi thành niên ở nước bạn, bạn cần sự đồng ý của cha mẹ hoặc người giám hộ.",
+          "Bạn phải từ 18 tuổi trở lên để dùng CamIA.",
           "Cung cấp thông tin đúng, giữ kín mật khẩu và không chia sẻ tài khoản. Bạn chịu trách nhiệm về mọi hoạt động trên tài khoản của mình.",
           "Bạn có thể xóa tài khoản bất cứ lúc nào tại Hồ sơ → Xóa tài khoản (https://camia.app/delete-account)."
         ]

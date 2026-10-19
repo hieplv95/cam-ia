@@ -10,7 +10,7 @@ import { MAX_SIDE } from './editor/imageOps';
 import { notify } from './notify';
 import { MAX_COMBINE } from './ai/combine';
 import { setPendingCombine, setPendingPhoto, type EditorIntent, type PendingPhoto } from './pendingPhoto';
-import { photoUrl, type PhotoKey } from './photos';
+import { photoImage, type PhotoKey } from './photos';
 import { bronzeGradient, cardShadow, colors, font } from './theme';
 import { track } from './track';
 import { t, useT, type MessageKey } from './i18n';
@@ -160,7 +160,7 @@ export function PhotoSourceProvider({ children }: { children: ReactNode }) {
                 iconColor="#C46A3A"
                 title={t('source.library')}
                 desc={t('source.libraryDesc')}
-                photos={['portraitSoft', 'dog', 'coast']}
+                photos={['modelPeace', 'dog', 'coast']}
                 onPress={() => fromPicker('library')}
               />
               <SourceCard
@@ -170,7 +170,7 @@ export function PhotoSourceProvider({ children }: { children: ReactNode }) {
                 iconColor="#D04A68"
                 title={t('source.camera')}
                 desc={t('source.cameraDesc')}
-                photos={['portraitFlowers', 'heroCurls', 'portraitRose']}
+                photos={['modelVanity', 'modelWhite', 'modelPeace']}
                 onPress={() => fromPicker('camera')}
               />
               {!intent && (
@@ -181,7 +181,7 @@ export function PhotoSourceProvider({ children }: { children: ReactNode }) {
                   iconColor="#3E8E5E"
                   title={t('source.combine')}
                   desc={t('source.combineDesc', { n: MAX_COMBINE })}
-                  photos={['portraitRose', 'coast', 'hat']}
+                  photos={['modelWhite', 'coast', 'hat']}
                   badge={t('source.combineBadge')}
                   onPress={combine}
                 />
@@ -332,9 +332,9 @@ function SourceCard({
           <Text style={styles.cardDesc}>{desc}</Text>
         </View>
         <View style={styles.stack}>
-          <Image source={{ uri: photoUrl(photos[2], 200) }} style={[styles.stackPhoto, styles.stackBack]} />
-          <Image source={{ uri: photoUrl(photos[1], 200) }} style={[styles.stackPhoto, styles.stackMid]} />
-          <Image source={{ uri: photoUrl(photos[0], 240) }} style={[styles.stackPhoto, styles.stackFront]} />
+          <Image source={photoImage(photos[2], 200)} style={[styles.stackPhoto, styles.stackBack]} />
+          <Image source={photoImage(photos[1], 200)} style={[styles.stackPhoto, styles.stackMid]} />
+          <Image source={photoImage(photos[0], 240)} style={[styles.stackPhoto, styles.stackFront]} />
         </View>
         <View style={styles.arrow}>
           <Ionicons name="chevron-forward" size={16} color={colors.text} />

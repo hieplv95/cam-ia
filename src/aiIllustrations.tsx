@@ -35,11 +35,11 @@ const H = ILLU_H;
 
 const photoFor: Record<IllustrationId, PhotoKey> = {
   erase: 'copacabana',
-  enhance: 'portraitSoft',
-  removebg: 'portraitRose',
-  art: 'heroGolden',
+  enhance: 'modelPeace',
+  removebg: 'modelWhite',
+  art: 'modelVanity',
   expand: 'cartagena',
-  generate: 'hero',
+  generate: 'modelPeace',
 };
 
 const cover = (img: SkImage, x = 0, y = 0, w = W, h = H) => <Image image={img} x={x} y={y} width={w} height={h} fit="cover" />;

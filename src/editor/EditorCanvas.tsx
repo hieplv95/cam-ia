@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Canvas, DashPathEffect, Group, Image, Line, Path, Rect, rect, RoundedRect, Skia, vec, type SkFont, type SkImage, type SkSVG } from '@shopify/react-native-skia';
+import { Canvas, DashPathEffect, Group, Image, Line, Path, Rect, rect, RoundedRect, Skia, vec, type SkImage, type SkSVG } from '@shopify/react-native-skia';
 import { memo, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { colors, font } from '../theme';
 import { moveCrop, resizeCrop, type CropCorner, type CropRect } from './crop';
-import { buildStrokePath, Scene, Stroke, textWidth } from './Scene';
+import { buildStrokePath, Scene, Stroke, textSize } from './Scene';
+import type { EditorFonts } from './text';
 import { newId, type Doc, type EraseMark, type Layer, type PenKind, type RetouchEffect, type TransformableLayer } from './types';
 import { useT } from '../i18n';
 
@@ -14,7 +15,7 @@ export type PenSettings = { color: string; width: number; kind: PenKind };
 
 type Props = {
   doc: Doc;
-  font: SkFont | null;
+  fonts: EditorFonts;
   svgs: Record<string, SkSVG | null>;
   /** 'retouch' paints a mask for a free beauty effect; 'erase' marks what to remove; 'crop' shows the crop frame. */
   mode: 'move' | 'draw' | 'retouch' | 'erase' | 'crop';
@@ -35,20 +36,32 @@ type Props = {
 /** How close (screen points) a touch must be to a corner of the crop frame to drag that corner. */
 const CORNER_HIT = 30;
 
+/**
+ * While a beauty brush is being drawn: a light hint of what it will do (the real effect, applied when the finger
+ * lifts, is subtle; a bright white preview made the result look like the stroke had vanished).
+ */
+const BRUSH_PREVIEW: Record<RetouchEffect, string> = {
+  whiten: 'rgba(255,255,255,0.3)',
+  lighten: 'rgba(255,236,214,0.3)',
+  lips: 'rgba(226,80,112,0.32)',
+  blush: 'rgba(240,120,140,0.26)',
+  brows: 'rgba(70,45,30,0.3)',
+};
+
 /** Translucent red, so the object stays visible under the mark. */
 export const ERASE_MARK_COLOR = 'rgba(255, 45, 85, 0.5)';
 
 const MIN_SIZE = 20;
 
-export function layerExtents(layer: TransformableLayer, font: SkFont | null) {
+export function layerExtents(layer: TransformableLayer, fonts: EditorFonts) {
   if (layer.kind === 'sticker') return { hw: layer.size / 2, hh: layer.size / 2 };
-  const tw = font ? textWidth(font, layer) : layer.size * layer.text.length * 0.5;
-  return { hw: tw / 2 + layer.size * 0.15, hh: layer.size * 0.55 };
+  const { width, height } = textSize(fonts, layer);
+  return { hw: width / 2 + layer.size * 0.15, hh: height / 2 + layer.size * 0.1 };
 }
 
 const isTransformable = (l: Layer): l is TransformableLayer => l.kind === 'sticker' || l.kind === 'text';
 
-export function EditorCanvas({ doc, font, svgs, mode, pen, brush, selectedId, onSelect, checkpoint, update, compareWith, erase, crop }: Props) {
+export function EditorCanvas({ doc, fonts, svgs, mode, pen, brush, selectedId, onSelect, checkpoint, update, compareWith, erase, crop }: Props) {
   const t = useT();
   const [split, setSplit] = useState(0.5);
   const [box, setBox] = useState({ w: 0, h: 0 });
@@ -83,8 +96,8 @@ export function EditorCanvas({ doc, font, svgs, mode, pen, brush, selectedId, on
   // Everything the gesture callbacks need, always current. The gestures themselves are created once per mode:
   // re-creating them on every render made the gesture library drop a handler in the middle of a drag
   // ("No handler for tag …"), since the canvas redraws on every move while drawing or cropping.
-  const latest = useRef({ mode, crop, erase, brush, pen, scale, iw, ih, font, checkpoint, update, onSelect });
-  latest.current = { mode, crop, erase, brush, pen, scale, iw, ih, font, checkpoint, update, onSelect };
+  const latest = useRef({ mode, crop, erase, brush, pen, scale, iw, ih, fonts, checkpoint, update, onSelect });
+  latest.current = { mode, crop, erase, brush, pen, scale, iw, ih, fonts, checkpoint, update, onSelect };
 
   const isMove = mode === 'move';
   const comparing = !!compareWith;
@@ -103,7 +116,7 @@ export function EditorCanvas({ doc, font, svgs, mode, pen, brush, selectedId, on
         const sin = Math.sin(l.rotation);
         const lx = dx * cos + dy * sin;
         const ly = -dx * sin + dy * cos;
-        const { hw, hh } = layerExtents(l, L().font);
+        const { hw, hh } = layerExtents(l, L().fonts);
         if (Math.abs(lx) <= hw && Math.abs(ly) <= hh) return l.id;
       }
       return null;
@@ -262,7 +275,7 @@ export function EditorCanvas({ doc, font, svgs, mode, pen, brush, selectedId, on
       {scale > 0 && (
         <GestureDetector gesture={gesture}>
           <View style={[styles.frame, { width: iw * scale, height: ih * scale }]}>
-            <PhotoLayer key={sizeKey} doc={doc} font={font} svgs={svgs} scale={scale} compareWith={compareWith ?? null} split={split} selectedId={selectedId} />
+            <PhotoLayer key={sizeKey} doc={doc} fonts={fonts} svgs={svgs} scale={scale} compareWith={compareWith ?? null} split={split} selectedId={selectedId} />
             {overlay && (
               <View pointerEvents="none" style={StyleSheet.absoluteFill}>
                 <Canvas key={sizeKey} style={{ width: iw * scale, height: ih * scale }}>
@@ -277,7 +290,7 @@ export function EditorCanvas({ doc, font, svgs, mode, pen, brush, selectedId, on
                         strokeWidth={drawing.width}
                         strokeCap="round"
                         strokeJoin="round"
-                        color="rgba(255,255,255,0.45)"
+                        color={BRUSH_PREVIEW[brush?.effect ?? 'whiten']}
                       />
                     )}
                     {mode === 'erase' &&
@@ -384,7 +397,7 @@ function CropOverlay({ rect: r, iw, ih, scale }: { rect: CropRect; iw: number; i
 /** The photo with its layers, the before/after split and the selection frame. */
 const PhotoLayer = memo(function PhotoLayer({
   doc,
-  font,
+  fonts,
   svgs,
   scale,
   compareWith,
@@ -392,7 +405,7 @@ const PhotoLayer = memo(function PhotoLayer({
   selectedId,
 }: {
   doc: Doc;
-  font: SkFont | null;
+  fonts: EditorFonts;
   svgs: Record<string, SkSVG | null>;
   scale: number;
   compareWith: SkImage | null;
@@ -402,11 +415,11 @@ const PhotoLayer = memo(function PhotoLayer({
   const iw = doc.image.width();
   const ih = doc.image.height();
   const selected = doc.layers.find((l): l is TransformableLayer => l.id === selectedId && isTransformable(l));
-  const sel = selected ? layerExtents(selected, font) : null;
+  const sel = selected ? layerExtents(selected, fonts) : null;
   return (
     <Canvas style={{ width: iw * scale, height: ih * scale }}>
       <Group transform={[{ scale }]}>
-        <Scene doc={doc} font={font} svgs={svgs} />
+        <Scene doc={doc} fonts={fonts} svgs={svgs} />
         {compareWith && (
           <Group clip={rect(0, 0, iw * split, ih)}>
             <Image image={compareWith} x={0} y={0} width={iw} height={ih} fit="fill" />

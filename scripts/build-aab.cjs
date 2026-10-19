@@ -4,7 +4,8 @@
  * 2. Runs Gradle bundleRelease against https://camia.app, signed with the upload key from
  *    ~/.gradle/gradle.properties (see plugins/withReleaseSigning.js).
  * 3. Copies the result to builds/camia-<version>-vc<versionCode>.aab.
- * Raise expo.android.versionCode in app.json before every upload to Google Play.
+ * Google Play refuses a versionCode it has already seen, so every run raises expo.android.versionCode in app.json
+ * by one first (commit app.json afterwards). A failed build just leaves a gap, which Play accepts.
  */
 const { execSync } = require('child_process');
 const fs = require('fs');
@@ -19,9 +20,14 @@ if (!fs.existsSync(props) || !fs.readFileSync(props, 'utf8').includes('CAMIA_UPL
   process.exit(1);
 }
 
-const { expo } = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'));
+const appJsonPath = path.join(root, 'app.json');
+const appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf8'));
+const { expo } = appJson;
 const version = expo.version;
-const versionCode = expo.android?.versionCode ?? 1;
+// No versionCode yet means the first bundle (1) went up already.
+const versionCode = (expo.android?.versionCode ?? 1) + 1;
+expo.android = { ...expo.android, versionCode };
+fs.writeFileSync(appJsonPath, `${JSON.stringify(appJson, null, 2)}\n`);
 console.log(`Building CamIA ${version} (versionCode ${versionCode})…`);
 
 const pkgPath = path.join(root, 'package.json');

@@ -11,7 +11,6 @@ import {
   Rect,
   vec,
   Skia,
-  type SkFont,
   type SkImage,
   type SkPicture,
   type SkSVG,
@@ -20,6 +19,7 @@ import { Platform } from 'react-native';
 
 import { Scene } from './Scene';
 import type { PendingPhoto } from '../pendingPhoto';
+import type { EditorFonts } from './text';
 import type { Doc } from './types';
 import { t } from '../i18n';
 
@@ -108,11 +108,11 @@ export async function renderJpegThumbnail(element: React.ReactElement, width: nu
 }
 
 /** The edited picture (filters, layers, frame) as a small stored thumbnail. */
-export function sceneThumbnail(doc: Doc, font: SkFont | null, svgs: Record<string, SkSVG | null>, maxSide = 320) {
+export function sceneThumbnail(doc: Doc, fonts: EditorFonts, svgs: Record<string, SkSVG | null>, maxSide = 320) {
   const k = Math.min(1, maxSide / Math.max(doc.image.width(), doc.image.height()));
   return renderJpegThumbnail(
     <Group transform={[{ scale: k }]}>
-      <Scene doc={doc} font={font} svgs={svgs} />
+      <Scene doc={doc} fonts={fonts} svgs={svgs} />
     </Group>,
     doc.image.width() * k,
     doc.image.height() * k,
@@ -194,21 +194,21 @@ export function blankImage(fill: string | readonly string[], width = 1200, heigh
 }
 
 /** Bakes filter, adjustments and every layer into a single image at working resolution. */
-export function flatten(doc: Doc, font: SkFont | null, svgs: Record<string, SkSVG | null>) {
-  return renderImage(<Scene doc={doc} font={font} svgs={svgs} />, doc.image.width(), doc.image.height());
+export function flatten(doc: Doc, fonts: EditorFonts, svgs: Record<string, SkSVG | null>) {
+  return renderImage(<Scene doc={doc} fonts={fonts} svgs={svgs} />, doc.image.width(), doc.image.height());
 }
 
 /**
  * Same as flatten, but at the original photo's resolution: the scene (laid out in working pixels) is scaled up
  * and the full-resolution original is drawn in place of the working image, so layers stay crisp vectors.
  */
-export function flattenFull(doc: Doc, font: SkFont | null, svgs: Record<string, SkSVG | null>) {
+export function flattenFull(doc: Doc, fonts: EditorFonts, svgs: Record<string, SkSVG | null>) {
   const full = doc.full;
-  if (!full || full === doc.image) return flatten(doc, font, svgs);
+  if (!full || full === doc.image) return flatten(doc, fonts, svgs);
   const k = full.width() / doc.image.width();
   return renderImage(
     <Group transform={[{ scale: k }]}>
-      <Scene doc={doc} font={font} svgs={svgs} base={full} />
+      <Scene doc={doc} fonts={fonts} svgs={svgs} base={full} />
     </Group>,
     full.width(),
     full.height(),

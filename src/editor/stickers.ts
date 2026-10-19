@@ -1,3 +1,5 @@
+import { moreStickers } from './stickersMore';
+
 /** Hand-drawn SVG stickers on a 100x100 viewBox. Rendered by Skia so they look identical on every platform. */
 
 const svg = (body: string) =>
@@ -11,8 +13,8 @@ const face = (cx: number, cy: number) =>
   `<path d="M${cx - 6} ${cy + 7} Q${cx} ${cy + 12} ${cx + 6} ${cy + 7}" stroke="#3B2A4A" stroke-width="2.6" fill="none" stroke-linecap="round"/>` +
   `<circle cx="${cx - 14}" cy="${cy + 7}" r="3.6" fill="#FF8FC1" opacity="0.8"/><circle cx="${cx + 14}" cy="${cy + 7}" r="3.6" fill="#FF8FC1" opacity="0.8"/>`;
 
-/** Names are translations: sticker.<id>. */
-export const stickers: { id: string; svg: string }[] = [
+/** The first set; names are translations (sticker.<id>). */
+const firstSet: { id: string; svg: string }[] = [
   {
     id: 'heart',
     svg: svg(
@@ -166,3 +168,30 @@ export const stickers: { id: string; svg: string }[] = [
   },
 ];
 
+/** Groups of the sticker panel (labels: sticker.cat.<id>). */
+export const STICKER_CATEGORIES = ['all', 'love', 'travel', 'party', 'nature', 'decor', 'cute'] as const;
+export type StickerCategory = (typeof STICKER_CATEGORIES)[number];
+
+const FIRST_SET_CATEGORY: Record<string, Exclude<StickerCategory, 'all'>> = {
+  heart: 'love',
+  glasses: 'love',
+  star: 'cute',
+  crown: 'cute',
+  catears: 'cute',
+  bunny: 'cute',
+  unicorn: 'cute',
+  icecream: 'cute',
+  rainbow: 'nature',
+  flower: 'nature',
+  butterfly: 'nature',
+  sun: 'nature',
+  cloud: 'nature',
+  balloon: 'party',
+  bow: 'decor',
+  sparkle: 'decor',
+};
+
+export type Sticker = { id: string; cat: Exclude<StickerCategory, 'all'>; svg: string };
+
+/** Every sticker, the first set first (drafts keep referring to stickers by id). */
+export const stickers: Sticker[] = [...firstSet.map((s) => ({ ...s, cat: FIRST_SET_CATEGORY[s.id] ?? 'decor' })), ...moreStickers];

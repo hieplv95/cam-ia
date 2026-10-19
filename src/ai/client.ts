@@ -7,7 +7,7 @@ import { DEFAULT_IMAGE_MODEL, isImageModel, modelInfo, type ImageModelId } from 
 import type { CombineRatio } from './combine';
 import type { GenerateRatio, GenerateStyleId } from './generate';
 import type { AiPresetId } from './presets';
-import type { RetouchOptionId } from './retouch';
+import type { RetouchOptionId, RetouchStyleId } from './retouch';
 import type { StudioChoices, StudioToolId } from './studio';
 import { t } from '../i18n';
 
@@ -45,7 +45,7 @@ export function useAiModel() {
 
 /** target 'logo': the picture is a logo from the studio, edited as a logo (same design, only the asked change). */
 export type AiRequest =
-  | { preset: AiPresetId; options?: RetouchOptionId[] }
+  | { preset: AiPresetId; options?: RetouchOptionId[]; style?: RetouchStyleId }
   | { prompt: string; target?: 'logo' }
   /** "Xóa vật thể": marked = the photo carries red brush marks over what to remove; prompt = a description. */
   | { erase: true; marked: boolean; prompt?: string };

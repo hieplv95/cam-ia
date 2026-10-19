@@ -4,29 +4,23 @@ import type { SkImage } from '@shopify/react-native-skia';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { aiEdit } from '@/src/ai/client';
-import { retouchOptions, type RetouchOptionId } from '@/src/ai/retouch';
+import { retouchOptions, retouchStyles, type RetouchOptionId, type RetouchStyleId } from '@/src/ai/retouch';
 import { Blend, CompareView } from '@/src/CompareView';
 import { encodeBase64, imageFromBase64, loadPendingPair, renderImage, resizeImage } from '@/src/editor/imageOps';
-import { Icon, type IconSpec } from '@/src/icons';
+import { photoImage } from '@/src/photos';
 import { notify } from '@/src/notify';
 import { ModelChip } from '@/src/ModelPicker';
 import { setPendingPhoto, takePendingPhoto } from '@/src/pendingPhoto';
 import { ReportAi } from '@/src/ReportAi';
+import { RetouchToolCard } from '@/src/RetouchToolCard';
 import { colors, font, goldGradient } from '@/src/theme';
 import { HomeButton, IconButton } from '@/src/ui';
 import { useT } from '@/src/i18n';
 
-const optionIcons: Record<RetouchOptionId, IconSpec> = {
-  face: { set: 'mci', name: 'face-woman-shimmer-outline' },
-  skin: { set: 'ion', name: 'water-outline' },
-  teeth: { set: 'mci', name: 'tooth-outline' },
-  eyes: { set: 'ion', name: 'eye-outline' },
-  light: { set: 'ion', name: 'sunny-outline' },
-};
 
 export default function Retouch() {
   const t = useT();
@@ -34,7 +28,8 @@ export default function Retouch() {
   const [original, setOriginal] = useState<SkImage | null>(null);
   const [result, setResult] = useState<SkImage | null>(null);
   const [resultKey, setResultKey] = useState('');
-  const [selected, setSelected] = useState<RetouchOptionId[]>(['face']);
+  const [style, setStyle] = useState<RetouchStyleId | null>('natural');
+  const [selected, setSelected] = useState<RetouchOptionId[]>(['skin']);
   const [intensity, setIntensity] = useState(0.7);
   const [comparing, setComparing] = useState(false);
   const [busy, setBusy] = useState<string | null>(t('common.openingPhoto'));
@@ -62,18 +57,19 @@ export default function Retouch() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const key = [...selected].sort().join(',');
+  const key = `${style ?? ''}|${[...selected].sort().join(',')}`;
+  const nothing = !style && !selected.length;
   const stale = !result || resultKey !== key;
 
   const toggle = (id: RetouchOptionId) =>
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
   const generate = async () => {
-    if (!original || !selected.length) return;
+    if (!original || nothing) return;
     setBusy(t('retouch.working'));
     try {
       const small = await resizeImage(original, 1024);
-      const out = await aiEdit(encodeBase64(small, 90), { preset: 'retouch', options: selected });
+      const out = await aiEdit(encodeBase64(small, 90), { preset: 'retouch', options: selected, ...(style && { style }) });
       setResult(await imageFromBase64(out.image));
       setResultKey(key);
       showToast(`Xong ✨ ${out.summary}`);
@@ -82,6 +78,14 @@ export default function Retouch() {
     } finally {
       setBusy(null);
     }
+  };
+
+  /** "Tùy chỉnh nâng cao": the full editor's beauty tools, starting from the retouched picture when there is one. */
+  const advanced = async () => {
+    if (!original) return;
+    if (result && !stale) return apply();
+    setPendingPhoto({ kind: 'image', image: original });
+    router.replace('/editor');
   };
 
   const apply = async () => {
@@ -122,36 +126,58 @@ export default function Retouch() {
           </View>
         )}
 
-        <ModelChip />
-
-        <View style={styles.tools}>
-          {retouchOptions.map((o) => {
-            const active = selected.includes(o.id);
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.strip} contentContainerStyle={styles.styles}>
+          {retouchStyles.map((st) => {
+            const active = style === st.id;
             return (
-              <Pressable key={o.id} onPress={() => toggle(o.id)} style={[styles.tool, active && styles.toolActive]}>
-                <Icon icon={optionIcons[o.id]} size={24} color={active ? colors.gold : colors.text} />
-                <Text style={[styles.toolLabel, active && { color: colors.gold }]}>{t(`retouch.${o.id}`)}</Text>
+              <Pressable key={st.id} onPress={() => setStyle(active ? null : st.id)} style={[styles.styleCard, active && styles.styleCardActive]}>
+                <Image source={photoImage(st.photo, 160)} style={styles.styleImg} />
+                {active && (
+                  <View style={styles.styleCheck}>
+                    <Ionicons name="checkmark" size={12} color={colors.onGold} />
+                  </View>
+                )}
+                <Text numberOfLines={1} style={[styles.styleName, active && { color: colors.goldDeep }]}>
+                  {t(`retouch.style.${st.id}`)}
+                </Text>
               </Pressable>
             );
           })}
-        </View>
+        </ScrollView>
 
-        <View style={styles.card}>
-          <View style={styles.cardRow}>
-            <Text style={styles.cardTitle}>{t('retouch.intensity')}</Text>
-            <Text style={styles.cardValue}>{Math.round(intensity * 100)}%</Text>
-          </View>
-          <Slider
-            style={{ height: 30 }}
-            minimumValue={0}
-            maximumValue={1}
-            value={intensity}
-            onValueChange={setIntensity}
-            minimumTrackTintColor={colors.gold}
-            maximumTrackTintColor={colors.border}
-            thumbTintColor={colors.gold}
-          />
+        <View style={styles.sectionRow}>
+          <Text style={styles.section}>{t('retouch.quick')}</Text>
+          <Pressable onPress={advanced} disabled={!!busy || !original} style={styles.advanced} hitSlop={6}>
+            <Text style={styles.advancedText}>{t('retouch.advanced')}</Text>
+            <Ionicons name="arrow-forward" size={13} color={colors.goldDeep} />
+          </Pressable>
         </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.strip} contentContainerStyle={styles.tools}>
+          {retouchOptions.map((o) => (
+            <RetouchToolCard key={o.id} id={o.id} active={selected.includes(o.id)} onPress={() => toggle(o.id)} />
+          ))}
+        </ScrollView>
+
+        {result && (
+          <View style={styles.card}>
+            <View style={styles.cardRow}>
+              <Text style={styles.cardTitle}>{t('retouch.intensity')}</Text>
+              <Text style={styles.cardValue}>{Math.round(intensity * 100)}%</Text>
+            </View>
+            <Slider
+              style={{ height: 30 }}
+              minimumValue={0}
+              maximumValue={1}
+              value={intensity}
+              onValueChange={setIntensity}
+              minimumTrackTintColor={colors.gold}
+              maximumTrackTintColor={colors.border}
+              thumbTintColor={colors.gold}
+            />
+          </View>
+        )}
+
+        <ModelChip />
 
         <View style={styles.actions}>
           <Pressable
@@ -164,9 +190,9 @@ export default function Retouch() {
             <Text style={styles.compareText}>{t('retouch.holdCompare')}</Text>
           </Pressable>
           <Pressable
-            disabled={!!busy || !original || (stale && !selected.length)}
+            disabled={!!busy || !original || (stale && nothing)}
             onPress={stale ? generate : apply}
-            style={({ pressed }) => [{ flex: 1.2 }, (pressed || busy || (stale && !selected.length)) && { opacity: 0.6 }]}
+            style={({ pressed }) => [{ flex: 1.2 }, (pressed || busy || (stale && nothing)) && { opacity: 0.6 }]}
           >
             <LinearGradient colors={goldGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.primary}>
               {stale && <Ionicons name="sparkles" size={16} color={colors.onGold} />}
@@ -207,21 +233,29 @@ const styles = StyleSheet.create({
   },
   proText: { fontFamily: font.bold, fontSize: 11, color: colors.gold, letterSpacing: 1 },
   compareArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  tools: { flexDirection: 'row', gap: 8 },
-  tool: {
-    flex: 1,
-    aspectRatio: 0.9,
-    borderRadius: 14,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
+  // Rows that scroll sideways keep their own height; the photo takes the rest.
+  strip: { flexGrow: 0, flexShrink: 0 },
+  styles: { gap: 10, paddingRight: 4 },
+  styleCard: { width: 70, alignItems: 'center', gap: 4, padding: 3, borderRadius: 14, borderWidth: 1.5, borderColor: 'transparent' },
+  styleCardActive: { borderColor: colors.gold, backgroundColor: colors.goldSoft },
+  styleImg: { width: 62, height: 62, borderRadius: 11, backgroundColor: colors.surface2 },
+  styleCheck: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: 2,
   },
-  toolActive: { borderColor: colors.gold, backgroundColor: colors.goldSoft },
-  toolLabel: { fontFamily: font.medium, fontSize: 10, lineHeight: 13, color: colors.text, textAlign: 'center' },
+  styleName: { fontFamily: font.medium, fontSize: 11, color: colors.text },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: -4 },
+  section: { fontFamily: font.serif, fontSize: 17, color: colors.text },
+  advanced: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, borderWidth: 1, borderColor: colors.gold },
+  advancedText: { fontFamily: font.medium, fontSize: 12, color: colors.goldDeep },
+  tools: { gap: 4, paddingRight: 4 },
   card: { backgroundColor: colors.surface2, borderRadius: 16, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 4 },
   cardRow: { flexDirection: 'row', justifyContent: 'space-between' },
   cardTitle: { fontFamily: font.medium, fontSize: 14, color: colors.text },

@@ -14,7 +14,7 @@ import { deleteDraft, timeAgo, useDrafts, type DraftMeta } from '@/src/drafts/dr
 import { aiPresetIcons, Icon } from '@/src/icons';
 import { setPendingPhoto, type EditorIntent } from '@/src/pendingPhoto';
 import { usePhotoSource } from '@/src/photoSource';
-import { photoUrl, samplePhotos, type PhotoKey } from '@/src/photos';
+import { photoImage, photoUrl, samplePhotos, type PhotoKey } from '@/src/photos';
 import { useRecents } from '@/src/recents';
 import { cardShadow, colors, font, MAX_CONTENT_WIDTH } from '@/src/theme';
 import { AppHeader, GoldButton, Screen, SectionHeader } from '@/src/ui';
@@ -32,16 +32,16 @@ const slides: {
   intent?: EditorIntent;
 }[] = [
   {
-    photo: 'hero',
-    focus: { x: 0.38, y: 0.3 },
+    photo: 'modelVanity',
+    focus: { x: 0.58, y: 0.48 },
     kicker: 'home.hero1.kicker',
     title: 'home.hero1.title',
     sub: 'home.hero1.sub',
     cta: 'home.hero1.cta',
   },
   {
-    photo: 'heroGolden',
-    focus: { x: 0.53, y: 0.28 },
+    photo: 'modelPeace',
+    focus: { x: 0.54, y: 0.45 },
     kicker: 'home.hero2.kicker',
     title: 'home.hero2.title',
     sub: 'home.hero2.sub',
@@ -49,8 +49,8 @@ const slides: {
     intent: { type: 'ai', preset: 'enhance' },
   },
   {
-    photo: 'heroCurls',
-    focus: { x: 0.55, y: 0.35 },
+    photo: 'modelWhite',
+    focus: { x: 0.48, y: 0.48 },
     kicker: 'home.hero3.kicker',
     title: 'home.hero3.title',
     sub: 'home.hero3.sub',
@@ -90,7 +90,7 @@ function HeroSlide({ slide, width, onPress }: { slide: (typeof slides)[number]; 
   return (
     <View style={[styles.hero, { width }]}>
       <Image
-        source={{ uri: `${photoUrl(slide.photo, 1500)}&h=1000` }}
+        source={photoImage(slide.photo, 1500, 1000)}
         style={[styles.heroImage, heroPhotoFrame(width, slide.focus)]}
         resizeMode="cover"
       />

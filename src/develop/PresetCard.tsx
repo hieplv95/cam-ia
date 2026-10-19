@@ -3,10 +3,10 @@ import { Skia, type SkImage } from '@shopify/react-native-skia';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 
 import { renderThumbnail } from '../editor/imageOps';
-import { photoUrl, type PhotoKey } from '../photos';
+import { photoData, photoImage, type PhotoKey } from '../photos';
 import { colors, font } from '../theme';
 import { presetDevelop, type DevelopPreset } from './presets';
 import { DevelopedImage } from './shader';
@@ -18,11 +18,11 @@ const THUMB_H = 280;
 const photoCache = new Map<PhotoKey, Promise<SkImage>>();
 const thumbCache = new Map<string, Promise<string>>();
 
-/** Decoded showcase photo (720px), cached. */
+/** Decoded showcase photo (720px for the Unsplash scenes, the bundled file for the models), cached. */
 export function loadPhoto(key: PhotoKey) {
   let p = photoCache.get(key);
   if (!p) {
-    p = Skia.Data.fromURI(photoUrl(key, 720)).then((data) => {
+    p = Skia.Data.fromURI(photoData(key, 720)).then((data) => {
       const img = Skia.Image.MakeImageFromEncoded(data);
       if (!img) throw new Error('decode failed');
       return img;
@@ -37,7 +37,7 @@ export function presetThumbnail(preset: DevelopPreset) {
   if (preset.thumb) return Promise.resolve(preset.thumb);
   let p = thumbCache.get(preset.id);
   if (!p) {
-    p = loadPhoto(preset.photo ?? 'portraitSoft').then((img) =>
+    p = loadPhoto(preset.photo ?? 'modelPeace').then((img) =>
       renderThumbnail(<DevelopedImage image={img} develop={presetDevelop(preset)} width={THUMB_W} height={THUMB_H} fit="cover" />, THUMB_W, THUMB_H),
     );
     thumbCache.set(preset.id, p);
@@ -45,19 +45,19 @@ export function presetThumbnail(preset: DevelopPreset) {
   return p;
 }
 
-export function usePresetThumbnail(preset: DevelopPreset) {
+export function usePresetThumbnail(preset: DevelopPreset): ImageSourcePropType {
   // Plain photo first, then the developed render.
-  const [uri, setUri] = useState(preset.thumb ?? photoUrl(preset.photo ?? 'portraitSoft', THUMB_W * 2));
+  const [source, setSource] = useState<ImageSourcePropType>(preset.thumb ? { uri: preset.thumb } : photoImage(preset.photo ?? 'modelPeace', THUMB_W * 2));
   useEffect(() => {
     let alive = true;
     presetThumbnail(preset)
-      .then((u) => alive && setUri(u))
+      .then((uri) => alive && setSource({ uri }))
       .catch(() => {});
     return () => {
       alive = false;
     };
   }, [preset]);
-  return uri;
+  return source;
 }
 
 /* ---------- Saved presets ---------- */
@@ -102,13 +102,13 @@ export function PresetCard({
   onRemove?: () => void;
 }) {
   const t = useT();
-  const uri = usePresetThumbnail(preset);
+  const thumb = usePresetThumbnail(preset);
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.card, { width, height: width * 0.8 }, selected && styles.cardSelected, pressed && { opacity: 0.85 }]}
     >
-      <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      <Image source={thumb} style={StyleSheet.absoluteFill} resizeMode="cover" />
       <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.7)']} style={styles.shade} />
       <View style={styles.footer}>
         <Text style={styles.name} numberOfLines={1}>

@@ -20,16 +20,33 @@ export const ec = {
   onGold: colors.onGold,
 };
 
-/** Text tabs with an underline under the active one (Cơ bản · Làm đẹp · …). */
+/**
+ * Text tabs with an underline under the active one (Cơ bản · Làm đẹp · …). Tabs with icons (Khuôn mặt · Trang điểm · …)
+ * show as pills instead: icon and name, the active one on a soft gold background.
+ */
 export function CategoryTabs<T extends string>({
   tabs,
   value,
   onChange,
 }: {
-  tabs: { id: T; label: string }[];
+  tabs: { id: T; label: string; icon?: IconSpec }[];
   value: T | null;
   onChange: (id: T) => void;
 }) {
+  if (tabs.some((t) => t.icon))
+    return (
+      <HScroll contentContainerStyle={styles.iconTabs}>
+        {tabs.map((t) => {
+          const active = t.id === value;
+          return (
+            <Pressable key={t.id} onPress={() => onChange(t.id)} style={[styles.iconTab, active && styles.iconTabActive]}>
+              {t.icon && <Icon icon={t.icon} size={15} color={active ? ec.gold : ec.textSoft} />}
+              <Text style={[styles.tabText, active && styles.tabTextActive]}>{t.label}</Text>
+            </Pressable>
+          );
+        })}
+      </HScroll>
+    );
   return (
     <HScroll contentContainerStyle={styles.tabs}>
       {tabs.map((t) => {
@@ -152,6 +169,9 @@ const styles = StyleSheet.create({
   tabText: { fontFamily: font.medium, fontSize: 14, color: ec.textSoft },
   tabTextActive: { color: ec.gold, fontFamily: font.semi },
   underline: { width: 22, height: 2.5, borderRadius: 2, marginTop: 6, backgroundColor: 'transparent' },
+  iconTabs: { paddingHorizontal: 10, gap: 4 },
+  iconTab: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+  iconTabActive: { backgroundColor: ec.goldSoft },
   toolRow: { paddingHorizontal: 10, gap: 4 },
   tool: { width: 66, alignItems: 'center', gap: 6 },
   circle: {

@@ -96,6 +96,20 @@ export const studioTools: StudioTool[] = [
           { id: 'glam', prompt: 'glamorous Latina makeup: bronzed glowing skin, defined brows, winged liner, glossy nude-brown lips' },
           { id: 'party', prompt: 'elegant evening makeup: soft smoky eyes, defined lashes, classic red lips' },
           { id: 'bridal', prompt: 'soft romantic bridal makeup: luminous skin, champagne shimmer eyes, rosy pink lips' },
+          { id: 'sweet', prompt: 'sweet, soft pink makeup: rosy flushed cheeks, light shimmer on the eyelids, glossy peach-pink lips' },
+        ],
+      },
+      {
+        // A new, modest outfit; never more revealing than what the person wears (see the prompt).
+        id: 'outfit',
+        defaults: [KEEP],
+        options: [
+          { id: KEEP, prompt: '' },
+          { id: 'dress', prompt: 'an elegant ivory satin dress with a soft bow detail and a flowing skirt' },
+          { id: 'street', prompt: 'a trendy streetwear outfit: a loose denim jacket over a fitted white top, with beige cargo pants' },
+          { id: 'elegant', prompt: 'a chic cream tweed blazer with gold buttons over a silk pussy-bow blouse, with a matching skirt' },
+          { id: 'evening', prompt: 'a glamorous champagne evening gown with pearl and sequin embellishments and a tulle skirt' },
+          { id: 'casual', prompt: 'a sweet casual outfit: a soft pink knit cardigan over a floral top, with a white ruffled skirt' },
         ],
       },
     ],
@@ -289,7 +303,7 @@ const picked = (tool: StudioTool, choices: StudioChoices, groupId: string) => {
 export function studioProblem(tool: StudioTool, choices: StudioChoices, brand: string, hasReference = false, hasExtra = false): MessageKey | null {
   // A written request is enough on its own for the photo tools.
   if (tool.id === 'restore' && !hasExtra && !picked(tool, choices, 'fix').length) return 'studio.problem.restore';
-  if (tool.id === 'style' && !hasExtra && !['hair', 'color', 'makeup'].some((g) => picked(tool, choices, g).length)) return 'studio.problem.style';
+  if (tool.id === 'style' && !hasExtra && !['hair', 'color', 'makeup', 'outfit'].some((g) => picked(tool, choices, g).length)) return 'studio.problem.style';
   // A reference image (e.g. the client's sketch) can carry the name itself.
   if (tool.id === 'logo' && !brand.trim() && !hasReference) return 'studio.problem.logo';
   return null;
@@ -357,15 +371,20 @@ export function studioPrompt(
       const [hair] = p('hair');
       const [color] = p('color');
       const [makeup] = p('makeup');
+      const [outfit] = p('outfit');
       const steps = [
         hair && `- change the hairstyle to ${hair}${color ? '' : ', keeping the current hair color'}`,
         color && `- change the hair color to ${color}${hair ? '' : ', keeping the current hairstyle and length'}`,
         makeup && `- apply ${makeup}`,
+        outfit && `- dress the person in ${outfit}`,
       ].filter(Boolean);
       return (
         'Give the person in this photo a new look:\n' +
         steps.join('\n') +
-        '\nKeep the same person: identical face, facial features, expression, age, skin tone, body, clothing, pose, background and framing. Photorealistic, natural result.' +
+        `\nKeep the same person: identical face, facial features, expression, age, skin tone, body, ${outfit ? '' : 'clothing, '}pose, background and framing. Photorealistic, natural result.` +
+        (outfit
+          ? ' The new outfit must cover the body at least as much as the original clothing: never make it more revealing, tighter or sexual, and never show underwear or skin that was covered.'
+          : '') +
         request
       );
     }

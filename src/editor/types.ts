@@ -2,6 +2,7 @@ import type { SkImage } from '@shopify/react-native-skia';
 
 import type { Develop } from '../develop/types';
 import type { FrameId } from './frames';
+import type { FontId, TextStyleId } from './text';
 
 export type PenKind = 'normal' | 'neon' | 'rainbow';
 
@@ -19,12 +20,16 @@ export type StickerLayer = {
 export type TextLayer = {
   kind: 'text';
   id: string;
+  /** May hold several lines ("\n"). */
   text: string;
   color: string;
   x: number;
   y: number;
   size: number;
   rotation: number;
+  /** Missing in drafts saved before fonts and looks existed: Baloo with a white border. */
+  font?: FontId;
+  style?: TextStyleId;
 };
 
 export type StrokeLayer = {
@@ -37,7 +42,7 @@ export type StrokeLayer = {
   pen: PenKind;
 };
 
-export type RetouchEffect = 'whiten' | 'lighten';
+export type RetouchEffect = 'whiten' | 'lighten' | 'lips' | 'blush' | 'brows';
 
 /**
  * A brush stroke marking what the AI should remove ("Xóa vật thể"), in image pixels.

@@ -2,6 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 
 import type { AiPresetId } from './ai/presets';
+import type { RetouchOptionId } from './ai/retouch';
 import { t, type MessageKey } from './i18n';
 
 type IonName = ComponentProps<typeof Ionicons>['name'];
@@ -16,6 +17,21 @@ export function Icon({ icon, size = 22, color }: { icon: IconSpec; size?: number
     <MaterialCommunityIcons name={icon.name} size={size} color={color} />
   );
 }
+
+/** Retouch tools (Retouch screen and the editor's AI beauty tab). */
+export const retouchIcons: Record<RetouchOptionId, IconSpec> = {
+  skin: { set: 'ion', name: 'water-outline' },
+  slimface: { set: 'mci', name: 'face-recognition' },
+  bigeyes: { set: 'mci', name: 'eye-plus-outline' },
+  teeth: { set: 'mci', name: 'tooth-outline' },
+  lips: { set: 'mci', name: 'lipstick' },
+  waist: { set: 'mci', name: 'human-female' },
+  legs: { set: 'mci', name: 'human-female-dance' },
+  acne: { set: 'mci', name: 'auto-fix' },
+  face: { set: 'mci', name: 'face-woman-shimmer-outline' },
+  eyes: { set: 'ion', name: 'eye-outline' },
+  light: { set: 'ion', name: 'sunny-outline' },
+};
 
 export const aiPresetIcons: Record<AiPresetId, IconSpec> = {
   enhance: { set: 'ion', name: 'sparkles-outline' },

@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ColorMatrix, Group, Image as SkImageNode, ImageSVG, Path, Skia, useFont, type SkImage, type SkSVG } from '@shopify/react-native-skia';
+import { ColorMatrix, Group, Image as SkImageNode, ImageSVG, Path, Skia, type SkImage, type SkSVG } from '@shopify/react-native-skia';
 import { usePreventRemove } from '@react-navigation/native';
 import { useNavigation, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,8 +7,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { aiEdit, type AiRequest } from '@/src/ai/client';
-import type { RetouchOptionId } from '@/src/ai/retouch';
+import { aiEdit, aiStudio, type AiRequest } from '@/src/ai/client';
+import type { RetouchOptionId, RetouchStyleId } from '@/src/ai/retouch';
 import { addCustomPreset, findPreset, nextRecipeName, removeCustomPreset, useCustomPresets } from '@/src/develop/customPresets';
 import { developPresets, presetDevelop, type DevelopPreset } from '@/src/develop/presets';
 import { DevelopedImage } from '@/src/develop/shader';
@@ -18,6 +18,7 @@ import { loadDraft, newDraftId, saveDraft, timeAgo } from '@/src/drafts/drafts';
 import { EditorCanvas, ERASE_MARK_COLOR, type PenSettings } from '@/src/editor/EditorCanvas';
 import { ERASE_SIZES, ErasePanel, type EraseSize } from '@/src/editor/ErasePanel';
 import { inpaint } from '@/src/editor/inpaint';
+import { biggerEyes, fullerLips, longerLegs, slimmerNose, slimmer, taller } from '@/src/editor/reshape';
 import { fitCrop, isFullCrop, scaleCrop, type CropRect } from '@/src/editor/crop';
 import { FrameOverlay, frames } from '@/src/editor/frames';
 import {
@@ -48,8 +49,14 @@ import {
   FramePanel,
   StickerPanel,
   TextPanel,
+  isShapeTool,
+  needsMarks,
+  type ShapeTool,
+  type TextLook,
   type BasicTool,
+  type BeautyMode,
   type BeautyTool,
+  type StyleGroup,
   type DevelopKey,
   type DevelopKeyId,
   cropRatioOf,
@@ -62,9 +69,12 @@ import { HistorySheet } from '@/src/editor/HistorySheet';
 import { PromptBar } from '@/src/editor/PromptBar';
 import { BASE_FONT_SIZE, buildStrokePath } from '@/src/editor/Scene';
 import { stickers } from '@/src/editor/stickers';
+import { designText, fontOf, textBlock, type TextDesign } from '@/src/editor/text';
+import { useEditorFonts } from '@/src/editor/useEditorFonts';
 import { defaultAdjust, newId, type Doc, type EraseMark, type Layer, type TransformableLayer } from '@/src/editor/types';
 import { CategoryTabs, ec } from '@/src/editor/ui';
 import { useDocHistory } from '@/src/editor/useDocHistory';
+import { getLanguage } from '@/src/i18n';
 import { aiPresetLabel, Icon, type IconSpec } from '@/src/icons';
 import { notify } from '@/src/notify';
 import { setPendingExport, setPendingPhoto, takePendingPhoto } from '@/src/pendingPhoto';
@@ -149,10 +159,13 @@ function TopButton({
   );
 }
 
+/** Mark size per free shape tool, times the chosen brush size: a pimple is small, an eye big. */
+const SHAPE_BRUSH: Record<ShapeTool, number> = { acne: 0.8, bigeyes: 2, slim: 1.5, legs: 1.5, vline: 1.3, jaw: 1.3, nose: 1.2, fulllips: 1.8, shoulders: 1.5, height: 1 };
+
 export default function Editor() {
   useT();
   const router = useRouter();
-  const skFont = useFont(require('@expo-google-fonts/baloo-2/700Bold/Baloo2_700Bold.ttf'), BASE_FONT_SIZE);
+  const fonts = useEditorFonts();
   const svgs = useMemo<Record<string, SkSVG | null>>(
     () => Object.fromEntries(stickers.map((s) => [s.id, Skia.SVG.MakeFromString(s.svg)])),
     [],
@@ -189,13 +202,22 @@ export default function Editor() {
   const [cropRect, setCropRect] = useState<CropRect | null>(null);
   const [effectTool, setEffectTool] = useState<DevelopKeyId>('vignette');
   const [beauty, setBeauty] = useState<RetouchOptionId[]>(['face', 'skin']);
-  const [beautyMode, setBeautyMode] = useState<'free' | 'ai'>('free');
+  // Làm đẹp opens on "Làm đẹp nhanh"; "Tùy chỉnh nâng cao" switches to the free tools.
+  const [beautyMode, setBeautyMode] = useState<BeautyMode>('quick');
+  // Phong cách: the makeup, hairstyle, hair color and outfit picked (one per group).
+  const [stylePicks, setStylePicks] = useState<Partial<Record<StyleGroup, string>>>({ makeup: 'natural' });
+  const [quickStyle, setQuickStyle] = useState<RetouchStyleId | null>('natural');
+  const [quickTools, setQuickTools] = useState<RetouchOptionId[]>([]);
   const [beautyTool, setBeautyTool] = useState<BeautyTool>('smooth');
+  // How strong bigger eyes / slimmer / longer legs are (0–100).
+  const [shapeStrength, setShapeStrength] = useState(50);
   const [brushWidth, setBrushWidth] = useState(26);
   const [compare, setCompare] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pen, setPen] = useState<PenSettings>({ color: paintColors[0], width: 12, kind: 'normal' });
-  const [textColor, setTextColor] = useState('#FFFFFF');
+  const [look, setLook] = useState<TextLook>({ font: 'baloo', style: 'sticker', color: '#FFFFFF' });
+  // The text layer whose words are being typed: one history step for the whole edit, not one per letter.
+  const editingTextId = useRef<string | null>(null);
   const [busy, setBusy] = useState<string | null>(t('common.openingPhoto'));
   const [toast, setToast] = useState<string | null>(null);
   const [stickerThumbs, setStickerThumbs] = useState<Record<string, string>>({});
@@ -222,7 +244,7 @@ export default function Editor() {
     setSelectedId(null);
     setCompare(false);
     try {
-      commit(freshDoc(await op(await flatten(base, skFont, svgs)), undefined, step));
+      commit(freshDoc(await op(await flatten(base, fonts, svgs)), undefined, step));
       return true;
     } catch (e: any) {
       showToast(e.message ?? t('common.error'));
@@ -238,9 +260,9 @@ export default function Editor() {
     setSelectedId(null);
     setCompare(false);
     try {
-      const image = await cropImage(await flatten(base, skFont, svgs), r);
+      const image = await cropImage(await flatten(base, fonts, svgs), r);
       const hasFull = base.full && base.full !== base.image;
-      const full = hasFull ? await cropImage(await flattenFull(base, skFont, svgs), scaleCrop(r, base.full!.width() / base.image.width())) : undefined;
+      const full = hasFull ? await cropImage(await flattenFull(base, fonts, svgs), scaleCrop(r, base.full!.width() / base.image.width())) : undefined;
       commit(freshDoc(image, full, label));
       // Done cropping: leave the crop tool so its frame doesn't come back over the new picture (tap "Cắt" to crop again).
       setBasicTool('exposure');
@@ -257,9 +279,9 @@ export default function Editor() {
     setSelectedId(null);
     setCompare(false);
     try {
-      const image = await transformImage(await flatten(base, skFont, svgs), op);
+      const image = await transformImage(await flatten(base, fonts, svgs), op);
       const hasFull = base.full && base.full !== base.image;
-      const full = hasFull ? await transformImage(await flattenFull(base, skFont, svgs), op) : undefined;
+      const full = hasFull ? await transformImage(await flattenFull(base, fonts, svgs), op) : undefined;
       commit(freshDoc(image, full, transformName(op)));
     } catch (e: any) {
       showToast(e.message ?? t('common.error'));
@@ -277,6 +299,25 @@ export default function Editor() {
       summary = result.summary;
       const out = await imageFromBase64(result.image);
       offerReport(out, 'preset' in req ? `preset.${req.preset}` : 'prompt', 'prompt' in req ? req.prompt : '');
+      return out;
+    });
+    if (ok) showToast(`Xong ✨ ${summary}`);
+  };
+
+  /** Phong cách: new makeup, hair and/or outfit with AI (the studio's hair & makeup tool). */
+  const runStyle = async (base: Doc) => {
+    const choices = Object.fromEntries(Object.entries(stylePicks).flatMap(([g, id]) => (id ? [[g, [id]]] : [])));
+    if (!Object.keys(choices).length) {
+      showToast(t('beauty.style.empty'));
+      return;
+    }
+    let summary = '';
+    const ok = await runFlattened(base, t('studio.style.busy'), t('studio.style.title'), async (flat) => {
+      const input = await resizeImage(flat, 1024);
+      const result = await aiStudio('style', choices, encodeBase64(input, 88));
+      summary = result.summary;
+      const out = await imageFromBase64(result.image);
+      offerReport(out, 'studio.style');
       return out;
     });
     if (ok) showToast(`Xong ✨ ${summary}`);
@@ -318,6 +359,44 @@ export default function Editor() {
       setEraseText('');
       showToast(`Xong ✨ ${summary}`);
     }
+  };
+
+  /** Free beauty tools that work on painted marks (acne healing and face / body reshaping), on the device. */
+  const runShape = async () => {
+    if (!doc || !isShapeTool(beautyTool)) return;
+    const marks = eraseMarks;
+    if (!marks.length && needsMarks(beautyTool)) {
+      showToast(t('editor.erase.needMarks'));
+      return;
+    }
+    const tool = beautyTool;
+    // V-line, jaw, shoulders and waist push the way the finger moved: a tap alone has no direction.
+    const pushes = tool === 'slim' || tool === 'vline' || tool === 'jaw' || tool === 'shoulders';
+    const swiped = (m: EraseMark) => {
+      const n = m.points.length;
+      return n >= 4 && Math.hypot(m.points[n - 2] - m.points[0], m.points[n - 1] - m.points[1]) > m.width * 0.25;
+    };
+    if (pushes && !marks.some(swiped)) {
+      showToast(t(`beauty.${tool}Hint`));
+      return;
+    }
+    const amount = shapeStrength / 100;
+    const ok = await runFlattened(doc, t('editor.processing'), t(`beauty.${tool}`), (flat) =>
+      tool === 'acne'
+        ? inpaint(flat, marks)
+        : tool === 'bigeyes'
+          ? biggerEyes(flat, marks, amount)
+          : tool === 'fulllips'
+            ? fullerLips(flat, marks, amount)
+            : tool === 'nose'
+              ? slimmerNose(flat, marks, amount)
+              : tool === 'legs'
+                ? longerLegs(flat, marks, amount)
+                : tool === 'height'
+                  ? taller(flat, amount)
+                  : slimmer(flat, marks, amount),
+    );
+    if (ok) setEraseMarks([]);
   };
 
   /** "Xóa nhanh": removes the painted area on the device, without AI (free, offline). */
@@ -460,7 +539,7 @@ export default function Editor() {
   /** Writes the draft; saves run one after another so an older save never lands last. */
   const writeDraft = (d: Doc, id: string) => {
     const run = saveChain.current.then(async () => {
-      await saveDraft(id, d, await sceneThumbnail(d, skFont, svgs));
+      await saveDraft(id, d, await sceneThumbnail(d, fonts, svgs));
       savedDoc.current = d;
       setSavedMark(d);
       setSavedAt(Date.now());
@@ -514,7 +593,7 @@ export default function Editor() {
    * otherwise one step of the edit history.
    */
   const undoStep = () => {
-    if (panel === 'erase' && eraseMarks.length) return setEraseMarks((m) => m.slice(0, -1));
+    if ((panel === 'erase' || shapeTool) && eraseMarks.length) return setEraseMarks((m) => m.slice(0, -1));
     setSelectedId(null);
     undo();
   };
@@ -569,6 +648,16 @@ export default function Editor() {
   const addLayer = (layer: Layer) => {
     commit({ ...doc, layers: [...doc.layers, layer] });
     if (layer.kind === 'sticker' || layer.kind === 'text') setSelectedId(layer.id);
+  };
+
+  /** Adds words in a look, centred low on the picture, shrunk so every line fits. */
+  const addText = (text: string, l: TextLook) => {
+    const b = textBlock(fontOf(fonts, l), text, BASE_FONT_SIZE);
+    const size = Math.min(minSide * 0.12, (iw * 0.85 * BASE_FONT_SIZE) / Math.max(b.width, 1), (ih * 0.45 * BASE_FONT_SIZE) / (b.lineHeight * b.lines.length));
+    editingTextId.current = null;
+    // A little apart from the previous one, so several designs don't land exactly on top of each other.
+    const jitter = () => (Math.random() - 0.5) * minSide * 0.12;
+    addLayer({ kind: 'text', id: newId(), text, color: l.color, font: l.font, style: l.style, x: iw / 2 + jitter(), y: ih * (b.lines.length > 1 ? 0.72 : 0.78) + jitter(), size, rotation: 0 });
   };
 
   const patchSelected = (fn: (l: TransformableLayer) => Partial<TransformableLayer>) => {
@@ -632,7 +721,7 @@ export default function Editor() {
     setBusy(t('common.preparing'));
     setSelectedId(null);
     try {
-      setPendingExport(await flattenFull(doc, skFont, svgs));
+      setPendingExport(await flattenFull(doc, fonts, svgs));
       router.push('/export');
     } catch (e: any) {
       showToast(e.message ?? t('common.error'));
@@ -646,8 +735,8 @@ export default function Editor() {
     setBusy(t('common.opening'));
     setSelectedId(null);
     try {
-      const flat = await flatten(doc, skFont, svgs);
-      const full = doc.full && doc.full !== doc.image ? await flattenFull(doc, skFont, svgs) : undefined;
+      const flat = await flatten(doc, fonts, svgs);
+      const full = doc.full && doc.full !== doc.image ? await flattenFull(doc, fonts, svgs) : undefined;
       if (draftId) await writeDraft(doc, draftId).catch(() => {});
       setPendingPhoto({ kind: 'image', image: flat, full, intent: { type } });
       allowLeave.current = true;
@@ -659,7 +748,9 @@ export default function Editor() {
   };
 
   const choosePanel = (p: Panel) => {
-    if (p !== 'erase') setEraseMarks([]);
+    // Marks belong to the panel they were painted in (Xóa vật thể or a beauty tool): never carry them to another one.
+    if (p !== panel) setEraseMarks([]);
+    if (p === 'beauty') setBeautyMode('quick');
     setPanel(p);
     if (p === 'draw') setSelectedId(null);
   };
@@ -676,8 +767,12 @@ export default function Editor() {
   const slider = { develop: doc.develop, onStart: checkpoint, onDevelop: setDevelopValue };
   // The teeth / under-eye brushes paint masks on the canvas instead of moving stickers.
   const brushEffect =
-    panel === 'beauty' && beautyMode === 'free' && (beautyTool === 'whiten' || beautyTool === 'lighten') ? beautyTool : null;
-  const canvasMode = cropping ? 'crop' : panel === 'erase' ? 'erase' : panel === 'draw' ? 'draw' : brushEffect ? 'retouch' : 'move';
+    panel === 'beauty' && beautyMode === 'free' && (beautyTool === 'whiten' || beautyTool === 'lighten' || beautyTool === 'lips' || beautyTool === 'blush' || beautyTool === 'brows')
+      ? beautyTool
+      : null;
+  // Acne, bigger eyes, slimmer and longer legs mark the photo like "Xóa vật thể", then apply.
+  const shapeTool = panel === 'beauty' && beautyMode === 'free' && isShapeTool(beautyTool) && needsMarks(beautyTool) ? beautyTool : null;
+  const canvasMode = cropping ? 'crop' : panel === 'erase' || shapeTool ? 'erase' : panel === 'draw' ? 'draw' : brushEffect ? 'retouch' : 'move';
   const chooseCropShape = (c: CropChoice) => {
     setCropChoice(c);
     setCropRect(fitCrop(iw, ih, cropRatioOf(c)));
@@ -709,7 +804,7 @@ export default function Editor() {
             icon={{ set: 'ion', name: 'arrow-undo-outline' }}
             label={`${t('common.undo')} (Ctrl+Z)`}
             onPress={undoStep}
-            disabled={!canUndo && !(panel === 'erase' && eraseMarks.length)}
+            disabled={!canUndo && !((panel === 'erase' || shapeTool) && eraseMarks.length)}
           />
           <TopButton icon={{ set: 'ion', name: 'arrow-redo-outline' }} label={`${t('common.redo')} (Ctrl+Y)`} onPress={redoStep} disabled={!canRedo} />
           <TopButton
@@ -733,7 +828,7 @@ export default function Editor() {
 
       <EditorCanvas
         doc={doc}
-        font={skFont}
+        fonts={fonts}
         svgs={svgs}
         mode={canvasMode}
         brush={brushEffect ? { effect: brushEffect, width: brushWidth } : undefined}
@@ -743,7 +838,7 @@ export default function Editor() {
         checkpoint={checkpoint}
         update={update}
         compareWith={compareWith}
-        erase={{ marks: eraseMarks, width: ERASE_SIZES[eraseSize], onChange: setEraseMarks }}
+        erase={{ marks: eraseMarks, width: shapeTool ? brushWidth * SHAPE_BRUSH[shapeTool] : ERASE_SIZES[eraseSize], onChange: setEraseMarks }}
         crop={cropping && cropRect ? { rect: cropRect, ratio: cropRatioOf(cropChoice), onChange: setCropRect } : undefined}
       />
 
@@ -754,7 +849,7 @@ export default function Editor() {
               ['remove', t('editor.layer.smaller'), () => patchSelected((l) => ({ size: Math.max(20, l.size * 0.8) }))],
               ['add', t('editor.layer.bigger'), () => patchSelected((l) => ({ size: l.size * 1.25 }))],
               ['refresh', t('editor.layer.rotate'), () => patchSelected((l) => ({ rotation: l.rotation + Math.PI / 12 }))],
-              ...(selected.kind === 'text' ? [['color-palette-outline', t('editor.layer.color'), () => patchSelected(() => ({ color: textColor }))]] : []),
+              ...(selected.kind === 'text' ? [['color-palette-outline', t('editor.layer.color'), () => patchSelected(() => ({ color: look.color }))]] : []),
               ['trash-outline', t('editor.layer.delete'), removeSelected],
               ['checkmark', t('editor.layer.done'), () => setSelectedId(null)],
             ] as [React.ComponentProps<typeof Ionicons>['name'], string, () => void][]
@@ -778,7 +873,14 @@ export default function Editor() {
           value={(categories.includes(panel as Category) ? panel : null) as Category | null}
           onChange={choosePanel}
         />
-        <View style={[styles.panel, panel === 'adjust' && styles.panelTall]}>
+        <View
+          style={[
+            styles.panel,
+            (panel === 'adjust' || panel === 'text' || panel === 'sticker' || panel === 'beauty') && styles.panelTall,
+            panel === 'beauty' && beautyMode === 'free' && isShapeTool(beautyTool) && styles.panelShape,
+            panel === 'beauty' && beautyMode === 'quick' && styles.panelQuick,
+          ]}
+        >
           {panel === 'basic' && (
             <BasicPanel
               {...slider}
@@ -791,11 +893,15 @@ export default function Editor() {
           {panel === 'beauty' && (
             <BeautyPanel
               mode={beautyMode}
-              onMode={setBeautyMode}
+              onMode={(m) => {
+                setBeautyMode(m);
+                setEraseMarks([]);
+              }}
               tool={beautyTool}
               onTool={(t) => {
                 setBeautyTool(t);
                 setSelectedId(null);
+                setEraseMarks([]);
               }}
               develop={doc.develop}
               onStart={checkpoint}
@@ -805,10 +911,29 @@ export default function Editor() {
               onClearBrush={(effect) =>
                 commit({ ...doc, layers: doc.layers.filter((l) => !(l.kind === 'retouch' && l.effect === effect)) })
               }
+              marks={eraseMarks.length}
+              strength={shapeStrength}
+              onStrength={setShapeStrength}
+              onClearMarks={() => setEraseMarks([])}
+              onApplyShape={runShape}
+              comparing={compare}
+              onCompare={toggleCompare}
               aiSelected={beauty}
               onAiToggle={(id) => setBeauty((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))}
               onAiRun={() => runAi(doc, { preset: 'retouch', options: beauty })}
               onAdvanced={() => openScreen('retouch')}
+              quick={{
+                style: quickStyle,
+                onStyle: setQuickStyle,
+                selected: quickTools,
+                onToggle: (id) => setQuickTools((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id])),
+                onRun: () => runAi(doc, { preset: 'retouch', options: quickTools, ...(quickStyle && { style: quickStyle }) }),
+              }}
+              look={{
+                picks: stylePicks,
+                onPick: (g, id) => setStylePicks((p) => ({ ...p, [g]: id ?? undefined })),
+                onRun: () => runStyle(doc),
+              }}
             />
           )}
           {panel === 'filters' && (
@@ -850,16 +975,25 @@ export default function Editor() {
           {panel === 'effects' && <EffectsPanel {...slider} active={effectTool} onActive={setEffectTool} />}
           {panel === 'text' && (
             <TextPanel
-              color={textColor}
-              onColor={(c) => {
-                setTextColor(c);
-                if (selected?.kind === 'text') patchSelected(() => ({ color: c }));
+              look={look}
+              onLook={(patch) => {
+                setLook((l) => ({ ...l, ...patch }));
+                if (selected?.kind === 'text') patchSelected(() => patch);
               }}
-              onAdd={(text) => {
-                // Shrink long captions so they fit inside the picture.
-                const widthAtBase = skFont?.getTextWidth(text) ?? text.length * BASE_FONT_SIZE * 0.5;
-                const size = Math.min(minSide * 0.12, (iw * 0.85 * BASE_FONT_SIZE) / Math.max(widthAtBase, 1));
-                addLayer({ kind: 'text', id: newId(), text, color: textColor, x: iw / 2, y: ih * 0.8, size, rotation: 0 });
+              selectedText={selected?.kind === 'text' ? selected.text : null}
+              onAdd={(text) => addText(text, look)}
+              onEdit={(text) => {
+                if (selected?.kind !== 'text') return;
+                if (editingTextId.current !== selected.id) {
+                  checkpoint();
+                  editingTextId.current = selected.id;
+                }
+                update((d) => ({ ...d, layers: d.layers.map((l) => (l.id === selected.id && l.kind === 'text' ? { ...l, text } : l)) }));
+              }}
+              onDesign={(d: TextDesign) => {
+                const next = { font: d.font, style: d.style, color: d.color };
+                setLook(next);
+                addText(designText(d, getLanguage()), next);
               }}
             />
           )}
@@ -1082,6 +1216,10 @@ const styles = StyleSheet.create({
   panel: { height: 184, justifyContent: 'center' },
   // Điều chỉnh holds sections, sliders or the curve, and the quick looks.
   panelTall: { height: 236, justifyContent: 'flex-start', paddingTop: 4, paddingBottom: 8 },
+  // Face and body reshaping: the strength slider and Reset / Compare / Apply get rows of their own.
+  panelShape: { height: 278 },
+  // Làm đẹp nhanh: the beauty tabs, the looks, the quick tools and "Áp dụng ngay".
+  panelQuick: { height: 316 },
   // Row of white tiles: Hiệu ứng · Văn bản · Sticker · Khung · Vẽ.
   bottomBar: { flexDirection: 'row', gap: 8, paddingTop: 10, width: '100%', maxWidth: 760, alignSelf: 'center' },
   bottomItem: {

@@ -2,6 +2,7 @@ import type { FilterId } from '../editor/filters';
 import type { PhotoKey } from '../photos';
 import { defaultDevelop, hslRanges, type CurveChannel, type Develop, type HslRange } from './types';
 import { t, type MessageKey } from '../i18n';
+import { morePresets } from './presetsMore';
 
 export const presetCategories = [
   { id: 'portrait', label: 'presetCat.portrait' },
@@ -10,6 +11,9 @@ export const presetCategories = [
   { id: 'cine', label: 'presetCat.cine' },
   { id: 'vintage', label: 'presetCat.vintage' },
   { id: 'aesthetic', label: 'presetCat.aesthetic' },
+  { id: 'food', label: 'presetCat.food' },
+  { id: 'landscape', label: 'presetCat.landscape' },
+  { id: 'night', label: 'presetCat.night' },
   { id: 'bw', label: 'presetCat.bw' },
 ] as const;
 
@@ -38,7 +42,8 @@ export type DevelopPreset = {
   custom?: boolean;
 };
 
-export const developPresets: DevelopPreset[] = [
+/** The first set of looks; the second set is in presetsMore.ts. */
+const firstSet: DevelopPreset[] = [
   {
     id: 'cinematic',
     name: 'Cinematic',
@@ -56,7 +61,7 @@ export const developPresets: DevelopPreset[] = [
     id: 'softglow',
     name: 'Soft Glow',
     categories: ['portrait', 'aesthetic'],
-    photo: 'portraitSoft',
+    photo: 'modelPeace',
     patch: {
       light: { exposure: 8, contrast: -20, highlights: -10, shadows: 20, blacks: 10 },
       color: { temperature: 12, saturation: -5, vibrance: 15 },
@@ -68,7 +73,7 @@ export const developPresets: DevelopPreset[] = [
   {
     id: 'mocha',
     name: 'Mocha',
-    categories: ['aesthetic', 'vintage'],
+    categories: ['aesthetic', 'vintage', 'food'],
     photo: 'coffee',
     patch: {
       light: { contrast: 10, highlights: -20, shadows: 10 },
@@ -94,7 +99,7 @@ export const developPresets: DevelopPreset[] = [
     id: 'noir',
     name: 'Noir',
     categories: ['bw', 'cine'],
-    photo: 'portraitRose',
+    photo: 'modelWhite',
     patch: {
       light: { contrast: 45, highlights: -10, shadows: -15, whites: 15, blacks: -25 },
       color: { saturation: -100 },
@@ -106,7 +111,7 @@ export const developPresets: DevelopPreset[] = [
     id: 'goldenhour',
     name: 'Golden Hour',
     categories: ['portrait', 'aesthetic'],
-    photo: 'portraitDusk',
+    photo: 'modelVanity',
     patch: {
       light: { exposure: 5, highlights: -15, shadows: 15 },
       color: { temperature: 30, tint: 4, vibrance: 25 },
@@ -118,7 +123,7 @@ export const developPresets: DevelopPreset[] = [
     id: 'blockbuster',
     name: 'Blockbuster',
     categories: ['cine'],
-    photo: 'portraitShadow',
+    photo: 'modelWhite',
     patch: {
       light: { contrast: 30, blacks: -15 },
       color: { temperature: -5, saturation: -5 },
@@ -166,7 +171,7 @@ export const developPresets: DevelopPreset[] = [
     id: 'silver',
     name: 'Silver',
     categories: ['bw'],
-    photo: 'heroGolden',
+    photo: 'modelVanity',
     patch: {
       light: { contrast: 60, whites: 20, blacks: -30 },
       color: { saturation: -100 },
@@ -177,7 +182,7 @@ export const developPresets: DevelopPreset[] = [
     id: 'cleanportrait',
     name: 'Clean Portrait',
     categories: ['portrait'],
-    photo: 'portraitFlowers',
+    photo: 'modelVanity',
     patch: {
       light: { exposure: 5, highlights: -10, shadows: 15 },
       color: { vibrance: 10 },
@@ -190,7 +195,7 @@ export const developPresets: DevelopPreset[] = [
   {
     id: 'cancun',
     name: 'Cancún',
-    categories: ['tropical'],
+    categories: ['tropical', 'landscape'],
     photo: 'tulum',
     patch: {
       light: { exposure: 8, contrast: 10, highlights: -20, shadows: 15 },
@@ -216,7 +221,7 @@ export const developPresets: DevelopPreset[] = [
     id: 'tulum',
     name: 'Tulum',
     categories: ['latino', 'tropical', 'aesthetic'],
-    photo: 'portraitSoft',
+    photo: 'modelPeace',
     patch: {
       light: { exposure: 6, contrast: -15, shadows: 20 },
       color: { temperature: 14, saturation: -25, vibrance: 5 },
@@ -229,7 +234,7 @@ export const developPresets: DevelopPreset[] = [
     id: 'mariachi',
     name: 'Mariachi',
     categories: ['latino', 'cine'],
-    photo: 'portraitShadow',
+    photo: 'modelWhite',
     patch: {
       light: { contrast: 30, highlights: -10, blacks: -15 },
       color: { temperature: 12, saturation: 15 },
@@ -241,7 +246,7 @@ export const developPresets: DevelopPreset[] = [
     id: 'frida',
     name: 'Frida',
     categories: ['latino'],
-    photo: 'portraitFlowers',
+    photo: 'modelVanity',
     patch: {
       light: { contrast: 20 },
       color: { saturation: 15, vibrance: 40 },
@@ -265,7 +270,7 @@ export const developPresets: DevelopPreset[] = [
     id: 'carnaval',
     name: 'Carnaval',
     categories: ['latino'],
-    photo: 'hero',
+    photo: 'modelPeace',
     patch: {
       light: { contrast: 30, whites: 10, blacks: -10 },
       color: { saturation: 35, vibrance: 25 },
@@ -277,7 +282,7 @@ export const developPresets: DevelopPreset[] = [
     id: 'telenovela',
     name: 'Telenovela',
     categories: ['latino', 'portrait'],
-    photo: 'portraitRose',
+    photo: 'modelWhite',
     patch: {
       light: { exposure: 6, contrast: -10, highlights: -15, shadows: 15 },
       color: { temperature: 10, tint: 10, vibrance: 12 },
@@ -314,7 +319,7 @@ export const developPresets: DevelopPreset[] = [
     id: 'oaxaca',
     name: 'Oaxaca',
     categories: ['latino'],
-    photo: 'heroCurls',
+    photo: 'modelWhite',
     patch: {
       light: { contrast: 15, highlights: -20 },
       color: { temperature: 25, saturation: -10 },
@@ -326,7 +331,7 @@ export const developPresets: DevelopPreset[] = [
   {
     id: 'patagonia',
     name: 'Patagonia',
-    categories: ['cine'],
+    categories: ['cine', 'landscape'],
     photo: 'patagonia',
     patch: {
       light: { contrast: 20, highlights: -20, shadows: 10 },
@@ -338,8 +343,8 @@ export const developPresets: DevelopPreset[] = [
   {
     id: 'atardecer',
     name: 'Atardecer',
-    categories: ['tropical', 'aesthetic'],
-    photo: 'portraitDusk',
+    categories: ['tropical', 'aesthetic', 'landscape'],
+    photo: 'modelVanity',
     patch: {
       light: { exposure: 5, highlights: -20 },
       color: { temperature: 35, tint: 12, vibrance: 20 },
@@ -365,7 +370,7 @@ export const developPresets: DevelopPreset[] = [
     id: 'salsa',
     name: 'Salsa',
     categories: ['latino'],
-    photo: 'heroGolden',
+    photo: 'modelVanity',
     patch: {
       light: { contrast: 25, blacks: -10 },
       color: { temperature: 15, saturation: 20 },
@@ -389,7 +394,7 @@ export const developPresets: DevelopPreset[] = [
     id: 'pieldorada',
     name: 'Piel Dorada',
     categories: ['portrait', 'latino'],
-    photo: 'portraitDusk',
+    photo: 'modelVanity',
     patch: {
       light: { exposure: 5, highlights: -10, shadows: 15 },
       color: { temperature: 15, tint: 4, vibrance: 10 },
@@ -400,7 +405,7 @@ export const developPresets: DevelopPreset[] = [
   {
     id: 'nochelatina',
     name: 'Noche Latina',
-    categories: ['latino', 'cine'],
+    categories: ['latino', 'cine', 'night'],
     photo: 'cinematic',
     patch: {
       light: { exposure: -8, contrast: 25, highlights: -10, blacks: -20 },
@@ -425,7 +430,7 @@ export const developPresets: DevelopPreset[] = [
   {
     id: 'cafecolombia',
     name: 'Café de Colombia',
-    categories: ['latino', 'aesthetic'],
+    categories: ['latino', 'aesthetic', 'food'],
     photo: 'coffee',
     patch: {
       light: { contrast: 10, highlights: -15 },
@@ -439,7 +444,7 @@ export const developPresets: DevelopPreset[] = [
     id: 'cinedeoro',
     name: 'Cine de Oro',
     categories: ['bw', 'latino', 'vintage'],
-    photo: 'portraitRose',
+    photo: 'modelWhite',
     patch: {
       look: 'vintage',
       light: { contrast: 35, blacks: -20 },
@@ -447,6 +452,8 @@ export const developPresets: DevelopPreset[] = [
     },
   },
 ];
+
+export const developPresets: DevelopPreset[] = [...firstSet, ...morePresets];
 
 export const presetById = (id: string) => developPresets.find((p) => p.id === id);
 

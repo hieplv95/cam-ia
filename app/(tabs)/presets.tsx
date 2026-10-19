@@ -185,7 +185,7 @@ function SelectedSheet({
   return (
     <View style={styles.sheet}>
       <View style={styles.sheetTop}>
-        <Image source={{ uri: thumb }} style={styles.sheetThumb} />
+        <Image source={thumb} style={styles.sheetThumb} />
         <View style={{ flex: 1 }}>
           <Text style={styles.sheetName}>{preset.name}</Text>
           <Text style={styles.sheetDesc} numberOfLines={2}>

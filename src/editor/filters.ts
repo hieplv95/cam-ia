@@ -60,6 +60,33 @@ export const filters = [
   { id: 'dreamy', name: 'Dreamy', emoji: '🦄', matrix: chain(contrast(0.8), tint(1, 0.92, 1.08, 0.08, 0.04, 0.1)) },
   { id: 'vintage', name: 'Vintage', emoji: '📜', matrix: chain(sepia, contrast(0.95)) },
   { id: 'bw', name: 'Black & White', emoji: '🐼', matrix: chain(saturate(0), contrast(1.15)) },
+  // Contrast looks: from punchy to matte.
+  { id: 'punch', name: 'Punch', emoji: '💥', matrix: chain(contrast(1.35), saturate(1.15)) },
+  { id: 'crisp', name: 'Crisp', emoji: '🔷', matrix: chain(contrast(1.2), brightness(-0.02)) },
+  { id: 'hdr', name: 'HDR', emoji: '🏞️', matrix: chain(contrast(1.25), saturate(1.3)) },
+  { id: 'drama', name: 'Drama', emoji: '🎭', matrix: chain(contrast(1.45), saturate(0.75)) },
+  { id: 'deepblack', name: 'Deep Black', emoji: '🖤', matrix: chain(contrast(1.3), brightness(-0.05), saturate(0.95)) },
+  { id: 'matte', name: 'Matte', emoji: '🌫️', matrix: chain(contrast(0.82), brightness(0.05)) },
+  { id: 'fade', name: 'Fade', emoji: '🍂', matrix: chain(contrast(0.75), saturate(0.8), brightness(0.06)) },
+  { id: 'airy', name: 'Airy', emoji: '☁️', matrix: chain(brightness(0.1), contrast(0.88), tint(0.98, 1, 1.03, 0, 0.01, 0.02)) },
+  { id: 'moody', name: 'Moody', emoji: '🌧️', matrix: chain(brightness(-0.06), contrast(1.15), saturate(0.75), tint(0.96, 1, 1.05, 0, 0, 0.02)) },
+  // Color looks.
+  { id: 'golden', name: 'Golden', emoji: '🌟', matrix: chain(tint(1.12, 1.02, 0.85, 0.03, 0.01, 0), contrast(1.05)) },
+  { id: 'peach', name: 'Peach', emoji: '🍑', matrix: chain(tint(1.08, 0.98, 0.94, 0.04, 0.02, 0.02), contrast(0.95)) },
+  { id: 'rose', name: 'Rosé', emoji: '🌹', matrix: chain(tint(1.06, 0.94, 1, 0.06, 0, 0.04)) },
+  { id: 'lavender', name: 'Lavender', emoji: '💜', matrix: chain(tint(1, 0.95, 1.1, 0.04, 0.02, 0.08), saturate(0.9)) },
+  { id: 'teal', name: 'Teal', emoji: '🦚', matrix: chain(tint(0.9, 1.02, 1.08, 0, 0.02, 0.04), contrast(1.15)) },
+  { id: 'tealorange', name: 'Teal & Orange', emoji: '🎞️', matrix: chain(tint(1.12, 1, 0.88, -0.04, 0, 0.06), contrast(1.15)) },
+  { id: 'forest', name: 'Forest', emoji: '🌲', matrix: chain(tint(0.92, 1.06, 0.94, 0, 0.02, 0), saturate(1.1)) },
+  { id: 'desert', name: 'Desert', emoji: '🏜️', matrix: chain(tint(1.1, 1, 0.86, 0.04, 0.02, 0), saturate(0.85)) },
+  { id: 'arctic', name: 'Arctic', emoji: '🧊', matrix: chain(tint(0.92, 1, 1.12, 0.02, 0.04, 0.08), brightness(0.04), saturate(0.85)) },
+  { id: 'neon', name: 'Neon', emoji: '🪩', matrix: chain(saturate(1.5), contrast(1.15), tint(1.05, 0.95, 1.1)) },
+  // Old film and black-and-white.
+  { id: 'retro', name: 'Retro', emoji: '📻', matrix: chain(tint(1.08, 1, 0.85, 0.06, 0.04, 0), saturate(0.75), contrast(0.9)) },
+  { id: 'polaroid', name: 'Polaroid', emoji: '🖼️', matrix: chain(tint(1.05, 1, 0.92, 0.05, 0.04, 0.02), contrast(0.9), saturate(0.9)) },
+  { id: 'noir', name: 'Noir', emoji: '🕶️', matrix: chain(saturate(0), contrast(1.45), brightness(-0.04)) },
+  { id: 'silver', name: 'Silver', emoji: '🥈', matrix: chain(saturate(0), contrast(0.9), brightness(0.05)) },
+  { id: 'sepiasoft', name: 'Soft Sepia', emoji: '☕', matrix: chain(sepia, contrast(0.85), brightness(0.04)) },
 ] as const;
 
 export type FilterId = (typeof filters)[number]['id'];

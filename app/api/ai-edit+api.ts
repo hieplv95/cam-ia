@@ -4,7 +4,7 @@ import { pointsFor } from '@/src/ai/credits';
 import { getPlan } from '@/src/server/plan';
 import { DEFAULT_IMAGE_MODEL, isImageModel } from '@/src/ai/models';
 import { aiPresets } from '@/src/ai/presets';
-import { isRetouchOption, retouchPrompt } from '@/src/ai/retouch';
+import { isRetouchOption, isRetouchStyle, retouchPrompt } from '@/src/ai/retouch';
 import { cleanChoices, cleanPart, MAX_BRAND, MAX_EXTRA, MAX_TAGLINE, studioProblem, studioPrompt, studioTool, takesReference } from '@/src/ai/studio';
 import { caller, charge, creditsOf, isDenied, refund, settle, type Caller } from '@/src/server/account';
 import { AiError, editImage, hasAiSource } from '@/src/server/gemini';
@@ -19,6 +19,15 @@ const SAFETY_INSTRUCTION =
   'You are the photo-editing engine of a family-friendly photo app used by adults and children. Only produce wholesome results. ' +
   'Never make people look older, thinner or sexualized, and never add violence, weapons, scary or adult content. ' +
   'Unless asked otherwise, keep every person recognizable and keep their face shape, body shape and skin tone unchanged.';
+
+/**
+ * Retouch (the user's own beauty choices): reshaping and brighter skin are allowed when picked, everything else stays
+ * as strict as SAFETY_INSTRUCTION. The prompt itself also forbids reshaping anyone who may be under 18.
+ */
+const RETOUCH_INSTRUCTION =
+  'You are the beauty retouching engine of a photo app. Apply only the retouching that is asked for, realistically. ' +
+  'Never produce nudity, sexual or revealing content, and never add violence, weapons or adult content. ' +
+  'Keep every person recognizable as themselves.';
 
 // A light first line of defense; Gemini's own safety filters run as well.
 const BLOCKED_WORDS = [
@@ -185,8 +194,10 @@ export async function POST(request: Request) {
   let instruction: string;
   const preset = aiPresets.find((p) => p.id === body.preset);
   const retouch = Array.isArray(body.options) ? body.options.filter(isRetouchOption) : [];
-  if (preset?.id === 'retouch' && retouch.length) {
-    instruction = retouchPrompt(retouch);
+  const style = isRetouchStyle(body.style) ? body.style : undefined;
+  if (preset?.id === 'retouch' && (retouch.length || style)) {
+    const retouchInstruction = retouchPrompt(retouch, style);
+    return paid(() => editImage(image, retouchInstruction, RETOUCH_INSTRUCTION, model));
   } else if (preset) {
     instruction = preset.prompt;
   } else {

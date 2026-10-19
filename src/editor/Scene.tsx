@@ -5,6 +5,7 @@ import {
   LinearGradient,
   Mask,
   Path,
+  Shadow,
   Skia,
   Text,
   vec,
@@ -17,15 +18,28 @@ import {
 import { DevelopedImage } from '../develop/shader';
 import { FrameOverlay } from './frames';
 import { brightness, multiply, saturate } from './filters';
+import { DEFAULT_TEXT_STYLE, fontOf, textBlock, type EditorFonts } from './text';
 import type { Doc, RetouchEffect, RetouchLayer, StrokeLayer, TextLayer } from './types';
 
-const retouchEffects: RetouchEffect[] = ['whiten', 'lighten'];
+const retouchEffects: RetouchEffect[] = ['whiten', 'lighten', 'lips', 'blush', 'brows'];
 
-/** Teeth: drain the yellow and brighten. Under-eyes: lift the shadow a little. */
+/**
+ * Teeth: drain the yellow and brighten. Under-eyes: lift the shadow and warm it a touch, so a bluish dark circle
+ * fades into the skin around it (strong enough to see, the soft mask edge keeps it natural).
+ */
 const retouchMatrix: Record<RetouchEffect, number[]> = {
   whiten: multiply(brightness(0.08), saturate(0.35)),
-  lighten: multiply(brightness(0.07), saturate(0.85)),
+  lighten: multiply([1, 0, 0, 0, 0.035, 0, 1, 0, 0, 0.018, 0, 0, 1, 0, -0.005, 0, 0, 0, 1, 0], multiply(brightness(0.16), saturate(0.78))),
+  // Lipstick: a soft rosy tint (more red, less green and blue), a little richer.
+  lips: multiply([1.06, 0, 0, 0, 0.03, 0, 0.8, 0, 0, 0, 0, 0, 0.88, 0, 0.01, 0, 0, 0, 1, 0], saturate(1.25)),
+  // Blush: a light pink flush over the cheeks.
+  blush: [1.04, 0, 0, 0, 0.05, 0, 0.85, 0, 0, 0, 0, 0, 0.91, 0, 0.02, 0, 0, 0, 1, 0],
+  // Brows: darker and a touch richer, so thin or light brows look filled in.
+  brows: multiply([0.78, 0, 0, 0, -0.01, 0, 0.76, 0, 0, -0.015, 0, 0, 0.76, 0, -0.015, 0, 0, 0, 1, 0], saturate(1.15)),
 };
+
+/** Blush fades out wide; the other brushes keep a tighter edge. */
+const maskBlur = (effect: RetouchEffect, width: number) => width * (effect === 'blush' ? 0.45 : 0.25);
 
 /** Fonts are loaded at this size and scaled per layer. */
 export const BASE_FONT_SIZE = 100;
@@ -52,8 +66,33 @@ export function buildStrokePath(points: number[]): SkPath {
   return path;
 }
 
-export function textWidth(font: SkFont, layer: TextLayer) {
-  return (font.getTextWidth(layer.text) * layer.size) / BASE_FONT_SIZE;
+/** Width and height of a text layer in image pixels. */
+export function textSize(fonts: EditorFonts, layer: TextLayer) {
+  const b = textBlock(fontOf(fonts, layer), layer.text, BASE_FONT_SIZE);
+  const k = layer.size / BASE_FONT_SIZE;
+  return { width: b.width * k, height: b.lineHeight * b.lines.length * k };
+}
+
+/** One text layer at the base font size, centered on (0, 0): every line, in the layer's look. */
+function TextBlock({ font, layer }: { font: SkFont; layer: TextLayer }) {
+  const b = textBlock(font, layer.text, BASE_FONT_SIZE);
+  const style = layer.style ?? DEFAULT_TEXT_STYLE;
+  return (
+    <Group>
+      {b.lines.map((line, i) => {
+        const props = { x: -font.getTextWidth(line) / 2, y: b.center + (i - (b.lines.length - 1) / 2) * b.lineHeight, text: line, font };
+        return (
+          <Group key={i}>
+            {style === 'sticker' && <Text {...props} color="#FFFFFF" style="stroke" strokeWidth={14} strokeJoin="round" />}
+            {style === 'outline' && <Text {...props} color="#1E1A17" style="stroke" strokeWidth={9} strokeJoin="round" />}
+            <Text {...props} color={layer.color}>
+              {style === 'shadow' && <Shadow dx={0} dy={4} blur={7} color="rgba(0,0,0,0.55)" />}
+            </Text>
+          </Group>
+        );
+      })}
+    </Group>
+  );
 }
 
 export function Stroke({ layer }: { layer: StrokeLayer }) {
@@ -93,12 +132,12 @@ type SceneProps = {
   doc: Doc;
   /** Higher-resolution version of doc.image to draw instead (full-size export). */
   base?: SkImage;
-  font: SkFont | null;
+  fonts: EditorFonts;
   svgs: Record<string, SkSVG | null>;
 };
 
 /** Draws the whole document in image-pixel coordinates. Pure (no hooks) so it also works with drawAsImage. */
-export function Scene({ doc, base, font, svgs }: SceneProps) {
+export function Scene({ doc, base, fonts, svgs }: SceneProps) {
   const w = doc.image.width();
   const h = doc.image.height();
   return (
@@ -115,7 +154,7 @@ export function Scene({ doc, base, font, svgs }: SceneProps) {
               <Group>
                 {areas.map((l) => (
                   <Path key={l.id} path={buildStrokePath(l.points)} style="stroke" strokeWidth={l.width} strokeCap="round" strokeJoin="round" color="#000000">
-                    <BlurMask blur={l.width * 0.25} style="normal" />
+                    <BlurMask blur={maskBlur(effect, l.width)} style="normal" />
                   </Path>
                 ))}
               </Group>
@@ -143,15 +182,11 @@ export function Scene({ doc, base, font, svgs }: SceneProps) {
             </Group>
           );
         }
+        const font = fontOf(fonts, layer);
         if (!font) return null;
-        const k = layer.size / BASE_FONT_SIZE;
-        const tw = font.getTextWidth(layer.text);
-        // Baseline sits ~35% below the visual center for Baloo 2.
-        const textProps = { x: -tw / 2, y: BASE_FONT_SIZE * 0.35, text: layer.text, font };
         return (
-          <Group key={layer.id} transform={[...transform, { scale: k }]}>
-            <Text {...textProps} color="#FFFFFF" style="stroke" strokeWidth={14} strokeJoin="round" />
-            <Text {...textProps} color={layer.color} />
+          <Group key={layer.id} transform={[...transform, { scale: layer.size / BASE_FONT_SIZE }]}>
+            <TextBlock font={font} layer={layer} />
           </Group>
         );
       })}

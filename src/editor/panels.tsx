@@ -16,6 +16,7 @@ import { colors, font, goldGradient, paintColors } from '../theme';
 import type { PenSettings } from './EditorCanvas';
 import { FRAME_CATEGORIES, frames, type FrameCategory, type FrameId } from './frames';
 import { cropRatios, type CropRatio, type TransformOp } from './imageOps';
+import type { NoseLiftStyle } from './reshape';
 import type { RetouchEffect } from './types';
 import { STICKER_CATEGORIES, stickers, type StickerCategory } from './stickers';
 import { designText, fontInfo, TEXT_CATEGORIES, TEXT_DESIGNS, TEXT_FONTS, TEXT_STYLES, type FontId, type TextCategory, type TextDesign, type TextStyleId } from './text';
@@ -277,10 +278,10 @@ export function FiltersPanel({
  * shape tools on marks the user paints before pressing "Apply" (acne healing and reshaping, see reshape.tsx).
  */
 export type BeautySlider = keyof Develop['beauty'];
-export type ShapeTool = 'acne' | 'bigeyes' | 'slim' | 'legs' | 'vline' | 'jaw' | 'nose' | 'fulllips' | 'shoulders' | 'height';
+export type ShapeTool = 'acne' | 'bigeyes' | 'slim' | 'legs' | 'vline' | 'jaw' | 'nose' | 'noselift' | 'fulllips' | 'shoulders' | 'height';
 export type BeautyTool = BeautySlider | RetouchEffect | ShapeTool;
 
-const shapeTools: ShapeTool[] = ['acne', 'bigeyes', 'slim', 'legs', 'vline', 'jaw', 'nose', 'fulllips', 'shoulders', 'height'];
+const shapeTools: ShapeTool[] = ['acne', 'bigeyes', 'slim', 'legs', 'vline', 'jaw', 'nose', 'noselift', 'fulllips', 'shoulders', 'height'];
 export const isShapeTool = (t: BeautyTool): t is ShapeTool => shapeTools.includes(t as ShapeTool);
 /** "Tăng chiều cao" works on the whole picture; the other shape tools need marks first. */
 export const needsMarks = (t: ShapeTool) => t !== 'height';
@@ -307,6 +308,7 @@ const freeCards: Record<BeautyGroup, FreeCard[]> = {
     { id: 'jaw', photo: 'slimface', picture: beautyPhotos.jaw, icon: { set: 'mci', name: 'face-woman-profile' } },
     { id: 'bigeyes', photo: 'bigeyes' },
     { id: 'nose', photo: 'nose', picture: beautyPhotos.nose, icon: { set: 'mci', name: 'arrow-collapse-horizontal' } },
+    { id: 'noselift', photo: 'nose', picture: beautyPhotos.noselift, icon: { set: 'mci', name: 'chevron-double-up' } },
     { id: 'fulllips', photo: 'lips', picture: beautyPhotos.fulllips, icon: { set: 'mci', name: 'emoticon-kiss-outline' } },
   ],
   makeup: [
@@ -349,6 +351,8 @@ const beautyBrushes: { id: RetouchEffect; icon: IconSpec; hint: MessageKey }[] =
   { id: 'brows', icon: { set: 'mci', name: 'format-paint' }, hint: 'beauty.browsHint' },
 ];
 
+const noseStyles: NoseLiftStyle[] = ['contour', 'lift'];
+
 const sizeLabels: MessageKey[] = ['common.small', 'common.medium', 'common.large'];
 const brushSizes = [14, 26, 44].map((width, i) => ({ width, label: sizeLabels[i] }));
 
@@ -364,7 +368,7 @@ export type QuickBeauty = {
 };
 
 /** What the Làm đẹp tab opens on: one-tap looks and retouch tools (the free tools are the other tabs). */
-function QuickBeautyPanel({ style, onStyle, selected, onToggle, onRun }: QuickBeauty) {
+function QuickBeautyPanel({ style, onStyle, selected, onToggle, onRun, compact }: QuickBeauty & { compact?: boolean }) {
   const t = useT();
   const nothing = !style && !selected.length;
   return (
@@ -387,9 +391,12 @@ function QuickBeautyPanel({ style, onStyle, selected, onToggle, onRun }: QuickBe
           );
         })}
       </HScroll>
-      <View style={styles.quickHead}>
-        <Text style={styles.quickTitle}>{t('retouch.quick')}</Text>
-      </View>
+      {/* On short screens the "Nhanh" tab already says it. */}
+      {!compact && (
+        <View style={styles.quickHead}>
+          <Text style={styles.quickTitle}>{t('retouch.quick')}</Text>
+        </View>
+      )}
       <ToolRow>
         {retouchOptions.map((o) => (
           <RetouchToolCard key={o.id} id={o.id} size={54} active={selected.includes(o.id)} onPress={() => onToggle(o.id)} />
@@ -526,6 +533,8 @@ export function BeautyPanel({
   onClearBrush,
   marks,
   strength,
+  noseStyle,
+  onNoseStyle,
   onStrength,
   onClearMarks,
   onApplyShape,
@@ -536,6 +545,7 @@ export function BeautyPanel({
   onAiRun,
   onAdvanced,
   quick,
+  compact,
   look,
 }: {
   /** Làm đẹp nhanh, Phong cách (makeup, hair, outfit), the free tools (Da / Khuôn mặt / Trang điểm / Body) or the AI tools. */
@@ -552,6 +562,9 @@ export function BeautyPanel({
   /** Shape tools: how many marks are painted, how strong the change is (0–100), and applying it. */
   marks: number;
   strength: number;
+  /** Nâng mũi: "Tạo khối" (contour) or "Nâng rõ" (lift). */
+  noseStyle: NoseLiftStyle;
+  onNoseStyle: (s: NoseLiftStyle) => void;
   onStrength: (v: number) => void;
   onClearMarks: () => void;
   onApplyShape: () => void;
@@ -563,6 +576,8 @@ export function BeautyPanel({
   onAiRun: () => void;
   onAdvanced: () => void;
   quick: QuickBeauty;
+  /** Short screen: leave out what the tabs already say. */
+  compact?: boolean;
   look: StyleLook;
 }) {
   const t = useT();
@@ -591,7 +606,7 @@ export function BeautyPanel({
     return (
       <View style={styles.colTight}>
         {tabs}
-        <QuickBeautyPanel {...quick} />
+        <QuickBeautyPanel {...quick} compact={compact} />
       </View>
     );
   if (mode === 'style')
@@ -628,6 +643,8 @@ export function BeautyPanel({
             <>
               <HScroll contentContainerStyle={styles.pills}>
                 <Text style={styles.brushHint}>{t(`beauty.${tool}Hint`)}</Text>
+                {tool === 'noselift' &&
+                  noseStyles.map((s) => <Pill key={s} label={t(`beauty.noseStyle.${s}`)} active={noseStyle === s} onPress={() => onNoseStyle(s)} />)}
                 {needsMarks(tool) &&
                   brushSizes.map((s) => <Pill key={s.width} label={t(s.label)} active={brushWidth === s.width} onPress={() => onBrushWidth(s.width)} />)}
               </HScroll>

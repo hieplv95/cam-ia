@@ -4,7 +4,7 @@ import { usePreventRemove } from '@react-navigation/native';
 import { useNavigation, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { aiEdit, aiStudio, type AiRequest } from '@/src/ai/client';
@@ -18,7 +18,7 @@ import { loadDraft, newDraftId, saveDraft, timeAgo } from '@/src/drafts/drafts';
 import { EditorCanvas, ERASE_MARK_COLOR, type PenSettings } from '@/src/editor/EditorCanvas';
 import { ERASE_SIZES, ErasePanel, type EraseSize } from '@/src/editor/ErasePanel';
 import { inpaint } from '@/src/editor/inpaint';
-import { biggerEyes, fullerLips, longerLegs, slimmerNose, slimmer, taller } from '@/src/editor/reshape';
+import { biggerEyes, fullerLips, liftNose, longerLegs, slimmerNose, slimmer, taller, type NoseLiftStyle } from '@/src/editor/reshape';
 import { fitCrop, isFullCrop, scaleCrop, type CropRect } from '@/src/editor/crop';
 import { FrameOverlay, frames } from '@/src/editor/frames';
 import {
@@ -160,7 +160,10 @@ function TopButton({
 }
 
 /** Mark size per free shape tool, times the chosen brush size: a pimple is small, an eye big. */
-const SHAPE_BRUSH: Record<ShapeTool, number> = { acne: 0.8, bigeyes: 2, slim: 1.5, legs: 1.5, vline: 1.3, jaw: 1.3, nose: 1.2, fulllips: 1.8, shoulders: 1.5, height: 1 };
+/** Below this window height (most phones, and phone browsers with their own bars) the editor uses its compact layout. */
+const COMPACT_HEIGHT = 820;
+
+const SHAPE_BRUSH: Record<ShapeTool, number> = { acne: 0.8, bigeyes: 2, slim: 1.5, legs: 1.5, vline: 1.3, jaw: 1.3, nose: 1.2, noselift: 1.4, fulllips: 1.8, shoulders: 1.5, height: 1 };
 
 export default function Editor() {
   useT();
@@ -203,6 +206,7 @@ export default function Editor() {
   const [effectTool, setEffectTool] = useState<DevelopKeyId>('vignette');
   const [beauty, setBeauty] = useState<RetouchOptionId[]>(['skin']);
   // Làm đẹp opens on "Làm đẹp nhanh"; "Tùy chỉnh nâng cao" switches to the free tools.
+  const { height: windowHeight } = useWindowDimensions();
   const [beautyMode, setBeautyMode] = useState<BeautyMode>('quick');
   // Phong cách: the makeup, hairstyle, hair color and outfit picked (one per group).
   const [stylePicks, setStylePicks] = useState<Partial<Record<StyleGroup, string>>>({ makeup: 'natural' });
@@ -211,6 +215,8 @@ export default function Editor() {
   const [beautyTool, setBeautyTool] = useState<BeautyTool>('smooth');
   // How strong bigger eyes / slimmer / longer legs are (0–100).
   const [shapeStrength, setShapeStrength] = useState(50);
+  // Nâng mũi: "Tạo khối" (contour) or "Nâng rõ" (lift).
+  const [noseStyle, setNoseStyle] = useState<NoseLiftStyle>('lift');
   const [brushWidth, setBrushWidth] = useState(26);
   const [compare, setCompare] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -390,6 +396,8 @@ export default function Editor() {
             ? fullerLips(flat, marks, amount)
             : tool === 'nose'
               ? slimmerNose(flat, marks, amount)
+              : tool === 'noselift'
+                ? liftNose(flat, marks, amount, noseStyle)
               : tool === 'legs'
                 ? longerLegs(flat, marks, amount)
                 : tool === 'height'
@@ -784,6 +792,20 @@ export default function Editor() {
     runCrop(doc, cropRect, t('editor.op.crop', { ratio: shape }));
   };
 
+  // Short screens (phones, mobile browsers): the app's own tab bar and, on tall tool panels, the AI prompt box step
+  // aside, and a panel never takes more than about a third of the screen (it scrolls instead), so the photo stays big.
+  const compact = windowHeight < COMPACT_HEIGHT;
+  const panelWanted =
+    panel === 'beauty' && beautyMode === 'quick'
+      ? 316
+      : panel === 'beauty' && beautyMode === 'free' && isShapeTool(beautyTool)
+        ? 278
+        : panel === 'adjust' || panel === 'text' || panel === 'sticker' || panel === 'beauty'
+          ? 236
+          : 184;
+  const panelHeight = compact ? Math.min(panelWanted, Math.max(170, Math.round(windowHeight * 0.43))) : panelWanted;
+  const showPrompt = !compact || panel === 'basic' || panel === 'ai' || panel === 'filters';
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
       {/* iOS: lift the AI prompt box above the keyboard (Android resizes the window itself). */}
@@ -863,7 +885,9 @@ export default function Editor() {
       )}
 
       {/* Describe the edit for the AI, on every tab (hidden while a sticker or text is being edited, or comparing). */}
-      {!compareWith && !(selected && panel !== 'draw') && panel !== 'erase' && !cropping && <PromptBar onSubmit={(prompt) => runAi(doc, { prompt })} onExpand={setPromptOpen} />}
+      {showPrompt && !compareWith && !(selected && panel !== 'draw') && panel !== 'erase' && !cropping && (
+        <PromptBar onSubmit={(prompt) => runAi(doc, { prompt })} onExpand={setPromptOpen} />
+      )}
 
       {/* Kept mounted while the prompt is open, so the panels keep their state. */}
       <View style={styles.controls}>
@@ -873,14 +897,13 @@ export default function Editor() {
           value={(categories.includes(panel as Category) ? panel : null) as Category | null}
           onChange={choosePanel}
         />
-        <View
-          style={[
-            styles.panel,
-            (panel === 'adjust' || panel === 'text' || panel === 'sticker' || panel === 'beauty') && styles.panelTall,
-            panel === 'beauty' && beautyMode === 'free' && isShapeTool(beautyTool) && styles.panelShape,
-            panel === 'beauty' && beautyMode === 'quick' && styles.panelQuick,
-          ]}
-        >
+        <View style={[styles.panel, { height: panelHeight }]}>
+          {/* Scrolls only when the panel had to be made shorter than its content (short screens). */}
+          <ScrollView
+            scrollEnabled={panelHeight < panelWanted}
+            showsVerticalScrollIndicator={panelHeight < panelWanted}
+            contentContainerStyle={[styles.panelContent, panelWanted > 184 && styles.panelTall]}
+          >
           {panel === 'basic' && (
             <BasicPanel
               {...slider}
@@ -892,6 +915,7 @@ export default function Editor() {
           )}
           {panel === 'beauty' && (
             <BeautyPanel
+              compact={compact}
               mode={beautyMode}
               onMode={(m) => {
                 setBeautyMode(m);
@@ -914,6 +938,8 @@ export default function Editor() {
               marks={eraseMarks.length}
               strength={shapeStrength}
               onStrength={setShapeStrength}
+              noseStyle={noseStyle}
+              onNoseStyle={setNoseStyle}
               onClearMarks={() => setEraseMarks([])}
               onApplyShape={runShape}
               comparing={compare}
@@ -1015,20 +1041,21 @@ export default function Editor() {
           )}
           {panel === 'frame' && <FramePanel value={doc.frame} thumbs={frameThumbs} onPick={(frame) => commit({ ...doc, frame })} />}
           {panel === 'draw' && <DrawPanel pen={pen} onChange={setPen} />}
+          </ScrollView>
         </View>
 
       </View>
 
-      <View style={[styles.bottomBar, promptOpen && styles.hidden]}>
+      <View style={[styles.bottomBar, compact && styles.bottomBarCompact, promptOpen && styles.hidden]}>
         {bottomTools.map((tool) => {
           const active = panel === tool.id;
           return (
             <Pressable
               key={tool.id}
               onPress={() => choosePanel(tool.id)}
-              style={({ pressed }) => [styles.bottomItem, active && styles.bottomItemActive, pressed && { opacity: 0.75 }]}
+              style={({ pressed }) => [styles.bottomItem, compact && styles.bottomItemCompact, active && styles.bottomItemActive, pressed && { opacity: 0.75 }]}
             >
-              <Icon icon={tool.icon} size={22} color={ec.gold} />
+              <Icon icon={tool.icon} size={compact ? 19 : 22} color={ec.gold} />
               <Text style={[styles.bottomLabel, active && { color: ec.gold, fontFamily: font.semi }]} numberOfLines={1}>
                 {t(`editor.tool.${tool.id}` as MessageKey)}
               </Text>
@@ -1037,9 +1064,11 @@ export default function Editor() {
         })}
       </View>
 
-      <View style={[styles.nav, promptOpen && styles.hidden]}>
-        <EditorNav />
-      </View>
+      {!compact && (
+        <View style={[styles.nav, promptOpen && styles.hidden]}>
+          <EditorNav />
+        </View>
+      )}
       </View>
 
       <HistorySheet
@@ -1212,16 +1241,16 @@ const styles = StyleSheet.create({
   },
   fill: { flex: 1 },
   hidden: { display: 'none' },
-  // Fixed height so the tabs don't jump when switching between taller and shorter panels.
-  panel: { height: 184, justifyContent: 'center' },
-  // Điều chỉnh holds sections, sliders or the curve, and the quick looks.
-  panelTall: { height: 236, justifyContent: 'flex-start', paddingTop: 4, paddingBottom: 8 },
-  // Face and body reshaping: the strength slider and Reset / Compare / Apply get rows of their own.
-  panelShape: { height: 278 },
-  // Làm đẹp nhanh: the beauty tabs, the looks, the quick tools and "Áp dụng ngay".
-  panelQuick: { height: 316 },
+  // Fixed height (see panelWanted) so the tabs don't jump when switching between taller and shorter panels:
+  // 184 for most, 236 for Điều chỉnh / Văn bản / Sticker / Làm đẹp, 278 for face and body reshaping (strength and
+  // Reset / Compare / Apply rows), 316 for Làm đẹp nhanh.
+  panel: { height: 184 },
+  panelContent: { flexGrow: 1, justifyContent: 'center' },
+  panelTall: { justifyContent: 'flex-start', paddingTop: 4, paddingBottom: 8 },
   // Row of white tiles: Hiệu ứng · Văn bản · Sticker · Khung · Vẽ.
   bottomBar: { flexDirection: 'row', gap: 8, paddingTop: 10, width: '100%', maxWidth: 760, alignSelf: 'center' },
+  bottomBarCompact: { gap: 6, paddingTop: 6, paddingBottom: 4 },
+  bottomItemCompact: { gap: 2, paddingVertical: 6, borderRadius: 14 },
   bottomItem: {
     flex: 1,
     alignItems: 'center',

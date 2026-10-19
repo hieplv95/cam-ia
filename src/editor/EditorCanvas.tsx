@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Canvas, DashPathEffect, Group, Image, Line, Path, Rect, rect, RoundedRect, Skia, vec, type SkImage, type SkSVG } from '@shopify/react-native-skia';
-import { memo, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { colors, font } from '../theme';
@@ -53,6 +53,25 @@ export const ERASE_MARK_COLOR = 'rgba(255, 45, 85, 0.5)';
 
 const MIN_SIZE = 20;
 
+/**
+ * Zoom of the photo inside its frame: scaled by z and shifted by (x, y) screen points. z = 1 is the whole picture
+ * (the frame's own size); the picture always covers the frame, so it can't be dragged away.
+ */
+type View2D = { z: number; x: number; y: number };
+const FIT: View2D = { z: 1, x: 0, y: 0 };
+const MAX_ZOOM = 6;
+
+const clampView = (v: View2D, fw: number, fh: number): View2D => {
+  const z = Math.min(MAX_ZOOM, Math.max(1, v.z));
+  return { z, x: Math.min(0, Math.max(fw - fw * z, v.x)), y: Math.min(0, Math.max(fh - fh * z, v.y)) };
+};
+
+/** Zooms `from` to `z`, keeping the point under (fx, fy) in place, then shifts by (dx, dy). */
+const zoomAt = (from: View2D, z: number, fx: number, fy: number, dx: number, dy: number, fw: number, fh: number) => {
+  const k = Math.min(MAX_ZOOM, Math.max(1, z)) / from.z;
+  return clampView({ z: from.z * k, x: fx - (fx - from.x) * k + dx, y: fy - (fy - from.y) * k + dy }, fw, fh);
+};
+
 export function layerExtents(layer: TransformableLayer, fonts: EditorFonts) {
   if (layer.kind === 'sticker') return { hw: layer.size / 2, hh: layer.size / 2 };
   const { width, height } = textSize(fonts, layer);
@@ -67,7 +86,23 @@ export function EditorCanvas({ doc, fonts, svgs, mode, pen, brush, selectedId, o
   const [box, setBox] = useState({ w: 0, h: 0 });
   const iw = doc.image.width();
   const ih = doc.image.height();
-  const scale = box.w && box.h ? Math.min(box.w / iw, box.h / ih) : 0;
+  // `fit`: the whole picture in the frame. Zoomed, everything works in `scale` (fit × zoom) and the view offset.
+  const fit = box.w && box.h ? Math.min(box.w / iw, box.h / ih) : 0;
+  const fw = iw * fit;
+  const fh = ih * fit;
+  const [zoomView, setView] = useState<View2D>(FIT);
+  // Before / after compares the whole picture.
+  const view = compareWith ? FIT : zoomView;
+  const scale = fit * view.z;
+  // A new picture size (crop, rotate, taller…) starts from the whole picture again.
+  useEffect(() => setView(FIT), [iw, ih]);
+  // A resized frame (another tool panel) keeps showing the same part of the picture.
+  const lastFw = useRef(fw);
+  useEffect(() => {
+    const k = lastFw.current ? fw / lastFw.current : 1;
+    lastFw.current = fw;
+    if (fw && k !== 1) setView((v) => clampView({ z: v.z, x: v.x * k, y: v.y * k }, fw, fh));
+  }, [fw, fh]);
 
   // Gesture callbacks outlive a render, so they read the latest values through refs.
   const docRef = useRef(doc);
@@ -96,14 +131,17 @@ export function EditorCanvas({ doc, fonts, svgs, mode, pen, brush, selectedId, o
   // Everything the gesture callbacks need, always current. The gestures themselves are created once per mode:
   // re-creating them on every render made the gesture library drop a handler in the middle of a drag
   // ("No handler for tag …"), since the canvas redraws on every move while drawing or cropping.
-  const latest = useRef({ mode, crop, erase, brush, pen, scale, iw, ih, fonts, checkpoint, update, onSelect });
-  latest.current = { mode, crop, erase, brush, pen, scale, iw, ih, fonts, checkpoint, update, onSelect };
+  const latest = useRef({ mode, crop, erase, brush, pen, scale, view, fw, fh, iw, ih, fonts, checkpoint, update, onSelect });
+  latest.current = { mode, crop, erase, brush, pen, scale, view, fw, fh, iw, ih, fonts, checkpoint, update, onSelect };
+  // Dragging the zoomed photo (one finger where nothing else happens) and pinching it (two fingers).
+  const viewPan = useRef<{ x: number; y: number } | null>(null);
+  const viewPinch = useRef<(View2D & { fx: number; fy: number }) | null>(null);
 
   const isMove = mode === 'move';
   const comparing = !!compareWith;
   const gesture = useMemo(() => {
     const L = () => latest.current;
-    const toImage = (x: number, y: number) => ({ x: x / L().scale, y: y / L().scale });
+    const toImage = (x: number, y: number) => ({ x: (x - L().view.x) / L().scale, y: (y - L().view.y) / L().scale });
     const layerAt = (id: string | null) => docRef.current.layers.find((l): l is TransformableLayer => l.id === id && isTransformable(l));
     const hitTest = (x: number, y: number) => {
       const layers = docRef.current.layers;
@@ -157,6 +195,9 @@ export function EditorCanvas({ doc, fonts, svgs, mode, pen, brush, selectedId, o
         const layer = layerAt(hit ?? (e.numberOfPointers > 1 ? selRef.current : null));
         if (!layer) {
           panStart.current = null;
+          // Nothing to move: a zoomed photo slides under the finger.
+          const { view } = L();
+          viewPan.current = view.z > 1 ? { x: view.x, y: view.y } : null;
           return;
         }
         if (layer.id !== selRef.current) L().onSelect(layer.id);
@@ -180,12 +221,19 @@ export function EditorCanvas({ doc, fonts, svgs, mode, pen, brush, selectedId, o
           redrawLive();
           return;
         }
+        const vp = viewPan.current;
+        if (vp) {
+          const { view, fw, fh } = L();
+          setView(clampView({ z: view.z, x: vp.x + e.translationX, y: vp.y + e.translationY }, fw, fh));
+          return;
+        }
         const s = panStart.current;
         if (s) patchLayer(s.id, { x: s.x + e.translationX / scale, y: s.y + e.translationY / scale });
       })
       .onFinalize(() => {
         const { crop, erase, brush, pen, checkpoint, update } = L();
         panStart.current = null;
+        viewPan.current = null;
         if (cropDrag.current) {
           cropDrag.current = null;
           if (liveCrop.current) crop?.onChange(liveCrop.current);
@@ -212,20 +260,38 @@ export function EditorCanvas({ doc, fonts, svgs, mode, pen, brush, selectedId, o
         }
       });
 
+    // Two fingers resize the selected sticker or text; with nothing selected they zoom and move the photo.
     const pinch = Gesture.Pinch()
       .runOnJS(true)
-      .onStart(() => {
+      .onStart((e) => {
         const layer = layerAt(selRef.current);
-        if (!layer) return;
-        L().checkpoint();
-        pinchStart.current = { id: layer.id, size: layer.size };
+        if (layer) {
+          L().checkpoint();
+          pinchStart.current = { id: layer.id, size: layer.size };
+          return;
+        }
+        // The first finger may have started a stroke: two fingers mean zoom, not paint.
+        if (live.current) {
+          live.current = null;
+          redrawLive();
+        }
+        viewPan.current = null;
+        viewPinch.current = { ...L().view, fx: e.focalX, fy: e.focalY };
       })
       .onUpdate((e) => {
         const s = pinchStart.current;
-        if (s) patchLayer(s.id, { size: Math.max(MIN_SIZE, s.size * e.scale) });
+        if (s) {
+          patchLayer(s.id, { size: Math.max(MIN_SIZE, s.size * e.scale) });
+          return;
+        }
+        const p = viewPinch.current;
+        if (!p) return;
+        const { fw, fh } = L();
+        setView(zoomAt(p, p.z * e.scale, p.fx, p.fy, e.focalX - p.fx, e.focalY - p.fy, fw, fh));
       })
       .onFinalize(() => {
         pinchStart.current = null;
+        viewPinch.current = null;
       });
 
     const rotation = Gesture.Rotation()
@@ -259,7 +325,7 @@ export function EditorCanvas({ doc, fonts, svgs, mode, pen, brush, selectedId, o
       .onBegin((e) => splitAt(e.x))
       .onUpdate((e) => splitAt(e.x));
 
-    return comparing ? dragSplit : !isMove ? pan : Gesture.Exclusive(Gesture.Simultaneous(pan, pinch, rotation), tap);
+    return comparing ? dragSplit : !isMove ? Gesture.Simultaneous(pan, pinch) : Gesture.Exclusive(Gesture.Simultaneous(pan, pinch, rotation), tap);
   }, [isMove, comparing]);
 
   const drawing = live.current;
@@ -268,18 +334,54 @@ export function EditorCanvas({ doc, fonts, svgs, mode, pen, brush, selectedId, o
   const overlay = !compareWith && mode !== 'move';
   // On web, Skia keeps drawing into the old-sized surface when a canvas is resized (after a crop or rotate the
   // new picture showed up shrunk in a corner), so each displayed size gets a fresh canvas.
-  const sizeKey = `${Math.round(iw * scale)}x${Math.round(ih * scale)}`;
+  const sizeKey = `${Math.round(fw)}x${Math.round(fh)}`;
+  // Image pixels → frame points, zoom included.
+  const toFrame = [{ translateX: view.x }, { translateY: view.y }, { scale }];
+  const zoomBy = (k: number) => setView((v) => zoomAt(v, v.z * k, fw / 2, fh / 2, 0, 0, fw, fh));
+
+  // Web: the mouse wheel zooms around the pointer (a trackpad pinch arrives as a wheel with Ctrl), and a
+  // trackpad's two-finger scroll moves the zoomed photo.
+  const frameRef = useRef<View>(null);
+  useEffect(() => {
+    const node = frameRef.current as unknown as HTMLElement | null;
+    if (Platform.OS !== 'web' || !node?.addEventListener || compareWith) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const r = node.getBoundingClientRect();
+      const mouseWheel = e.ctrlKey || (e.deltaX === 0 && Math.abs(e.deltaY) >= 40);
+      setView((v) =>
+        mouseWheel
+          ? zoomAt(v, v.z * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)), e.clientX - r.left, e.clientY - r.top, 0, 0, fw, fh)
+          : clampView({ z: v.z, x: v.x - e.deltaX, y: v.y - e.deltaY }, fw, fh),
+      );
+    };
+    node.addEventListener('wheel', onWheel, { passive: false });
+    return () => node.removeEventListener('wheel', onWheel);
+  }, [fw, fh, compareWith]);
 
   return (
     <View style={styles.area} onLayout={(e) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
-      {scale > 0 && (
-        <GestureDetector gesture={gesture}>
-          <View style={[styles.frame, { width: iw * scale, height: ih * scale }]}>
-            <PhotoLayer key={sizeKey} doc={doc} fonts={fonts} svgs={svgs} scale={scale} compareWith={compareWith ?? null} split={split} selectedId={selectedId} />
+      {fit > 0 && (
+        <View ref={frameRef}>
+          <GestureDetector gesture={gesture}>
+            <View style={[styles.frame, { width: fw, height: fh }]}>
+            <PhotoLayer
+              key={sizeKey}
+              doc={doc}
+              fonts={fonts}
+              svgs={svgs}
+              width={fw}
+              height={fh}
+              view={view}
+              scale={scale}
+              compareWith={compareWith ?? null}
+              split={split}
+              selectedId={selectedId}
+            />
             {overlay && (
               <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-                <Canvas key={sizeKey} style={{ width: iw * scale, height: ih * scale }}>
-                  <Group transform={[{ scale }]}>
+                <Canvas key={sizeKey} style={{ width: fw, height: fh }}>
+                  <Group transform={toFrame}>
                     {drawing?.kind === 'stroke' && (
                       <Stroke layer={{ kind: 'stroke', id: 'live', points: drawing.points, color: pen.color, width: drawing.width, pen: pen.kind }} />
                     )}
@@ -318,14 +420,30 @@ export function EditorCanvas({ doc, fonts, svgs, mode, pen, brush, selectedId, o
                 <View style={[styles.tag, { right: 10 }]}>
                   <Text style={styles.tagText}>{t('common.after')}</Text>
                 </View>
-                <View pointerEvents="none" style={[styles.divider, { left: iw * scale * split - 1 }]} />
-                <View pointerEvents="none" style={[styles.handle, { left: iw * scale * split - 18, top: (ih * scale) / 2 - 18 }]}>
+                <View pointerEvents="none" style={[styles.divider, { left: fw * split - 1 }]} />
+                <View pointerEvents="none" style={[styles.handle, { left: fw * split - 18, top: fh / 2 - 18 }]}>
                   <Ionicons name="code-outline" size={16} color="#FFFFFF" />
                 </View>
               </>
             )}
-          </View>
-        </GestureDetector>
+            </View>
+          </GestureDetector>
+        </View>
+      )}
+      {/* Zoom: − · current zoom (tap = whole picture) · +. Two fingers or the mouse wheel work too. Kept outside the
+          photo's gestures so pressing a button never paints a mark under it. */}
+      {fit > 0 && !compareWith && (
+        <View style={[styles.zoomBar, { right: (box.w - fw) / 2 + 8, bottom: (box.h - fh) / 2 + 8 }]}>
+          <Pressable onPress={() => zoomBy(1 / 1.5)} disabled={view.z <= 1} hitSlop={6} style={[styles.zoomBtn, view.z <= 1 && { opacity: 0.4 }]}>
+            <Ionicons name="remove" size={16} color="#FFFFFF" />
+          </Pressable>
+          <Pressable onPress={() => setView(FIT)} hitSlop={4} accessibilityLabel={t('editor.zoomFit')}>
+            <Text style={styles.zoomText}>{view.z > 1.01 ? `${Math.round(view.z * 100)}%` : t('editor.zoom')}</Text>
+          </Pressable>
+          <Pressable onPress={() => zoomBy(1.5)} disabled={view.z >= MAX_ZOOM} hitSlop={6} style={[styles.zoomBtn, view.z >= MAX_ZOOM && { opacity: 0.4 }]}>
+            <Ionicons name="add" size={16} color="#FFFFFF" />
+          </Pressable>
+        </View>
       )}
     </View>
   );
@@ -344,6 +462,18 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
   },
+  zoomBar: {
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: 999,
+    paddingHorizontal: 4,
+    paddingVertical: 3,
+  },
+  zoomBtn: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  zoomText: { fontFamily: font.semi, fontSize: 11, color: '#FFFFFF', minWidth: 38, textAlign: 'center' },
   tag: { position: 'absolute', top: 10, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 },
   tagText: { fontFamily: font.medium, fontSize: 12, color: '#FFFFFF' },
   divider: { position: 'absolute', top: 0, bottom: 0, width: 2, backgroundColor: 'rgba(255,255,255,0.95)' },
@@ -399,6 +529,9 @@ const PhotoLayer = memo(function PhotoLayer({
   doc,
   fonts,
   svgs,
+  width,
+  height,
+  view,
   scale,
   compareWith,
   split,
@@ -407,6 +540,10 @@ const PhotoLayer = memo(function PhotoLayer({
   doc: Doc;
   fonts: EditorFonts;
   svgs: Record<string, SkSVG | null>;
+  /** The frame (screen points); the picture is drawn into it at `scale` (zoom included), shifted by the view. */
+  width: number;
+  height: number;
+  view: View2D;
   scale: number;
   compareWith: SkImage | null;
   split: number;
@@ -417,8 +554,8 @@ const PhotoLayer = memo(function PhotoLayer({
   const selected = doc.layers.find((l): l is TransformableLayer => l.id === selectedId && isTransformable(l));
   const sel = selected ? layerExtents(selected, fonts) : null;
   return (
-    <Canvas style={{ width: iw * scale, height: ih * scale }}>
-      <Group transform={[{ scale }]}>
+    <Canvas style={{ width, height }}>
+      <Group transform={[{ translateX: view.x }, { translateY: view.y }, { scale }]}>
         <Scene doc={doc} fonts={fonts} svgs={svgs} />
         {compareWith && (
           <Group clip={rect(0, 0, iw * split, ih)}>

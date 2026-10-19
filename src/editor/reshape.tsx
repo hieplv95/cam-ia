@@ -58,6 +58,28 @@ half4 main(float2 p) {
   float y = p.y < y0 ? p.y : (p.y < bottom ? y0 + (p.y - y0) / k : p.y - (y1 - y0) * (k - 1.0));
   return image.eval(clamp(float2(p.x, y), float2(0.5), size - 0.5));
 }`,
+  // Nose contour, like makeup: a soft light down the bridge (from top to tip) and a soft shade on each side of it.
+  contour: `
+uniform shader image;
+uniform float2 size;
+uniform float2 top;
+uniform float2 tip;
+uniform float light;
+uniform float shade;
+uniform float side;
+uniform float lightWidth;
+uniform float shadeWidth;
+half4 main(float2 p) {
+  half4 c = image.eval(p);
+  float u = clamp((p.y - top.y) / (tip.y - top.y), 0.0, 1.0);
+  float along = smoothstep(0.0, 0.25, u) * (1.0 - smoothstep(0.8, 1.0, u));
+  if (p.y < top.y || p.y > tip.y) along = 0.0;
+  float d = abs(p.x - mix(top.x, tip.x, u));
+  float hi = exp(-(d * d) / (lightWidth * lightWidth)) * light * along;
+  float sh = exp(-((d - side) * (d - side)) / (shadeWidth * shadeWidth)) * shade * along;
+  half3 rgb = c.rgb * (1.0 - sh * half3(1.0, 1.08, 1.15)) + hi;
+  return half4(clamp(rgb, 0.0, 1.0), c.a);
+}`,
 };
 
 // Compiled on first use: on the web Skia finishes loading after the modules are evaluated.
@@ -68,12 +90,15 @@ const effect = (name: keyof typeof SKSL) => {
   return e;
 };
 
+const CUBIC = { B: 1 / 3, C: 1 / 3 };
+
 function pass(img: SkImage, name: keyof typeof SKSL, uniforms: Record<string, number | number[]>, height = img.height()) {
   const w = img.width();
   return renderImage(
     <Fill>
       <Shader source={effect(name)} uniforms={{ ...uniforms, size: [w, img.height()] }}>
-        <ImageShader image={img} fit="none" x={0} y={0} width={w} height={img.height()} tx="clamp" ty="clamp" />
+        {/* Bicubic (Mitchell) sampling: the reshaped area stays sharp instead of softening with every Apply. */}
+        <ImageShader image={img} fit="none" x={0} y={0} width={w} height={img.height()} tx="clamp" ty="clamp" sampling={CUBIC} />
       </Shader>
     </Fill>,
     w,
@@ -111,6 +136,44 @@ export function fullerLips(img: SkImage, marks: EraseMark[], amount: number) {
 /** Slimmer nose: a tap on the nose narrows it sideways (taller than wide). `amount` 0..1. */
 export function slimmerNose(img: SkImage, marks: EraseMark[], amount: number) {
   return lenses(img, marks, () => [0.9, 1.5, -(0.1 + amount * 0.3), 0]);
+}
+
+export type NoseLiftStyle = 'contour' | 'lift';
+
+/**
+ * Nose lift, from a tap on the tip of the nose with a dot as wide as the nose (wing to wing): R is half that width.
+ * Tuned on sample photos the user picked:
+ * - 'contour' ("Tạo khối"): almost no reshaping, a light down the bridge and a soft shade beside it, wings a bit
+ *   narrower, like contour makeup;
+ * - 'lift' ("Nâng rõ"): wings and bridge narrower, the tip lifted and the nose a little shorter, with a lighter contour.
+ * `amount` 0..1; 0.5 (the default strength) is the sample look.
+ */
+export async function liftNose(img: SkImage, marks: EraseMark[], amount: number, style: NoseLiftStyle) {
+  const f = amount * 2;
+  let out = img;
+  for (const m of marks) {
+    const R = m.width / 2;
+    const cx = mean(xs(m));
+    const cy = mean(ys(m));
+    const wings = style === 'lift' ? -0.17 : -0.07;
+    out = await pass(out, 'lens', { center: [cx, cy + 0.086 * R], radius: [1.2 * R, 0.62 * R], amount: [wings * f, 0] });
+    if (style === 'lift') {
+      out = await pass(out, 'lens', { center: [cx - 0.05 * R, cy - 0.86 * R], radius: [0.45 * R, 1.14 * R], amount: [-0.16 * f, 0] });
+      out = await pass(out, 'push', { target: [cx, cy - 0.14 * R * f], delta: [0, -0.14 * R * f], radius: 0.76 * R });
+      // Lower nose a little shorter: what sat 0.4 R under the tip moves up (push targets are where things land).
+      out = await pass(out, 'push', { target: [cx, cy + 0.396 * R - 0.086 * R * f], delta: [0, -0.086 * R * f], radius: 0.86 * R });
+    }
+    out = await pass(out, 'contour', {
+      top: [cx - 0.07 * R, cy - 1.72 * R],
+      tip: [cx, cy - 0.07 * R],
+      light: (style === 'lift' ? 0.045 : 0.06) * f,
+      shade: (style === 'lift' ? 0.03 : 0.045) * f,
+      side: 0.28 * R,
+      lightWidth: 0.11 * R,
+      shadeWidth: 0.18 * R,
+    });
+  }
+  return out;
 }
 
 /** Slimmer: each mark is a push from its first point to its last (draw from the outside in). `amount` 0..1. */

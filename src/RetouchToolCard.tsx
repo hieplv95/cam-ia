@@ -26,6 +26,7 @@ export const beautyPhotos = {
   vline: require('../assets/images/beauty/vline.jpg'),
   jaw: require('../assets/images/beauty/jaw.jpg'),
   nose: require('../assets/images/beauty/nose.jpg'),
+  noselift: require('../assets/images/beauty/noselift.jpg'),
   fulllips: require('../assets/images/beauty/fulllips.jpg'),
   blush: require('../assets/images/beauty/blush.jpg'),
   brows: require('../assets/images/beauty/brows.jpg'),

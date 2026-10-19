@@ -48,6 +48,7 @@ export function RetouchToolCard({
   label,
   photo,
   icon,
+  oneLine = false,
 }: {
   /** Which sample picture and icon to show. */
   id: RetouchOptionId;
@@ -59,10 +60,12 @@ export function RetouchToolCard({
   /** Another picture and icon than the retouch tool's own. */
   photo?: ImageSourcePropType;
   icon?: IconSpec;
+  /** Keep the name on one line (the card grows a little wider instead), so every row of cards has the same height. */
+  oneLine?: boolean;
 }) {
   const t = useT();
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.card, { width: size + 8 }, pressed && { opacity: 0.8 }]} accessibilityRole="button" accessibilityState={{ selected: active }}>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.card, oneLine ? { minWidth: size + 8, maxWidth: size + 40 } : { width: size + 8 }, pressed && { opacity: 0.8 }]} accessibilityRole="button" accessibilityState={{ selected: active }}>
       <View style={[styles.frame, { width: size + 4, height: size + 4, borderRadius: size * 0.24 }, active && styles.frameActive]}>
         <Image source={photo ?? retouchPhotos[id]} style={{ width: size, height: size, borderRadius: size * 0.22 }} />
         {active && (
@@ -74,7 +77,7 @@ export function RetouchToolCard({
       <View style={[styles.badge, active && styles.badgeActive]}>
         <Icon icon={icon ?? retouchIcons[id]} size={13} color={active ? colors.onGold : colors.goldDeep} />
       </View>
-      <Text numberOfLines={2} style={[styles.label, active && { color: colors.goldDeep }]}>
+      <Text numberOfLines={oneLine ? 1 : 2} style={[styles.label, active && { color: colors.goldDeep }]}>
         {(label ?? t(`retouch.${id}`)).replace('\n', ' ')}
       </Text>
     </Pressable>

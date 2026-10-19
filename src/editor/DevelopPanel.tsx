@@ -58,7 +58,7 @@ export function DevelopPanel({
 
   return (
     <View style={styles.wrap}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sections}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionsRow} contentContainerStyle={styles.sections}>
         {sections.map((s) => (
           <Pill key={s.id} label={t(`adjust.tab.${s.id}`)} icon={s.icon} active={section === s.id} onPress={() => setSection(s.id)} />
         ))}
@@ -158,7 +158,9 @@ export function DevelopPanel({
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, gap: 8 },
-  sections: { paddingHorizontal: 12, gap: 6 },
+  // A horizontal ScrollView grows by default on the web: keep the row of section pills at its own height.
+  sectionsRow: { flexGrow: 0, flexShrink: 0 },
+  sections: { paddingHorizontal: 12, gap: 6, alignItems: 'center' },
   body: { flex: 1, minHeight: 0, paddingHorizontal: 14 },
   sliders: { gap: 6, paddingBottom: 4 },
   hslDots: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 },

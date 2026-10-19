@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { creditsLabel, useAccount } from '../account';
@@ -29,6 +29,17 @@ export function PromptBar({ onSubmit, onExpand }: { onSubmit: (text: string) => 
     setOpenState(v);
     onExpand(v);
   };
+
+  // Hidden while open (e.g. the layout turned compact): give the tool panels back instead of leaving them hidden.
+  const expand = useRef(onExpand);
+  expand.current = onExpand;
+  useEffect(
+    () => () => {
+      if (closing.current) clearTimeout(closing.current);
+      expand.current(false);
+    },
+    [],
+  );
 
   const submit = () => {
     const prompt = text.trim();

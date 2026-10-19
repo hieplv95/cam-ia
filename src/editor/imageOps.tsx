@@ -74,14 +74,14 @@ function renderOnWebGpu(picture: SkPicture, w: number, h: number): SkImage | nul
   }
 }
 
-export async function renderImage(element: React.ReactElement, width: number, height: number) {
+export async function renderImage(element: React.ReactElement, width: number, height: number, gpu = false) {
   const w = Math.round(width);
   const h = Math.round(height);
   if (Platform.OS === 'web') {
     // drawAsImage opens a new WebGL context per call on web, and browsers evict old contexts
-    // (including the editor canvas). Small renders use a CPU raster surface; big ones a short-lived GL surface.
+    // (including the editor canvas). Small renders use a CPU raster surface; big ones (or `gpu`) a short-lived GL surface.
     const picture = await drawAsPicture(element, rect(0, 0, w, h));
-    if (w * h >= WEB_GPU_MIN_PIXELS) {
+    if (gpu || w * h >= WEB_GPU_MIN_PIXELS) {
       const gpu = renderOnWebGpu(picture, w, h);
       if (gpu) return gpu;
     }
@@ -99,6 +99,38 @@ export async function renderImage(element: React.ReactElement, width: number, he
 export async function renderThumbnail(element: React.ReactElement, width: number, height: number) {
   const img = await renderImage(element, width, height);
   return `data:image/png;base64,${img.encodeToBase64(ImageFormat.PNG, 100)}`;
+}
+
+/**
+ * Many square JPEG previews (presets, looks, frames) in one go: they are drawn side by side into one sheet on the
+ * GPU, then cut apart. One render instead of dozens: the look shaders are very slow on the CPU surfaces small
+ * renders otherwise use on the web (81 presets took over 10 s on a computer, much longer on phones).
+ */
+export async function renderJpegThumbnails(elements: React.ReactElement[], size: number): Promise<string[]> {
+  if (!elements.length) return [];
+  const cols = Math.ceil(Math.sqrt(elements.length));
+  const rows = Math.ceil(elements.length / cols);
+  const at = (i: number) => ({ x: (i % cols) * size, y: Math.floor(i / cols) * size });
+  const sheet = await renderImage(
+    <Group>
+      {elements.map((el, i) => (
+        <Group key={i} transform={[{ translateX: at(i).x }, { translateY: at(i).y }]} clip={rect(0, 0, size, size)}>
+          {el}
+        </Group>
+      ))}
+    </Group>,
+    cols * size,
+    rows * size,
+    true,
+  );
+  const paint = Skia.Paint();
+  return elements.map((_, i) => {
+    const surface = Skia.Surface.Make(size, size);
+    if (!surface) throw new Error(t('image.cantCreate'));
+    surface.getCanvas().drawImageRect(sheet, rect(at(i).x, at(i).y, size, size), rect(0, 0, size, size), paint);
+    surface.flush();
+    return `data:image/jpeg;base64,${surface.makeImageSnapshot().encodeToBase64(ImageFormat.JPEG, 82)}`;
+  });
 }
 
 /** Compact JPEG data URI for thumbnails that get stored (drafts, saved recipes). */
@@ -162,7 +194,49 @@ async function decodeWithBrowser(uri: string): Promise<SkImage | null> {
   return Skia.Image.MakeImageFromEncoded(Skia.Data.fromBytes(new Uint8Array(await jpeg.arrayBuffer())));
 }
 
+/**
+ * Web fast path: the browser's own decoder (hardware-assisted, off the main thread) decodes the photo and
+ * scales it down in one go, then hands CanvasKit plain pixels: much quicker on phones than decoding a 12 MP
+ * JPEG in WebAssembly and resizing it there, and the page stays responsive meanwhile. It also follows the
+ * photo's EXIF orientation. Returns null when the browser can't decode it (e.g. HEIC outside Safari).
+ */
+async function pairWithBrowser(uri: string): Promise<ImagePair | null> {
+  const CK = (globalThis as any).CanvasKit;
+  if (typeof createImageBitmap !== 'function' || !CK?.MakeImageFromCanvasImageSource) return null;
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(await (await fetch(uri)).blob());
+  } catch {
+    return null;
+  }
+  const scaled = async (maxSide: number) => {
+    const k = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+    if (k === 1) return bitmap;
+    return createImageBitmap(bitmap, { resizeWidth: Math.round(bitmap.width * k), resizeHeight: Math.round(bitmap.height * k), resizeQuality: 'high' });
+  };
+  const toSkia = (b: ImageBitmap) => {
+    const img = CK.MakeImageFromCanvasImageSource(b);
+    return img ? (new JsiSkImage(CK, img) as SkImage) : null;
+  };
+  try {
+    const [fullBitmap, workBitmap] = await Promise.all([scaled(FULL_MAX_SIDE), scaled(MAX_SIDE)]);
+    const full = toSkia(fullBitmap);
+    const image = workBitmap === fullBitmap ? full : toSkia(workBitmap);
+    if (fullBitmap !== bitmap) fullBitmap.close();
+    if (workBitmap !== bitmap && workBitmap !== fullBitmap) workBitmap.close();
+    if (!full || !image) return null;
+    // Older browsers ignore the resize options: finish the job here so editing stays fast.
+    return { image: await resizeImage(image, MAX_SIDE), full: await resizeImage(full, FULL_MAX_SIDE) };
+  } finally {
+    bitmap.close();
+  }
+}
+
 export async function loadPhotoPair(uri: string): Promise<ImagePair> {
+  if (Platform.OS === 'web') {
+    const fast = await pairWithBrowser(uri);
+    if (fast) return fast;
+  }
   let img = Skia.Image.MakeImageFromEncoded(await Skia.Data.fromURI(uri));
   if (!img && Platform.OS === 'web') img = await decodeWithBrowser(uri);
   if (!img) throw new Error(t('image.unreadable'));

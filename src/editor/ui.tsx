@@ -94,6 +94,7 @@ export function EditorSlider({
   onStart,
   onChange,
   label,
+  bare,
 }: {
   value: number;
   min: number;
@@ -101,6 +102,8 @@ export function EditorSlider({
   onStart?: () => void;
   onChange: (v: number) => void;
   label?: string;
+  /** Just the track and thumb (no padding, no value), for a slider sharing its row with buttons. */
+  bare?: boolean;
 }) {
   const [width, setWidth] = useState(0);
   const centered = min < 0;
@@ -137,7 +140,7 @@ export function EditorSlider({
   const shown = centered && value > 0 ? `+${value}` : `${value}`;
 
   return (
-    <View style={styles.sliderRow}>
+    <View style={[styles.sliderRow, bare && { paddingHorizontal: 0 }]}>
       {label ? <Text style={styles.sliderLabel}>{label}</Text> : null}
       <GestureDetector gesture={Gesture.Race(pan, Gesture.Exclusive(reset, tap))}>
         <View style={styles.sliderHit} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
@@ -148,7 +151,7 @@ export function EditorSlider({
           {width > 0 && <View style={[styles.thumb, { left: frac * (width - THUMB) }]} />}
         </View>
       </GestureDetector>
-      <Text style={[styles.sliderValue, value !== 0 && { color: ec.gold }]}>{shown}</Text>
+      {!bare && <Text style={[styles.sliderValue, value !== 0 && { color: ec.gold }]}>{shown}</Text>}
     </View>
   );
 }

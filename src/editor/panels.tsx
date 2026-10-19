@@ -372,50 +372,48 @@ function QuickBeautyPanel({ style, onStyle, selected, onToggle, onRun, compact }
   const t = useT();
   const nothing = !style && !selected.length;
   return (
-    <View style={styles.colTight}>
+    // Short screens: the same panel, only smaller, so the photo above keeps its room.
+    <View style={[styles.colTight, compact && { gap: 6 }]}>
       <HScroll contentContainerStyle={styles.lookRow}>
         {retouchStyles.map((st) => {
           const active = style === st.id;
           return (
-            <Pressable key={st.id} onPress={() => onStyle(active ? null : st.id)} style={[styles.look, active && styles.lookActive]}>
-              <Image source={photoImage(st.photo, 160)} style={styles.lookImg} />
+            <Pressable key={st.id} onPress={() => onStyle(active ? null : st.id)} style={[styles.look, compact && styles.lookSmall, active && styles.lookActive]}>
+              <Image source={photoImage(st.photo, 160)} style={[styles.lookImg, compact && styles.lookImgSmall]} />
               {active && (
                 <View style={styles.lookCheck}>
                   <Ionicons name="checkmark" size={11} color={colors.onGold} />
                 </View>
               )}
-              <Text numberOfLines={1} style={[styles.lookName, active && { color: colors.goldDeep }]}>
+              <Text numberOfLines={1} style={[styles.lookName, compact && { fontSize: 9 }, active && { color: colors.goldDeep }]}>
                 {t(`retouch.style.${st.id}`)}
               </Text>
             </Pressable>
           );
         })}
       </HScroll>
-      {/* On short screens the "Nhanh" tab already says it. */}
-      {!compact && (
-        <View style={styles.quickHead}>
-          <Text style={styles.quickTitle}>{t('retouch.quick')}</Text>
-        </View>
-      )}
+      <View style={styles.quickHead}>
+        <Text style={[styles.quickTitle, compact && { fontSize: 13 }]}>{t('retouch.quick')}</Text>
+      </View>
       <ToolRow>
         {retouchOptions.map((o) => (
-          <RetouchToolCard key={o.id} id={o.id} size={54} active={selected.includes(o.id)} onPress={() => onToggle(o.id)} />
+          <RetouchToolCard key={o.id} id={o.id} size={compact ? 40 : 54} active={selected.includes(o.id)} onPress={() => onToggle(o.id)} />
         ))}
       </ToolRow>
-      <AiRunRow label={t('retouch.applyNow')} disabled={nothing} onRun={onRun} />
+      <AiRunRow label={t('retouch.applyNow')} disabled={nothing} onRun={onRun} compact={compact} />
     </View>
   );
 }
 
 /** The AI model to use (and its cost) beside the big gold button that runs it. */
-function AiRunRow({ label, disabled, onRun }: { label: string; disabled: boolean; onRun: () => void }) {
+function AiRunRow({ label, disabled, onRun, compact }: { label: string; disabled: boolean; onRun: () => void; compact?: boolean }) {
   return (
     <View style={styles.aiRunRow}>
       <ModelChip compact />
       <Pressable disabled={disabled} onPress={onRun} style={({ pressed }) => [styles.applyNow, (pressed || disabled) && { opacity: 0.55 }]}>
-        <LinearGradient colors={goldGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.applyNowFill}>
+        <LinearGradient colors={goldGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.applyNowFill, compact && { paddingVertical: 8 }]}>
           <Ionicons name="sparkles" size={16} color={colors.onGold} />
-          <Text numberOfLines={1} style={styles.applyNowText}>
+          <Text numberOfLines={1} style={[styles.applyNowText, compact && { fontSize: 14 }]}>
             {label}
           </Text>
         </LinearGradient>
@@ -546,6 +544,7 @@ export function BeautyPanel({
   onAdvanced,
   quick,
   compact,
+  onHint,
   look,
 }: {
   /** Làm đẹp nhanh, Phong cách (makeup, hair, outfit), the free tools (Da / Khuôn mặt / Trang điểm / Body) or the AI tools. */
@@ -578,6 +577,8 @@ export function BeautyPanel({
   quick: QuickBeauty;
   /** Short screen: leave out what the tabs already say. */
   compact?: boolean;
+  /** Short screens: the tool's hint, shown over the photo. */
+  onHint?: (text: string) => void;
   look: StyleLook;
 }) {
   const t = useT();
@@ -628,10 +629,15 @@ export function BeautyPanel({
                 id={c.photo}
                 photo={c.picture}
                 icon={c.icon}
-                size={54}
+                size={compact ? 46 : 54}
+                oneLine={compact}
                 label={t(c.label ?? `beauty.${c.id}`)}
                 active={tool === c.id}
-                onPress={() => onTool(c.id)}
+                onPress={() => {
+                  onTool(c.id);
+                  const id = c.id;
+                  if (compact && isShapeTool(id)) onHint?.(t(`beauty.${id}Hint`));
+                }}
               />
             ))}
             {group === 'skin' &&
@@ -642,23 +648,45 @@ export function BeautyPanel({
           {isShapeTool(tool) ? (
             <>
               <HScroll contentContainerStyle={styles.pills}>
-                <Text style={styles.brushHint}>{t(`beauty.${tool}Hint`)}</Text>
+                {/* Short screens show the hint over the photo instead (onHint). */}
+                {!compact && <Text style={styles.brushHint}>{t(`beauty.${tool}Hint`)}</Text>}
                 {tool === 'noselift' &&
                   noseStyles.map((s) => <Pill key={s} label={t(`beauty.noseStyle.${s}`)} active={noseStyle === s} onPress={() => onNoseStyle(s)} />)}
                 {needsMarks(tool) &&
                   brushSizes.map((s) => <Pill key={s.width} label={t(s.label)} active={brushWidth === s.width} onPress={() => onBrushWidth(s.width)} />)}
               </HScroll>
-              {tool !== 'acne' && <EditorSlider label={t('editor.intensity')} value={strength} min={0} max={100} onChange={onStrength} />}
-              <View style={styles.actionRow}>
-                <View style={styles.shapeActions}>
-                  {needsMarks(tool) && <Pill label={t('common.reset')} icon={{ set: 'ion', name: 'refresh' }} onPress={onClearMarks} />}
-                  <Pill label={t('beauty.compare')} icon={{ set: 'mci', name: 'compare' }} active={comparing} onPress={onCompare} />
+              {compact ? (
+                // One row: Reset and Compare as icons, the strength, Apply.
+                <View style={styles.actionRow}>
+                  {needsMarks(tool) && (
+                    <Pressable onPress={onClearMarks} style={styles.iconAction} accessibilityLabel={t('common.reset')}>
+                      <Icon icon={{ set: 'ion', name: 'refresh' }} size={17} color={ec.text} />
+                    </Pressable>
+                  )}
+                  <Pressable onPress={onCompare} style={[styles.iconAction, comparing && styles.iconActionOn]} accessibilityLabel={t('beauty.compare')}>
+                    <Icon icon={{ set: 'mci', name: 'compare' }} size={17} color={comparing ? '#FFFFFF' : ec.text} />
+                  </Pressable>
+                  <View style={styles.compactSlider}>{tool !== 'acne' && <EditorSlider bare value={strength} min={0} max={100} onChange={onStrength} />}</View>
+                  <Pressable disabled={needsMarks(tool) && !marks} onPress={onApplyShape} style={[styles.runBtn, needsMarks(tool) && !marks && { opacity: 0.4 }]}>
+                    <Icon icon={{ set: 'ion', name: 'checkmark' }} size={15} color="#FFFFFF" />
+                    <Text style={styles.runText}>{t('common.apply')}</Text>
+                  </Pressable>
                 </View>
-                <Pressable disabled={needsMarks(tool) && !marks} onPress={onApplyShape} style={[styles.runBtn, needsMarks(tool) && !marks && { opacity: 0.4 }]}>
-                  <Icon icon={{ set: 'ion', name: 'checkmark' }} size={15} color="#FFFFFF" />
-                  <Text style={styles.runText}>{t('common.apply')}</Text>
-                </Pressable>
-              </View>
+              ) : (
+                <>
+                  {tool !== 'acne' && <EditorSlider label={t('editor.intensity')} value={strength} min={0} max={100} onChange={onStrength} />}
+                  <View style={styles.actionRow}>
+                    <View style={styles.shapeActions}>
+                      {needsMarks(tool) && <Pill label={t('common.reset')} icon={{ set: 'ion', name: 'refresh' }} onPress={onClearMarks} />}
+                      <Pill label={t('beauty.compare')} icon={{ set: 'mci', name: 'compare' }} active={comparing} onPress={onCompare} />
+                    </View>
+                    <Pressable disabled={needsMarks(tool) && !marks} onPress={onApplyShape} style={[styles.runBtn, needsMarks(tool) && !marks && { opacity: 0.4 }]}>
+                      <Icon icon={{ set: 'ion', name: 'checkmark' }} size={15} color="#FFFFFF" />
+                      <Text style={styles.runText}>{t('common.apply')}</Text>
+                    </Pressable>
+                  </View>
+                </>
+              )}
             </>
           ) : brush ? (
             <HScroll contentContainerStyle={styles.pills}>
@@ -976,6 +1004,8 @@ const styles = StyleSheet.create({
   look: { width: 90, alignItems: 'center', gap: 3, padding: 2, borderRadius: 13, borderWidth: 1.5, borderColor: 'transparent' },
   lookActive: { borderColor: ec.gold, backgroundColor: ec.goldSoft },
   lookImg: { width: 56, height: 56, borderRadius: 10, backgroundColor: ec.surface2 },
+  lookSmall: { width: 70, gap: 2 },
+  lookImgSmall: { width: 44, height: 44, borderRadius: 9 },
   lookCheck: {
     position: 'absolute',
     top: 5,
@@ -996,6 +1026,9 @@ const styles = StyleSheet.create({
   applyNowText: { fontFamily: font.semi, fontSize: 15, color: colors.onGold },
   modeRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 14 },
   shapeActions: { flexDirection: 'row', gap: 8, flexShrink: 1 },
+  iconAction: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: ec.surface2 },
+  iconActionOn: { backgroundColor: ec.gold },
+  compactSlider: { flex: 1, marginHorizontal: 4 },
   brushHint: { fontFamily: font.medium, fontSize: 13, color: ec.gold, alignSelf: 'center', marginRight: 4 },
   pills: { paddingHorizontal: 14, gap: 8 },
   thumbRow: { paddingHorizontal: 12, gap: 10 },

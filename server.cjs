@@ -640,8 +640,9 @@ const server = http.createServer((req, res) => {
   }
   const file = req.method === 'GET' || req.method === 'HEAD' ? staticFile(req.url) : null;
   if (file) {
-    // Bundles and assets have a content hash in their name: cache them for a year. Other files for an hour.
-    const hashed = req.url.startsWith('/_expo/static/') || req.url.startsWith('/assets/');
+    // Bundles and assets have a content hash in their name, and CanvasKit a version in its URL (index.web.js):
+    // cache them for a year. Other files for an hour.
+    const hashed = req.url.startsWith('/_expo/static/') || req.url.startsWith('/assets/') || req.url.startsWith('/canvaskit.wasm?v=');
     res.writeHead(200, {
       'Content-Type': TYPES[path.extname(file).toLowerCase()] ?? 'application/octet-stream',
       'Cache-Control': hashed ? 'public, max-age=31536000, immutable' : 'public, max-age=3600',

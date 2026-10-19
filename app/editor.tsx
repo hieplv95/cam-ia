@@ -4,7 +4,7 @@ import { usePreventRemove } from '@react-navigation/native';
 import { useNavigation, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Image as RNImage, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { aiEdit, aiStudio, type AiRequest } from '@/src/ai/client';
@@ -33,6 +33,7 @@ import {
   cropImage,
   renderImage,
   renderJpegThumbnail,
+  renderJpegThumbnails,
   renderThumbnail,
   resizeImage,
   sceneThumbnail,
@@ -101,6 +102,17 @@ const bottomTools: { id: BottomTool; icon: IconSpec }[] = [
 ];
 
 const THUMB = 124;
+
+/** Runs `fn` over `items` a few at a time, handing each finished group to `onPart` and letting the screen breathe. */
+async function inBatches<T, R>(items: readonly T[], fn: (item: T) => Promise<R>, cancelled: () => boolean, onPart: (part: R[]) => void, size = 6) {
+  for (let i = 0; i < items.length; i += size) {
+    if (cancelled()) return;
+    const part = await Promise.all(items.slice(i, i + size).map(fn));
+    if (cancelled()) return;
+    onPart(part);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+}
 
 const cropRatioLabels: Partial<Record<TransformOp, string>> = { square: '1:1', portrait: '4:5', classic: '3:4', story: '9:16', landscape: '16:9' };
 
@@ -208,6 +220,8 @@ export default function Editor() {
   // Làm đẹp opens on "Làm đẹp nhanh"; "Tùy chỉnh nâng cao" switches to the free tools.
   const { height: windowHeight } = useWindowDimensions();
   const [beautyMode, setBeautyMode] = useState<BeautyMode>('quick');
+  // The chosen photo (as the system gave it), shown while it is decoded.
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
   // Phong cách: the makeup, hairstyle, hair color and outfit picked (one per group).
   const [stylePicks, setStylePicks] = useState<Partial<Record<StyleGroup, string>>>({ makeup: 'natural' });
   const [quickStyle, setQuickStyle] = useState<RetouchStyleId | null>('natural');
@@ -448,6 +462,7 @@ export default function Editor() {
         .finally(() => setBusy(null));
       return;
     }
+    if (pending.kind === 'uri') setPreviewUri(pending.uri);
     const load: Promise<{ image: SkImage; full?: SkImage }> =
       pending.kind === 'uri'
         ? loadPhotoPair(pending.uri)
@@ -479,70 +494,98 @@ export default function Editor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    Promise.all(
-      stickers.map(async (s) => {
-        const svg = svgs[s.id];
-        if (!svg) return [s.id, ''] as const;
-        return [s.id, await renderThumbnail(<ImageSVG svg={svg} x={0} y={0} width={100} height={100} />, 100, 100)] as const;
-      }),
-    ).then((entries) => setStickerThumbs(Object.fromEntries(entries)));
-  }, [svgs]);
-
-  // Preset and frame previews are rendered from the user's own photo.
+  // Previews are made only for the panel that shows them, once it is opened (and again after the picture
+  // changed), a few at a time so the editor stays responsive: making all ~200 right after a photo was opened (and
+  // after every edit) kept phones busy for seconds.
   const image = doc?.image;
+  // What each panel's previews were made from (sticker: the SVGs; others: the picture, and for presets the recipes).
+  const madeFor = useRef<Partial<Record<'filters' | 'adjust' | 'frame' | 'sticker', readonly unknown[]>>>({});
+  const same = (a: readonly unknown[] | undefined, b: readonly unknown[]) => !!a && a.length === b.length && a.every((v, i) => v === b[i]);
   useEffect(() => {
-    if (!image) return;
+    const record = madeFor.current;
+    if (panel !== 'sticker' || same(record.sticker, [svgs])) return;
+    record.sticker = [svgs];
     let cancelled = false;
+    let finished = false;
+    const svgThumb = async (s: (typeof stickers)[number]) => {
+      const svg = svgs[s.id];
+      return [s.id, svg ? await renderThumbnail(<ImageSVG svg={svg} x={0} y={0} width={100} height={100} />, 100, 100) : ''] as const;
+    };
+    inBatches(stickers, svgThumb, () => cancelled, (part) => setStickerThumbs((m) => ({ ...m, ...Object.fromEntries(part) }))).then(() => {
+      finished = !cancelled;
+    });
+    return () => {
+      cancelled = true;
+      // Left before they were all made: make them again next time.
+      if (!finished) record.sticker = undefined;
+    };
+  }, [panel, svgs]);
+
+  useEffect(() => {
+    const record = madeFor.current;
+    const which = panel === 'filters' || panel === 'adjust' || panel === 'frame' ? panel : null;
+    if (!image || !which) return;
+    // Presets also change with the user's own recipes.
+    const from = which === 'filters' ? [image, custom] : [image];
+    if (same(record[which], from)) return;
+    record[which] = from;
+    let cancelled = false;
+    let finished = false;
+    const stop = () => cancelled;
     (async () => {
       const small = await resizeImage(image, 200);
       const plain = <SkImageNode image={small} x={0} y={0} width={THUMB} height={THUMB} fit="cover" />;
-      const presets = await Promise.all(
-        [...custom, ...developPresets].map(async (p) => [
-          p.id,
-          await renderThumbnail(
-            <DevelopedImage image={small} develop={presetDevelop(p)} width={THUMB} height={THUMB} fit="cover" />,
-            THUMB,
-            THUMB,
-          ),
-        ]),
-      );
-      const none = await renderThumbnail(plain, THUMB, THUMB);
-      if (cancelled) return;
-      setPresetThumbs({ none, ...Object.fromEntries(presets) });
-      const looks = await Promise.all(
-        filters.map(async (f) => [
-          f.id,
-          await renderThumbnail(
-            <SkImageNode image={small} x={0} y={0} width={THUMB} height={THUMB} fit="cover">
-              <ColorMatrix matrix={buildMatrix(f.id, defaultAdjust)} />
-            </SkImageNode>,
-            THUMB,
-            THUMB,
-          ),
-        ]),
-      );
-      if (cancelled) return;
-      setLookThumbs(Object.fromEntries(looks));
-      const frameEntries = await Promise.all(
-        frames.map(async (f) => [
-          f.id,
-          await renderThumbnail(
-            <Group>
-              {plain}
-              <FrameOverlay frame={f.id} width={THUMB} height={THUMB} />
-            </Group>,
-            THUMB,
-            THUMB,
-          ),
-        ]),
-      );
-      if (!cancelled) setFrameThumbs(Object.fromEntries(frameEntries));
+      // All of a panel's previews in one GPU render (see renderJpegThumbnails), keyed by id.
+      const make = async (items: readonly { id: string; el: React.ReactElement }[]) => {
+        const urls = await renderJpegThumbnails(
+          items.map((i) => i.el),
+          THUMB,
+        );
+        return Object.fromEntries(items.map((item, i) => [item.id, urls[i]]));
+      };
+      if (which === 'filters') {
+        const made = await make([
+          { id: 'none', el: plain },
+          ...[...custom, ...developPresets].map((p) => ({
+            id: p.id,
+            el: <DevelopedImage image={small} develop={presetDevelop(p)} width={THUMB} height={THUMB} fit="cover" />,
+          })),
+        ]);
+        if (!stop()) setPresetThumbs(made);
+      } else if (which === 'adjust') {
+        const made = await make(
+          filters.map((f) => ({
+            id: f.id,
+            el: (
+              <SkImageNode image={small} x={0} y={0} width={THUMB} height={THUMB} fit="cover">
+                <ColorMatrix matrix={buildMatrix(f.id, defaultAdjust)} />
+              </SkImageNode>
+            ),
+          })),
+        );
+        if (!stop()) setLookThumbs(made);
+      } else {
+        const made = await make(
+          frames.map((f) => ({
+            id: f.id,
+            el: (
+              <Group>
+                {plain}
+                <FrameOverlay frame={f.id} width={THUMB} height={THUMB} />
+              </Group>
+            ),
+          })),
+        );
+        if (!stop()) setFrameThumbs(made);
+      }
+      finished = !cancelled;
     })();
     return () => {
       cancelled = true;
+      // Left before they were all made: make them again next time the panel opens.
+      if (!finished) record[which] = undefined;
     };
-  }, [image, custom]);
+  }, [panel, image, custom]);
 
   /** Writes the draft; saves run one after another so an older save never lands last. */
   const writeDraft = (d: Doc, id: string) => {
@@ -642,7 +685,9 @@ export default function Editor() {
   if (!doc) {
     return (
       <SafeAreaView style={[styles.safe, styles.center]}>
-        <ActivityIndicator size="large" color={ec.gold} />
+        {/* The chosen photo shows right away while it is being prepared for editing. */}
+        {previewUri && <RNImage source={{ uri: previewUri }} resizeMode="contain" style={styles.loadingPreview} />}
+        <ActivityIndicator size="large" color={ec.gold} style={previewUri ? styles.loadingSpinner : undefined} />
       </SafeAreaView>
     );
   }
@@ -794,14 +839,22 @@ export default function Editor() {
 
   // Short screens (phones, mobile browsers): the app's own tab bar and, on tall tool panels, the AI prompt box step
   // aside, and a panel never takes more than about a third of the screen (it scrolls instead), so the photo stays big.
-  const compact = windowHeight < COMPACT_HEIGHT;
+  // Làm đẹp always uses it, on any screen: marking a pimple or the tip of the nose needs a big photo.
+  const compact = windowHeight < COMPACT_HEIGHT || panel === 'beauty';
+  // Compact: smaller tiles, the hint over the photo and one row for Reset / Compare / strength / Apply.
   const panelWanted =
     panel === 'beauty' && beautyMode === 'quick'
-      ? 316
+      ? compact
+        ? 262
+        : 316
       : panel === 'beauty' && beautyMode === 'free' && isShapeTool(beautyTool)
-        ? 278
+        ? compact
+          ? 206
+          : 278
         : panel === 'adjust' || panel === 'text' || panel === 'sticker' || panel === 'beauty'
-          ? 236
+          ? compact
+            ? 222
+            : 236
           : 184;
   const panelHeight = compact ? Math.min(panelWanted, Math.max(170, Math.round(windowHeight * 0.43))) : panelWanted;
   const showPrompt = !compact || panel === 'basic' || panel === 'ai' || panel === 'filters';
@@ -891,10 +944,13 @@ export default function Editor() {
 
       {/* Kept mounted while the prompt is open, so the panels keep their state. */}
       <View style={styles.controls}>
-      <View style={[styles.sheet, promptOpen && styles.hidden]}>
+      <View style={[styles.sheet, compact && styles.sheetCompact, promptOpen && styles.hidden]}>
         <CategoryTabs
-          tabs={categories.map((id) => ({ id, label: t(`editor.tab.${id}` as MessageKey) }))}
-          value={(categories.includes(panel as Category) ? panel : null) as Category | null}
+          tabs={[
+            ...categories.map((id) => ({ id: id as Panel, label: t(`editor.tab.${id}` as MessageKey) })),
+            ...(compact ? bottomTools.map((b) => ({ id: b.id as Panel, label: t(`editor.tool.${b.id}` as MessageKey) })) : []),
+          ]}
+          value={compact || categories.includes(panel as Category) ? panel : null}
           onChange={choosePanel}
         />
         <View style={[styles.panel, { height: panelHeight }]}>
@@ -916,6 +972,7 @@ export default function Editor() {
           {panel === 'beauty' && (
             <BeautyPanel
               compact={compact}
+              onHint={showToast}
               mode={beautyMode}
               onMode={(m) => {
                 setBeautyMode(m);
@@ -1046,16 +1103,17 @@ export default function Editor() {
 
       </View>
 
-      <View style={[styles.bottomBar, compact && styles.bottomBarCompact, promptOpen && styles.hidden]}>
+      {/* Short screens: these tools are tabs next to Cơ bản · Làm đẹp · … instead (more room for the photo). */}
+      <View style={[styles.bottomBar, (compact || promptOpen) && styles.hidden]}>
         {bottomTools.map((tool) => {
           const active = panel === tool.id;
           return (
             <Pressable
               key={tool.id}
               onPress={() => choosePanel(tool.id)}
-              style={({ pressed }) => [styles.bottomItem, compact && styles.bottomItemCompact, active && styles.bottomItemActive, pressed && { opacity: 0.75 }]}
+              style={({ pressed }) => [styles.bottomItem, active && styles.bottomItemActive, pressed && { opacity: 0.75 }]}
             >
-              <Icon icon={tool.icon} size={compact ? 19 : 22} color={ec.gold} />
+              <Icon icon={tool.icon} size={22} color={ec.gold} />
               <Text style={[styles.bottomLabel, active && { color: ec.gold, fontFamily: font.semi }]} numberOfLines={1}>
                 {t(`editor.tool.${tool.id}` as MessageKey)}
               </Text>
@@ -1195,6 +1253,8 @@ function dialogProps(
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: ec.bg },
+  loadingPreview: { position: 'absolute', top: 70, bottom: 120, left: 12, right: 12, borderRadius: 20, opacity: 0.85 },
+  loadingSpinner: { position: 'absolute', bottom: 60 },
   center: { alignItems: 'center', justifyContent: 'center' },
   topBar: {
     flexDirection: 'row',
@@ -1239,6 +1299,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     ...cardShadow,
   },
+  // Compact hides the app's tab bar, so the sheet reaches the bottom of the screen: keep its last row (strength,
+  // Apply) clear of the phone browser's toolbar and the home indicator.
+  sheetCompact: { paddingBottom: Platform.OS === 'web' ? ('max(14px, env(safe-area-inset-bottom))' as unknown as number) : 10 },
   fill: { flex: 1 },
   hidden: { display: 'none' },
   // Fixed height (see panelWanted) so the tabs don't jump when switching between taller and shorter panels:
@@ -1249,8 +1312,6 @@ const styles = StyleSheet.create({
   panelTall: { justifyContent: 'flex-start', paddingTop: 4, paddingBottom: 8 },
   // Row of white tiles: Hiệu ứng · Văn bản · Sticker · Khung · Vẽ.
   bottomBar: { flexDirection: 'row', gap: 8, paddingTop: 10, width: '100%', maxWidth: 760, alignSelf: 'center' },
-  bottomBarCompact: { gap: 6, paddingTop: 6, paddingBottom: 4 },
-  bottomItemCompact: { gap: 2, paddingVertical: 6, borderRadius: 14 },
   bottomItem: {
     flex: 1,
     alignItems: 'center',

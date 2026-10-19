@@ -739,7 +739,7 @@ const fr: Messages = {
   'retouch.holdCompare': 'Maintiens pour comparer',
   'retouch.run': 'Retoucher',
   'retouch.again': 'Retoucher à nouveau',
-  'retouch.face': 'Embellir\nle visage',
+  'retouch.nose': 'Nez affiné',
   'retouch.skin': 'Lisser\nla peau',
   'retouch.teeth': 'Blanchir\nles dents',
   'retouch.eyes': 'Effacer\nles cernes',

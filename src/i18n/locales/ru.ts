@@ -739,7 +739,7 @@ const ru: Messages = {
   'retouch.holdCompare': 'Удерживай для сравнения',
   'retouch.run': 'Ретушь',
   'retouch.again': 'Ретушь ещё раз',
-  'retouch.face': 'Улучшить\nлицо',
+  'retouch.nose': 'Изящный нос',
   'retouch.skin': 'Гладкая\nкожа',
   'retouch.teeth': 'Отбелить\nзубы',
   'retouch.eyes': 'Убрать\nкруги',

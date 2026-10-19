@@ -739,7 +739,7 @@ const ja: Messages = {
   'retouch.holdCompare': '長押しで比較',
   'retouch.run': 'レタッチ',
   'retouch.again': 'もう一度レタッチ',
-  'retouch.face': '顔を\nきれいに',
+  'retouch.nose': '鼻筋アップ',
   'retouch.skin': '美肌',
   'retouch.teeth': '歯を\n白く',
   'retouch.eyes': 'クマを\n消す',

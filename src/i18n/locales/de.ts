@@ -739,7 +739,7 @@ const de: Messages = {
   'retouch.holdCompare': 'Zum Vergleichen gedrückt halten',
   'retouch.run': 'Retuschieren',
   'retouch.again': 'Erneut retuschieren',
-  'retouch.face': 'Gesicht\nverschönern',
+  'retouch.nose': 'Nasen-Lift',
   'retouch.skin': 'Haut\nglätten',
   'retouch.teeth': 'Zähne\naufhellen',
   'retouch.eyes': 'Augenringe\nentfernen',

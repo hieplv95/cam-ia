@@ -754,7 +754,7 @@ const en: Messages = {
   'retouch.holdCompare': 'Hold to compare',
   'retouch.run': 'Retouch',
   'retouch.again': 'Retouch again',
-  'retouch.face': 'Beautify\nface',
+  'retouch.nose': 'Nose lift',
   'retouch.skin': 'Smooth\nskin',
   'retouch.teeth': 'Whiten\nteeth',
   'retouch.eyes': 'Remove\ndark circles',

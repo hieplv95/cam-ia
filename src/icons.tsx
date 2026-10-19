@@ -28,7 +28,7 @@ export const retouchIcons: Record<RetouchOptionId, IconSpec> = {
   waist: { set: 'mci', name: 'human-female' },
   legs: { set: 'mci', name: 'human-female-dance' },
   acne: { set: 'mci', name: 'auto-fix' },
-  face: { set: 'mci', name: 'face-woman-shimmer-outline' },
+  nose: { set: 'mci', name: 'face-woman-profile' },
   eyes: { set: 'ion', name: 'eye-outline' },
   light: { set: 'ion', name: 'sunny-outline' },
 };

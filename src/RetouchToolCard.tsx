@@ -16,7 +16,7 @@ export const retouchPhotos: Record<RetouchOptionId, ImageSourcePropType> = {
   waist: require('../assets/images/beauty/waist.jpg'),
   legs: require('../assets/images/beauty/legs.jpg'),
   acne: require('../assets/images/beauty/acne.jpg'),
-  face: require('../assets/images/beauty/face.jpg'),
+  nose: require('../assets/images/beauty/nose.jpg'),
   eyes: require('../assets/images/beauty/eyes.jpg'),
   light: require('../assets/images/beauty/light.jpg'),
 };

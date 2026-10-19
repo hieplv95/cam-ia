@@ -739,7 +739,7 @@ const ko: Messages = {
   'retouch.holdCompare': '길게 눌러 비교',
   'retouch.run': '보정하기',
   'retouch.again': '다시 보정',
-  'retouch.face': '얼굴\n보정',
+  'retouch.nose': '콧대 높이기',
   'retouch.skin': '피부\n매끈하게',
   'retouch.teeth': '치아\n미백',
   'retouch.eyes': '다크서클\n제거',

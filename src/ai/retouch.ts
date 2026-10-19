@@ -41,8 +41,9 @@ export const retouchOptions = [
     prompt: 'remove acne, pimples, spots and small scars while keeping natural skin texture',
   },
   {
-    id: 'face',
-    prompt: 'subtly enhance the face with balanced, flattering light and clearer, brighter eyes for a fresh, healthy look',
+    id: 'nose',
+    prompt: 'refine the nose so it looks a little slimmer, with a straighter, slightly higher bridge and a neater tip, natural and in proportion, keeping it clearly the same person',
+    reshapes: 'face',
   },
   {
     id: 'eyes',

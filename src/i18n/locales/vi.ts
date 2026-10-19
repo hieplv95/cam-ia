@@ -762,7 +762,7 @@ const vi = {
   'retouch.holdCompare': 'Giữ để so sánh',
   'retouch.run': 'Retouch',
   'retouch.again': 'Retouch lại',
-  'retouch.face': 'Làm đẹp\ngương mặt',
+  'retouch.nose': 'Nâng mũi',
   'retouch.skin': 'Làm mịn\nda',
   'retouch.teeth': 'Làm trắng\nrăng',
   'retouch.eyes': 'Xóa\nthâm mắt',

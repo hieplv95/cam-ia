@@ -201,7 +201,7 @@ export default function Editor() {
   const [cropChoice, setCropChoice] = useState<CropChoice>('free');
   const [cropRect, setCropRect] = useState<CropRect | null>(null);
   const [effectTool, setEffectTool] = useState<DevelopKeyId>('vignette');
-  const [beauty, setBeauty] = useState<RetouchOptionId[]>(['face', 'skin']);
+  const [beauty, setBeauty] = useState<RetouchOptionId[]>(['skin']);
   // Làm đẹp opens on "Làm đẹp nhanh"; "Tùy chỉnh nâng cao" switches to the free tools.
   const [beautyMode, setBeautyMode] = useState<BeautyMode>('quick');
   // Phong cách: the makeup, hairstyle, hair color and outfit picked (one per group).

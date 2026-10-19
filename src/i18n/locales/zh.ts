@@ -739,7 +739,7 @@ const zh: Messages = {
   'retouch.holdCompare': '按住对比',
   'retouch.run': '修图',
   'retouch.again': '再修一次',
-  'retouch.face': '面部\n美化',
+  'retouch.nose': '隆鼻',
   'retouch.skin': '磨皮',
   'retouch.teeth': '牙齿\n美白',
   'retouch.eyes': '去\n黑眼圈',

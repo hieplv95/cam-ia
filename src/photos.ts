@@ -28,12 +28,15 @@ const models = {
   modelVanity: require('../assets/images/models/vanity.jpg'),
   modelPeace: require('../assets/images/models/peace.jpg'),
   modelWhite: require('../assets/images/models/white.jpg'),
-  // The Retouch looks (Natural, Sang chảnh, Latina glam, Hàn Quốc, Selfie sáng da): 176 px face squares.
+  // The Retouch looks (Tự nhiên … Glass Skin, see retouchStyles): 176 px face squares of the same model.
   lookNatural: require('../assets/images/looks/natural.jpg'),
   lookLuxe: require('../assets/images/looks/luxe.jpg'),
   lookLatina: require('../assets/images/looks/latina.jpg'),
   lookKorean: require('../assets/images/looks/korean.jpg'),
   lookBright: require('../assets/images/looks/bright.jpg'),
+  lookClean: require('../assets/images/looks/clean.jpg'),
+  lookHollywood: require('../assets/images/looks/hollywood.jpg'),
+  lookGlass: require('../assets/images/looks/glass.jpg'),
 } as const;
 
 export type ScenePhotoKey = keyof typeof scenes;

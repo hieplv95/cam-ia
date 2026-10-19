@@ -82,6 +82,21 @@ export const retouchStyles = [
     prompt: 'a bright selfie look: brighter, luminous, glowing skin and a clean bright exposure',
     lightens: true,
   },
+  {
+    id: 'clean',
+    photo: 'lookClean',
+    prompt: 'a "clean girl" look: fresh, healthy, dewy skin, brushed-up natural brows, a soft flush on the cheeks and glossy nude lips, effortless and minimal',
+  },
+  {
+    id: 'hollywood',
+    photo: 'lookHollywood',
+    prompt: 'a classic Hollywood glam look: flawless luminous skin, soft sculpted contour, winged eyeliner, full lashes and elegant warm red-nude lips, flattering warm studio light',
+  },
+  {
+    id: 'glass',
+    photo: 'lookGlass',
+    prompt: 'a glass-skin look: ultra-smooth, clear, even, translucent-looking skin with a dewy reflective glow on the cheekbones, nose and forehead, with minimal makeup',
+  },
 ] as const;
 
 export type RetouchStyleId = (typeof retouchStyles)[number]['id'];

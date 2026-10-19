@@ -59,7 +59,17 @@ export function ModelSheet({ visible, onClose }: { visible: boolean; onClose: ()
 }
 
 /** Small pill showing the current model; tapping it opens the picker. */
-export function ModelChip({ style, dark }: { style?: StyleProp<ViewStyle>; /** For the dark editor. */ dark?: boolean }) {
+export function ModelChip({
+  style,
+  dark,
+  compact,
+}: {
+  style?: StyleProp<ViewStyle>;
+  /** For the dark editor. */
+  dark?: boolean;
+  /** Without the "Model:" label, beside a wide button. */
+  compact?: boolean;
+}) {
   const t = useT();
   const [model] = useAiModel();
   const [open, setOpen] = useState(false);
@@ -70,7 +80,8 @@ export function ModelChip({ style, dark }: { style?: StyleProp<ViewStyle>; /** F
       <Pressable onPress={() => setOpen(true)} style={({ pressed }) => [styles.chip, style, pressed && { opacity: 0.7 }]}>
         <Ionicons name="hardware-chip-outline" size={14} color={colors.gold} />
         <Text style={[styles.chipText, dark && { color: '#A8A097' }]}>
-          {t('model.chip')} <Text style={[styles.chipStrong, dark && { color: '#F4EFE7' }]}>{info?.name ?? model}</Text>
+          {compact ? '' : `${t('model.chip')} `}
+          <Text style={[styles.chipStrong, dark && { color: '#F4EFE7' }]}>{info?.name ?? model}</Text>
           {info ? ` · ${t('common.points', { n: pointsFor(plan, info.id) })}` : ''}
         </Text>
         <Ionicons name="chevron-down" size={14} color={colors.textSoft} />

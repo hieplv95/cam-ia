@@ -363,8 +363,8 @@ export type QuickBeauty = {
   onRun: () => void;
 };
 
-/** What the Làm đẹp tab opens on: one-tap looks and retouch tools; "Tùy chỉnh nâng cao" leads to the free tools. */
-function QuickBeautyPanel({ style, onStyle, selected, onToggle, onRun, onAdvanced }: QuickBeauty & { onAdvanced: () => void }) {
+/** What the Làm đẹp tab opens on: one-tap looks and retouch tools (the free tools are the other tabs). */
+function QuickBeautyPanel({ style, onStyle, selected, onToggle, onRun }: QuickBeauty) {
   const t = useT();
   const nothing = !style && !selected.length;
   return (
@@ -389,20 +389,28 @@ function QuickBeautyPanel({ style, onStyle, selected, onToggle, onRun, onAdvance
       </HScroll>
       <View style={styles.quickHead}>
         <Text style={styles.quickTitle}>{t('retouch.quick')}</Text>
-        <Pressable onPress={onAdvanced} style={styles.advanced} hitSlop={6}>
-          <Text style={styles.advancedText}>{t('retouch.advanced')}</Text>
-          <Ionicons name="arrow-forward" size={13} color={colors.goldDeep} />
-        </Pressable>
       </View>
       <ToolRow>
         {retouchOptions.map((o) => (
           <RetouchToolCard key={o.id} id={o.id} size={54} active={selected.includes(o.id)} onPress={() => onToggle(o.id)} />
         ))}
       </ToolRow>
-      <Pressable disabled={nothing} onPress={onRun} style={({ pressed }) => [styles.applyNow, (pressed || nothing) && { opacity: 0.55 }]}>
+      <AiRunRow label={t('retouch.applyNow')} disabled={nothing} onRun={onRun} />
+    </View>
+  );
+}
+
+/** The AI model to use (and its cost) beside the big gold button that runs it. */
+function AiRunRow({ label, disabled, onRun }: { label: string; disabled: boolean; onRun: () => void }) {
+  return (
+    <View style={styles.aiRunRow}>
+      <ModelChip compact />
+      <Pressable disabled={disabled} onPress={onRun} style={({ pressed }) => [styles.applyNow, (pressed || disabled) && { opacity: 0.55 }]}>
         <LinearGradient colors={goldGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.applyNowFill}>
           <Ionicons name="sparkles" size={16} color={colors.onGold} />
-          <Text style={styles.applyNowText}>{t('retouch.applyNow')}</Text>
+          <Text numberOfLines={1} style={styles.applyNowText}>
+            {label}
+          </Text>
         </LinearGradient>
       </Pressable>
     </View>
@@ -500,12 +508,7 @@ function StyleLookPanel({ picks, onPick, onRun }: StyleLook) {
           );
         })}
       </HScroll>
-      <Pressable disabled={nothing} onPress={onRun} style={({ pressed }) => [styles.applyNow, (pressed || nothing) && { opacity: 0.55 }]}>
-        <LinearGradient colors={goldGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.applyNowFill}>
-          <Ionicons name="sparkles" size={16} color={colors.onGold} />
-          <Text style={styles.applyNowText}>{t('beauty.style.run')}</Text>
-        </LinearGradient>
-      </Pressable>
+      <AiRunRow label={t('beauty.style.run')} disabled={nothing} onRun={onRun} />
     </>
   );
 }
@@ -588,13 +591,7 @@ export function BeautyPanel({
     return (
       <View style={styles.colTight}>
         {tabs}
-        <QuickBeautyPanel
-          {...quick}
-          onAdvanced={() => {
-            onMode('free');
-            onTool(freeCards[group][0].id);
-          }}
-        />
+        <QuickBeautyPanel {...quick} />
       </View>
     );
   if (mode === 'style')
@@ -959,7 +956,7 @@ const styles = StyleSheet.create({
   colTight: { gap: 10 },
   lookRow: { paddingHorizontal: 10, gap: 2 },
   lookIcon: { alignItems: 'center', justifyContent: 'center' },
-  look: { width: 76, alignItems: 'center', gap: 3, padding: 2, borderRadius: 13, borderWidth: 1.5, borderColor: 'transparent' },
+  look: { width: 90, alignItems: 'center', gap: 3, padding: 2, borderRadius: 13, borderWidth: 1.5, borderColor: 'transparent' },
   lookActive: { borderColor: ec.gold, backgroundColor: ec.goldSoft },
   lookImg: { width: 56, height: 56, borderRadius: 10, backgroundColor: ec.surface2 },
   lookCheck: {
@@ -976,9 +973,8 @@ const styles = StyleSheet.create({
   lookName: { fontFamily: font.medium, fontSize: 10, color: ec.text },
   quickHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, marginBottom: -4 },
   quickTitle: { fontFamily: font.serif, fontSize: 16, color: ec.text },
-  advanced: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: ec.gold },
-  advancedText: { fontFamily: font.medium, fontSize: 12, color: colors.goldDeep },
-  applyNow: { marginHorizontal: 14 },
+  aiRunRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14 },
+  applyNow: { flex: 1 },
   applyNowFill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 11 },
   applyNowText: { fontFamily: font.semi, fontSize: 15, color: colors.onGold },
   modeRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 14 },

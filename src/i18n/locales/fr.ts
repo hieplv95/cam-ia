@@ -638,6 +638,7 @@ const fr: Messages = {
   'beauty.height': 'Plus grande',
   'beauty.heightHint': 'Étire la moitié basse ; appuyez sur Appliquer',
   'beauty.compare': 'Comparer',
+  'beauty.pickTool': 'Touchez un outil ci-dessus pour commencer',
 
   'history.addSticker': 'Ajouter un sticker',
   'history.addText': 'Ajouter du texte',

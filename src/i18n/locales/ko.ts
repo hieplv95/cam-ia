@@ -638,6 +638,7 @@ const ko: Messages = {
   'beauty.height': '키 늘리기',
   'beauty.heightHint': '아래쪽 절반을 늘려요. 적용을 누르세요',
   'beauty.compare': '비교',
+  'beauty.pickTool': '위의 도구를 눌러 시작하세요',
 
   'history.addSticker': '스티커 추가',
   'history.addText': '텍스트 추가',

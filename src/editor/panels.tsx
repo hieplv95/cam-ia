@@ -282,7 +282,7 @@ export type ShapeTool = 'acne' | 'bigeyes' | 'slim' | 'legs' | 'vline' | 'jaw' |
 export type BeautyTool = BeautySlider | RetouchEffect | ShapeTool;
 
 const shapeTools: ShapeTool[] = ['acne', 'bigeyes', 'slim', 'legs', 'vline', 'jaw', 'nose', 'noselift', 'fulllips', 'shoulders', 'height'];
-export const isShapeTool = (t: BeautyTool): t is ShapeTool => shapeTools.includes(t as ShapeTool);
+export const isShapeTool = (t: BeautyTool | null): t is ShapeTool => t !== null && shapeTools.includes(t as ShapeTool);
 /** "Tăng chiều cao" works on the whole picture; the other shape tools need marks first. */
 export const needsMarks = (t: ShapeTool) => t !== 'height';
 
@@ -332,7 +332,7 @@ const beautyGroupIcons: Record<BeautyGroup, IconSpec> = {
   makeup: { set: 'mci', name: 'brush-variant' },
   body: { set: 'mci', name: 'human-female' },
 };
-const groupOf = (tool: BeautyTool) => beautyGroups.find((g) => freeCards[g].some((c) => c.id === tool)) ?? 'skin';
+const groupOf = (tool: BeautyTool | null) => beautyGroups.find((g) => freeCards[g].some((c) => c.id === tool)) ?? 'skin';
 
 const beautySliders: { id: BeautySlider; icon: IconSpec }[] = [
   { id: 'smooth', icon: { set: 'ion', name: 'water-outline' } },
@@ -550,8 +550,9 @@ export function BeautyPanel({
   /** Làm đẹp nhanh, Phong cách (makeup, hair, outfit), the free tools (Da / Khuôn mặt / Trang điểm / Body) or the AI tools. */
   mode: BeautyMode;
   onMode: (m: BeautyMode) => void;
-  tool: BeautyTool;
-  onTool: (t: BeautyTool) => void;
+  /** null: nothing picked (pressing the picked tool again lets it go). */
+  tool: BeautyTool | null;
+  onTool: (t: BeautyTool | null) => void;
   develop: Develop;
   onStart: () => void;
   onBeauty: (key: BeautySlider, value: number) => void;
@@ -634,6 +635,8 @@ export function BeautyPanel({
                 label={t(c.label ?? `beauty.${c.id}`)}
                 active={tool === c.id}
                 onPress={() => {
+                  // Pressing the picked tool again lets it go (its marks are cleared, nothing is changed on the photo).
+                  if (tool === c.id) return onTool(null);
                   onTool(c.id);
                   const id = c.id;
                   if (compact && isShapeTool(id)) onHint?.(t(`beauty.${id}Hint`));
@@ -643,7 +646,7 @@ export function BeautyPanel({
             {group === 'skin' &&
               beautySliders
                 .filter((b) => !carded.has(b.id))
-                .map((b) => <ToolCircle key={b.id} icon={b.icon} label={t(`beauty.${b.id}`)} active={tool === b.id} onPress={() => onTool(b.id)} />)}
+                .map((b) => <ToolCircle key={b.id} icon={b.icon} label={t(`beauty.${b.id}`)} active={tool === b.id} onPress={() => onTool(tool === b.id ? null : b.id)} />)}
           </ToolRow>
           {isShapeTool(tool) ? (
             <>
@@ -696,6 +699,8 @@ export function BeautyPanel({
               ))}
               <Pill label={t('editor.clearBrush')} icon={{ set: 'ion', name: 'trash-outline' }} onPress={() => onClearBrush(brush.id)} />
             </HScroll>
+          ) : tool === null ? (
+            <Text style={styles.pickHint}>{t('beauty.pickTool')}</Text>
           ) : (
             <EditorSlider
               value={develop.beauty[tool as BeautySlider]}
@@ -1029,6 +1034,7 @@ const styles = StyleSheet.create({
   iconAction: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: ec.surface2 },
   iconActionOn: { backgroundColor: ec.gold },
   compactSlider: { flex: 1, marginHorizontal: 4 },
+  pickHint: { fontFamily: font.regular, fontSize: 12.5, color: ec.textSoft, textAlign: 'center', paddingVertical: 8 },
   brushHint: { fontFamily: font.medium, fontSize: 13, color: ec.gold, alignSelf: 'center', marginRight: 4 },
   pills: { paddingHorizontal: 14, gap: 8 },
   thumbRow: { paddingHorizontal: 12, gap: 10 },

@@ -638,6 +638,7 @@ const ja: Messages = {
   'beauty.height': '身長アップ',
   'beauty.heightHint': '下半分を伸ばします。適用をタップ',
   'beauty.compare': '比較',
+  'beauty.pickTool': '上のツールをタップして始めましょう',
 
   'history.addSticker': 'スタンプを追加',
   'history.addText': 'テキストを追加',

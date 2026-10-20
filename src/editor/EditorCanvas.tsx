@@ -337,7 +337,9 @@ export function EditorCanvas({ doc, fonts, svgs, mode, pen, brush, selectedId, o
   const sizeKey = `${Math.round(fw)}x${Math.round(fh)}`;
   // Image pixels → frame points, zoom included.
   const toFrame = [{ translateX: view.x }, { translateY: view.y }, { scale }];
-  const zoomBy = (k: number) => setView((v) => zoomAt(v, v.z * k, fw / 2, fh / 2, 0, 0, fw, fh));
+  // − / + buttons: 10% of the fitted size per press (100% → 110% → 120%…), from the nearest 10% after a pinch.
+  const zoomStep = (step: number) =>
+    setView((v) => zoomAt(v, Math.round(v.z * 10) / 10 + step, fw / 2, fh / 2, 0, 0, fw, fh));
 
   // Web: the mouse wheel zooms around the pointer (a trackpad pinch arrives as a wheel with Ctrl), and a
   // trackpad's two-finger scroll moves the zoomed photo.
@@ -434,13 +436,13 @@ export function EditorCanvas({ doc, fonts, svgs, mode, pen, brush, selectedId, o
           photo's gestures so pressing a button never paints a mark under it. */}
       {fit > 0 && !compareWith && (
         <View style={[styles.zoomBar, { right: (box.w - fw) / 2 + 8, bottom: (box.h - fh) / 2 + 8 }]}>
-          <Pressable onPress={() => zoomBy(1 / 1.5)} disabled={view.z <= 1} hitSlop={6} style={[styles.zoomBtn, view.z <= 1 && { opacity: 0.4 }]}>
+          <Pressable onPress={() => zoomStep(-0.1)} disabled={view.z <= 1} hitSlop={6} style={[styles.zoomBtn, view.z <= 1 && { opacity: 0.4 }]}>
             <Ionicons name="remove" size={16} color="#FFFFFF" />
           </Pressable>
           <Pressable onPress={() => setView(FIT)} hitSlop={4} accessibilityLabel={t('editor.zoomFit')}>
             <Text style={styles.zoomText}>{view.z > 1.01 ? `${Math.round(view.z * 100)}%` : t('editor.zoom')}</Text>
           </Pressable>
-          <Pressable onPress={() => zoomBy(1.5)} disabled={view.z >= MAX_ZOOM} hitSlop={6} style={[styles.zoomBtn, view.z >= MAX_ZOOM && { opacity: 0.4 }]}>
+          <Pressable onPress={() => zoomStep(0.1)} disabled={view.z >= MAX_ZOOM} hitSlop={6} style={[styles.zoomBtn, view.z >= MAX_ZOOM && { opacity: 0.4 }]}>
             <Ionicons name="add" size={16} color="#FFFFFF" />
           </Pressable>
         </View>

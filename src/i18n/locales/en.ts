@@ -651,6 +651,7 @@ const en: Messages = {
   'beauty.height': 'Taller',
   'beauty.heightHint': 'Stretches the lower half; press Apply',
   'beauty.compare': 'Compare',
+  'beauty.pickTool': 'Tap a tool above to start',
 
   'history.addSticker': 'Add sticker',
   'history.addText': 'Add text',

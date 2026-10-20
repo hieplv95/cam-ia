@@ -638,6 +638,7 @@ const de: Messages = {
   'beauty.height': 'Größer',
   'beauty.heightHint': 'Streckt die untere Hälfte; Anwenden drücken',
   'beauty.compare': 'Vergleich',
+  'beauty.pickTool': 'Tippe oben auf ein Werkzeug, um zu beginnen',
 
   'history.addSticker': 'Sticker hinzufügen',
   'history.addText': 'Text hinzufügen',

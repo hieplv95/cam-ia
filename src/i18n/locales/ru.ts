@@ -638,6 +638,7 @@ const ru: Messages = {
   'beauty.height': 'Выше ростом',
   'beauty.heightHint': 'Вытягивает нижнюю половину; нажмите «Применить»',
   'beauty.compare': 'Сравнить',
+  'beauty.pickTool': 'Выберите инструмент выше, чтобы начать',
 
   'history.addSticker': 'Добавить стикер',
   'history.addText': 'Добавить текст',

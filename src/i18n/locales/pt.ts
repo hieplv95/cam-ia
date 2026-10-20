@@ -638,6 +638,7 @@ const pt: Messages = {
   'beauty.height': 'Mais alta',
   'beauty.heightHint': 'Estica a metade de baixo; toque em Aplicar',
   'beauty.compare': 'Comparar',
+  'beauty.pickTool': 'Toque numa ferramenta acima para começar',
 
   'history.addSticker': 'Adicionar figurinha',
   'history.addText': 'Adicionar texto',

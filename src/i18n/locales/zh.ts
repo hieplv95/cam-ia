@@ -638,6 +638,7 @@ const zh: Messages = {
   'beauty.height': '增高',
   'beauty.heightHint': '拉长下半部分，点应用',
   'beauty.compare': '对比',
+  'beauty.pickTool': '点按上方的工具开始',
 
   'history.addSticker': '添加贴纸',
   'history.addText': '添加文字',

@@ -657,6 +657,7 @@ const vi = {
   'beauty.height': 'Tăng chiều cao',
   'beauty.heightHint': 'Kéo dài nửa dưới ảnh, bấm Áp dụng',
   'beauty.compare': 'So sánh',
+  'beauty.pickTool': 'Bấm một công cụ ở trên để chỉnh',
 
   // Edit history
   'history.addSticker': 'Thêm sticker',

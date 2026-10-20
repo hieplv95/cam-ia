@@ -226,7 +226,7 @@ export default function Editor() {
   const [stylePicks, setStylePicks] = useState<Partial<Record<StyleGroup, string>>>({ makeup: 'natural' });
   const [quickStyle, setQuickStyle] = useState<RetouchStyleId | null>('natural');
   const [quickTools, setQuickTools] = useState<RetouchOptionId[]>([]);
-  const [beautyTool, setBeautyTool] = useState<BeautyTool>('smooth');
+  const [beautyTool, setBeautyTool] = useState<BeautyTool | null>('smooth');
   // How strong bigger eyes / slimmer / longer legs are (0–100).
   const [shapeStrength, setShapeStrength] = useState(50);
   // Nâng mũi: "Tạo khối" (contour) or "Nâng rõ" (lift).

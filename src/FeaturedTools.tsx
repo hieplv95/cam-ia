@@ -1,14 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 
 import { studioText, studioTools, type StudioTool } from './ai/studio';
-import { FEATURED_ASPECT, featuredImages } from './featuredImages';
+import { FEATURED_ASPECT, featuredImages, filtersArt } from './featuredImages';
 import { usePhotoSource } from './photoSource';
 import { cardShadow, colors, font } from './theme';
 import { useT } from './i18n';
 
-/** "Công cụ nổi bật": restore, hairstyle & makeup, product studio, logo — each opens the Studio screen. */
+/** "Công cụ nổi bật": CamIA Filters, then restore, hairstyle & makeup, product studio, logo (the Studio screen). */
 export function FeaturedTools() {
   const t = useT();
   const router = useRouter();
@@ -25,23 +25,29 @@ export function FeaturedTools() {
         <Ionicons name="sparkles" size={18} color={colors.gold} />
         <Text style={styles.title}>{t('featured.title')}</Text>
       </View>
-      {studioTools.map((t) => (
-        <ToolCard key={t.id} tool={t} onPress={() => open(t)} />
+      <ToolCard art={filtersArt} title={t('filters.title')} desc={t('filters.cardDesc')} onPress={() => choose({ type: 'filters' })} />
+      {studioTools.map((tool) => (
+        <ToolCard
+          key={tool.id}
+          art={featuredImages[tool.id]}
+          title={t(studioText.tool(tool, 'title'))}
+          desc={t(studioText.tool(tool, 'desc'))}
+          onPress={() => open(tool)}
+        />
       ))}
     </View>
   );
 }
 
-function ToolCard({ tool, onPress }: { tool: StudioTool; onPress: () => void }) {
-  const t = useT();
+function ToolCard({ art, title, desc, onPress }: { art: ImageSourcePropType; title: string; desc: string; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}>
       <View style={styles.art}>
-        <Image source={featuredImages[tool.id]} style={styles.artImage} resizeMode="cover" />
+        <Image source={art} style={styles.artImage} resizeMode="cover" />
       </View>
       <View style={styles.text}>
-        <Text style={styles.cardTitle}>{t(studioText.tool(tool, 'title'))}</Text>
-        <Text style={styles.cardDesc}>{t(studioText.tool(tool, 'desc'))}</Text>
+        <Text style={styles.cardTitle}>{title}</Text>
+        <Text style={styles.cardDesc}>{desc}</Text>
       </View>
       <View style={styles.arrow}>
         <Ionicons name="chevron-forward" size={15} color={colors.goldDeep} />

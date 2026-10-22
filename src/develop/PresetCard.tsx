@@ -1,63 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Skia, type SkImage } from '@shopify/react-native-skia';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 
-import { renderThumbnail } from '../editor/imageOps';
-import { photoData, photoImage, type PhotoKey } from '../photos';
+import { photoImage } from '../photos';
 import { colors, font } from '../theme';
-import { presetDevelop, type DevelopPreset } from './presets';
-import { DevelopedImage } from './shader';
+import type { DevelopPreset } from './presets';
+import { presetThumbs } from './presetThumbs';
 import { useT } from '../i18n';
 
-const THUMB_W = 360;
-const THUMB_H = 280;
-
-const photoCache = new Map<PhotoKey, Promise<SkImage>>();
-const thumbCache = new Map<string, Promise<string>>();
-
-/** Decoded showcase photo (720px for the Unsplash scenes, the bundled file for the models), cached. */
-export function loadPhoto(key: PhotoKey) {
-  let p = photoCache.get(key);
-  if (!p) {
-    p = Skia.Data.fromURI(photoData(key, 720)).then((data) => {
-      const img = Skia.Image.MakeImageFromEncoded(data);
-      if (!img) throw new Error('decode failed');
-      return img;
-    });
-    photoCache.set(key, p);
-  }
-  return p;
-}
-
-/** The preset's sample photo rendered with the preset at full strength (cached data URI). */
-export function presetThumbnail(preset: DevelopPreset) {
-  if (preset.thumb) return Promise.resolve(preset.thumb);
-  let p = thumbCache.get(preset.id);
-  if (!p) {
-    p = loadPhoto(preset.photo ?? 'modelPeace').then((img) =>
-      renderThumbnail(<DevelopedImage image={img} develop={presetDevelop(preset)} width={THUMB_W} height={THUMB_H} fit="cover" />, THUMB_W, THUMB_H),
-    );
-    thumbCache.set(preset.id, p);
-  }
-  return p;
-}
-
+/** The card picture: the user's own recipe keeps its thumbnail, built-in presets ship one (see presetThumbs.ts). */
 export function usePresetThumbnail(preset: DevelopPreset): ImageSourcePropType {
-  // Plain photo first, then the developed render.
-  const [source, setSource] = useState<ImageSourcePropType>(preset.thumb ? { uri: preset.thumb } : photoImage(preset.photo ?? 'modelPeace', THUMB_W * 2));
-  useEffect(() => {
-    let alive = true;
-    presetThumbnail(preset)
-      .then((uri) => alive && setSource({ uri }))
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [preset]);
-  return source;
+  if (preset.thumb) return { uri: preset.thumb };
+  return presetThumbs[preset.id] ?? photoImage(preset.photo ?? 'modelPeace', 720);
 }
 
 /* ---------- Saved presets ---------- */

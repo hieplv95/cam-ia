@@ -22,11 +22,10 @@ import type { PendingPhoto } from '../pendingPhoto';
 import type { EditorFonts } from './text';
 import type { Doc } from './types';
 import { t } from '../i18n';
+import { FULL_MAX_SIDE, MAX_SIDE } from './limits';
 
-/** Working resolution while editing: keeps the canvas and every edit fast on phones. */
-export const MAX_SIDE = 2048;
-/** Largest original kept for full-resolution export (common GPU texture limit). */
-export const FULL_MAX_SIDE = 8192;
+// In their own file so screens that load before Skia (the photo picker) can use them.
+export { FULL_MAX_SIDE, MAX_SIDE };
 
 /** Above this many pixels, web renders on a throwaway WebGL surface: the CPU path is far too slow for shaders. */
 const WEB_GPU_MIN_PIXELS = 1_500_000;

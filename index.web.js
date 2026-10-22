@@ -1,14 +1,12 @@
-// Skia's web build reads global.CanvasKit when its module is first evaluated,
-// so CanvasKit (WebAssembly) must finish loading before any route is imported.
 import '@expo/metro-runtime';
 import { LoadSkiaWeb } from '@shopify/react-native-skia/lib/module/web';
 
-// The version in the URL lets browsers keep public/canvaskit.wasm (8 MB) for a year (see server.cjs): change it
-// together with the file whenever the canvaskit-wasm package is upgraded.
-const CANVASKIT_VERSION = '0.40.0';
+import { CANVASKIT_URL } from './src/canvaskit';
 
-LoadSkiaWeb({ locateFile: (file) => (file === 'canvaskit.wasm' ? `/canvaskit.wasm?v=${CANVASKIT_VERSION}` : `/${file}`) }).then(() => {
-  const { App } = require('expo-router/build/qualified-entry');
-  const { renderRootComponent } = require('expo-router/build/renderRootComponent');
-  renderRootComponent(App);
-});
+// Skia's engine (CanvasKit, WebAssembly) loads next to the app instead of before it: the home screen and the other
+// screens without Skia are usable at once, and screens that draw with Skia wait for it (src/skia.tsx).
+globalThis.__skiaReady = LoadSkiaWeb({ locateFile: (file) => (file === 'canvaskit.wasm' ? CANVASKIT_URL : `/${file}`) });
+
+const { App } = require('expo-router/build/qualified-entry');
+const { renderRootComponent } = require('expo-router/build/renderRootComponent');
+renderRootComponent(App);

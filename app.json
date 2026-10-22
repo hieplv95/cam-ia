@@ -28,7 +28,7 @@
         "android.permission.READ_MEDIA_AUDIO",
         "android.permission.READ_MEDIA_VISUAL_USER_SELECTED"
       ],
-      "versionCode": 2
+      "versionCode": 3
     },
     "web": {
       "output": "server",

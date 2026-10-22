@@ -15,15 +15,25 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider } from '@/src/AuthSheet';
 import { PhotoSourceProvider } from '@/src/photoSource';
 import { PresencePing } from '@/src/presence';
+import { skiaReady } from '@/src/skia';
 import { colors } from '@/src/theme';
 import { languageReady } from '@/src/i18n';
 import { track } from '@/src/track';
 
 SplashScreen.preventAutoHideAsync();
 
+// Development only (left out of the app): redraws the ready-made preset and AI tool pictures, see src/develop/renderThumbs.tsx.
+if (__DEV__ && Platform.OS === 'web') {
+  (globalThis as { camiRenderThumbs?: () => Promise<string> }).camiRenderThumbs = async () => {
+    await skiaReady;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('@/src/develop/renderThumbs').renderThumbs();
+  };
+}
+
 /**
- * On web, screens use Skia (CanvasKit, loaded in index.web.js) which does not exist during
- * server-side rendering, so routes only render once we are in the browser.
+ * On web, routes only render once we are in the browser: the server sends the spinner (screens that draw with Skia
+ * need its engine, which only the browser loads; see src/skia.tsx).
  */
 function useClientReady() {
   const [ready, setReady] = useState(Platform.OS !== 'web');
@@ -64,6 +74,7 @@ export default function RootLayout() {
               <Stack.Screen name="editor" options={{ animation: 'slide_from_bottom' }} />
               <Stack.Screen name="retouch" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="adjust" options={{ animation: 'slide_from_bottom' }} />
+              <Stack.Screen name="filters" options={{ animation: 'slide_from_bottom' }} />
               <Stack.Screen name="export" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="generate" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="studio" options={{ animation: 'slide_from_right' }} />

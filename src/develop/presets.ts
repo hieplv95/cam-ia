@@ -1,6 +1,6 @@
-import type { FilterId } from '../editor/filters';
 import type { PhotoKey } from '../photos';
-import { defaultDevelop, hslRanges, type CurveChannel, type Develop, type HslRange } from './types';
+import { developFromPatch, type DevelopPatch } from './patch';
+import { defaultDevelop, hslRanges, type CurveChannel, type Develop } from './types';
 import { t, type MessageKey } from '../i18n';
 import { morePresets } from './presetsMore';
 
@@ -18,16 +18,6 @@ export const presetCategories = [
 ] as const;
 
 export type PresetCategory = (typeof presetCategories)[number]['id'];
-
-type DevelopPatch = {
-  light?: Partial<Develop['light']>;
-  color?: Partial<Develop['color']>;
-  curves?: Partial<Record<CurveChannel, number[]>>;
-  hsl?: Partial<Record<HslRange, Partial<Develop['hsl'][HslRange]>>>;
-  detail?: Partial<Develop['detail']>;
-  /** Color look layered on top (e.g. sepia); applied whenever the preset is on. */
-  look?: FilterId;
-};
 
 export type DevelopPreset = {
   id: string;
@@ -460,26 +450,11 @@ export const presetById = (id: string) => developPresets.find((p) => p.id === id
 /** One-line description in the app's language (the user's own recipes share one). */
 export const presetDescription = (p: DevelopPreset) => (p.custom ? t('recipe.description') : t(`preset.${p.id}` as MessageKey));
 
-const linear = [0, 0.25, 0.5, 0.75, 1];
-
 /** The preset as full develop settings, blended from neutral by intensity (0–100). */
 export function presetDevelop(preset: DevelopPreset, intensity = 100): Develop {
   const t = intensity / 100;
   if (preset.develop) return scaleDevelop(preset.develop, t);
-  const d = defaultDevelop();
-  const patch = preset.patch ?? {};
-  for (const [k, v] of Object.entries(patch.light ?? {})) d.light[k as keyof Develop['light']] = Math.round(v * t);
-  for (const [k, v] of Object.entries(patch.color ?? {})) d.color[k as keyof Develop['color']] = Math.round(v * t);
-  for (const [k, v] of Object.entries(patch.detail ?? {})) d.detail[k as keyof Develop['detail']] = Math.round(v * t);
-  for (const [k, pts] of Object.entries(patch.curves ?? {})) {
-    d.curves[k as CurveChannel] = pts.map((y, i) => linear[i] + (y - linear[i]) * t);
-  }
-  if (patch.look && t > 0) d.look = patch.look;
-  for (const r of hslRanges) {
-    const p = patch.hsl?.[r.id];
-    if (p) d.hsl[r.id] = { hue: Math.round((p.hue ?? 0) * t), sat: Math.round((p.sat ?? 0) * t), lum: Math.round((p.lum ?? 0) * t) };
-  }
-  return d;
+  return developFromPatch(preset.patch ?? {}, t);
 }
 
 const mix = (from: number, to: number, t: number) => Math.round(from + (to - from) * t);
@@ -499,5 +474,8 @@ export function scaleDevelop(target: Develop, t: number): Develop {
     ) as Develop['curves'],
     hsl: Object.fromEntries(hslRanges.map((r) => [r.id, scaleGroup(d.hsl[r.id], target.hsl[r.id] ?? d.hsl[r.id])])) as Develop['hsl'],
     look: t > 0 ? target.look : 'none',
+    ...(target.split && {
+      split: { ...target.split, shadowSat: mix(0, target.split.shadowSat, t), highlightSat: mix(0, target.split.highlightSat, t), balance: mix(0, target.split.balance, t) },
+    }),
   };
 }

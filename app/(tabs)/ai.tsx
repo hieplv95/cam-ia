@@ -51,7 +51,7 @@ function FeatureCard({ feature, width, onPress }: { feature: Feature; width: num
       </Text>
       <Text style={styles.cardSub}>{t(feature.sub)}</Text>
       <View style={[styles.art, { width: imgW, height: imgH }]}>
-        {art ? <Image source={{ uri: art }} style={StyleSheet.absoluteFill} /> : null}
+        <Image source={art} style={StyleSheet.absoluteFill} />
         {feature.id === 'enhance' && (
           <View style={styles.hd}>
             <Text style={styles.hdText}>HD</Text>

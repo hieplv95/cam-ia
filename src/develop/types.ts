@@ -13,7 +13,12 @@ export type Develop = {
   beauty: { smooth: number; brighten: number; rosy: number; even: number; glow: number; detail: number };
   /** Color filter applied on top of the manual settings. */
   look: FilterId;
+  /** Split toning (CamIA Filters); none when absent. */
+  split?: SplitTone;
 };
+
+/** Tints the shadows and the highlights with their own colors (hues 0–360, amounts 0–100, balance −100…100 towards highlights). */
+export type SplitTone = { shadowHue: number; shadowSat: number; highlightHue: number; highlightSat: number; balance: number };
 
 export type CurveChannel = 'rgb' | 'r' | 'g' | 'b';
 

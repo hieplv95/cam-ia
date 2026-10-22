@@ -10,5 +10,8 @@ export const featuredImages: Record<StudioToolId, ImageSourcePropType> = {
   logo: require('../assets/images/featured/logo.jpg'),
 };
 
+/** CamIA Filters: one photo, before | after (the ‹› handle is part of the image). */
+export const filtersArt: ImageSourcePropType = require('../assets/images/featured/filters.jpg');
+
 /** Width / height of the artwork. */
 export const FEATURED_ASPECT = 262 / 167;

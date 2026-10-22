@@ -6,7 +6,7 @@ import { createContext, useContext, useState, type ComponentProps, type ReactNod
 import { Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { MAX_SIDE } from './editor/imageOps';
+import { MAX_SIDE } from './editor/limits';
 import { notify } from './notify';
 import { MAX_COMBINE } from './ai/combine';
 import { setPendingCombine, setPendingPhoto, type EditorIntent, type PendingPhoto } from './pendingPhoto';
@@ -74,7 +74,7 @@ export function PhotoSourceProvider({ children }: { children: ReactNode }) {
     const intent = photo.intent;
     const go = inPlace ? router.replace : router.push;
     if (intent?.type === 'studio') go({ pathname: '/studio', params: { tool: intent.tool } });
-    else go(intent?.type === 'retouch' ? '/retouch' : intent?.type === 'adjust' ? '/adjust' : '/editor');
+    else go(intent?.type === 'retouch' ? '/retouch' : intent?.type === 'adjust' ? '/adjust' : intent?.type === 'filters' ? '/filters' : '/editor');
   };
 
   const fromPicker = async (source: 'camera' | 'library') => {

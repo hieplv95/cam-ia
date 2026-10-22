@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ImageFormat, Skia, type SkImage } from '@shopify/react-native-skia';
+import type { SkImage } from '@shopify/react-native-skia';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 
@@ -26,6 +26,11 @@ export async function listDrafts(): Promise<DraftMeta[]> {
   }
 }
 
+// Skia is only needed to save or open a draft (from the editor), not to list them on the home screen, which on the
+// web shows before Skia has loaded (see src/skia.ts).
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const skia = (): typeof import('@shopify/react-native-skia') => require('@shopify/react-native-skia');
+
 /** Encoding a 2048px picture takes a moment, so each image is encoded once and reused by later saves. */
 const encoded = new WeakMap<SkImage, Uint8Array>();
 const written = new Map<string, SkImage>();
@@ -34,7 +39,7 @@ async function storeImage(key: string, img: SkImage) {
   if (written.get(key) === img) return;
   let bytes = encoded.get(img);
   if (!bytes) {
-    bytes = img.encodeToBytes(ImageFormat.JPEG, 95);
+    bytes = img.encodeToBytes(skia().ImageFormat.JPEG, 95);
     encoded.set(img, bytes);
   }
   await putBlob(key, bytes);
@@ -57,7 +62,11 @@ export async function saveDraft(id: string, doc: Doc, thumb: string) {
   await AsyncStorage.setItem(INDEX_KEY, JSON.stringify(next));
 }
 
-const decode = (bytes: Uint8Array | null) => (bytes ? Skia.Image.MakeImageFromEncoded(Skia.Data.fromBytes(bytes)) : null);
+const decode = (bytes: Uint8Array | null) => {
+  if (!bytes) return null;
+  const { Skia } = skia();
+  return Skia.Image.MakeImageFromEncoded(Skia.Data.fromBytes(bytes));
+};
 
 export async function loadDraft(id: string): Promise<Doc> {
   const raw = await AsyncStorage.getItem(dataKey(id));

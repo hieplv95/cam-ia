@@ -11,7 +11,9 @@ export type EditorIntent =
   /** Opens the manual color/light adjustment screen. */
   | { type: 'adjust'; preset?: string; intensity?: number }
   /** Opens one of the featured AI tools (Studio screen) with the photo. */
-  | { type: 'studio'; tool: StudioToolId };
+  | { type: 'studio'; tool: StudioToolId }
+  /** Opens CamIA Filters (swipe through color filters). */
+  | { type: 'filters' };
 
 /** Hands the chosen photo from other screens to the editor without stuffing large data into route params. */
 export type PendingPhoto = (
@@ -39,10 +41,16 @@ export const takePendingPhoto = () => {
 
 /** The finished picture handed to the Export screen, kept as a decoded image to avoid re-compressing it. */
 let pendingExport: SkImage | null = null;
+let exportLogo = true;
 
-export const setPendingExport = (img: SkImage) => {
+/** `logo: false` opens Export with the CamIA logo switched off (CamIA Filters never adds one by itself). */
+export const setPendingExport = (img: SkImage, options?: { logo?: boolean }) => {
   pendingExport = img;
+  exportLogo = options?.logo ?? true;
 };
+
+/** Whether Export starts with the logo on, for the picture last handed over. */
+export const pendingExportLogo = () => exportLogo;
 
 export const takePendingExport = () => {
   const img = pendingExport;

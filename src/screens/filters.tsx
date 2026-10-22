@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Canvas, Group, Image as SkImageNode, rect, Rect, type SkImage } from '@shopify/react-native-skia';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -13,17 +14,18 @@ import { camFilters, filterById, filterCategories, filtersIn, type CamFilter, ty
 import { useT, type MessageKey } from '@/src/i18n';
 import { notify } from '@/src/notify';
 import { setPendingExport, takePendingPhoto } from '@/src/pendingPhoto';
-import { font } from '@/src/theme';
+import { cardShadow, colors, font, goldGradient } from '@/src/theme';
 
-/** Dark, like a camera app: the photo stands out. */
-const dk = {
-  bg: '#0D0D0F',
-  panel: '#18181C',
-  chip: '#27272D',
-  text: '#F5F3F0',
-  soft: '#A3A3AD',
-  accent: '#8B7CF6',
+/** The app's cream and gold, like the other screens. */
+const tone = {
+  bg: colors.bg,
+  panel: colors.surface,
+  chip: colors.surface2,
+  text: colors.text,
+  soft: colors.textSoft,
+  accent: colors.gold,
 };
+const HEART = '#E25D7E';
 
 type Shelf = 'all' | 'favorites' | FilterCategory;
 
@@ -36,7 +38,7 @@ const SWIPE_SHARE = 0.22;
 const ease = (x: number) => 1 - (1 - x) ** 3;
 
 /**
- * CamIA Filters: the photo full screen, swipe left / right for the next / previous color filter (the new one slides
+ * CamIA Filters (in the app's cream and gold): the photo large, swipe left / right for the next / previous color filter (the new one slides
  * in under the finger), hold to see the original, pick a category or a thumbnail of the photo itself below, set the
  * intensity, save. Everything runs on the device (src/filters/engine.tsx): no AI, no cost per filter.
  */
@@ -67,6 +69,7 @@ export default function Filters() {
   const intensity = intensityOf(filter);
 
   const leave = () => (router.canGoBack() ? router.back() : router.replace('/'));
+  const goHome = () => (router.canDismiss() ? router.dismissTo('/') : router.replace('/'));
 
   useEffect(() => {
     const pending = takePendingPhoto();
@@ -233,12 +236,14 @@ export default function Filters() {
       <View style={styles.column}>
         <View style={styles.header}>
           <Pressable onPress={leave} hitSlop={8} style={styles.roundBtn} accessibilityLabel={t('common.back')}>
-            <Ionicons name="chevron-back" size={22} color={dk.text} />
+            <Ionicons name="chevron-back" size={22} color={tone.text} />
           </Pressable>
           <Text style={styles.title}>{t('filters.title')}</Text>
-          <Pressable onPress={save} disabled={!full || !!busy} style={({ pressed }) => [styles.saveBtn, pressed && { opacity: 0.85 }]}>
-            <Ionicons name="download-outline" size={17} color="#111111" />
-            <Text style={styles.saveText}>{t('common.save')}</Text>
+          <Pressable onPress={save} disabled={!full || !!busy} style={({ pressed }) => pressed && { opacity: 0.85 }}>
+            <LinearGradient colors={goldGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.saveBtn}>
+              <Ionicons name="download-outline" size={17} color={colors.onGold} />
+              <Text style={styles.saveText}>{t('common.save')}</Text>
+            </LinearGradient>
           </Pressable>
         </View>
 
@@ -290,14 +295,14 @@ export default function Filters() {
                       style={styles.photoBtn}
                       accessibilityLabel={favorite ? t('filters.unfavorite') : t('filters.favorite')}
                     >
-                      <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={18} color={favorite ? '#FF6B8A' : '#FFFFFF'} />
+                      <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={18} color={favorite ? HEART : '#FFFFFF'} />
                     </Pressable>
                   )}
                 </View>
               </View>
             </GestureDetector>
           ) : (
-            <ActivityIndicator color={dk.accent} />
+            <ActivityIndicator color={tone.accent} />
           )}
         </View>
 
@@ -305,7 +310,7 @@ export default function Filters() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.row} contentContainerStyle={styles.shelves}>
             {shelves.map((s) => (
               <Pressable key={s.id} onPress={() => setShelf(s.id)} style={[styles.chip, shelf === s.id && styles.chipActive]}>
-                {s.id === 'favorites' && <Ionicons name="heart" size={12} color={shelf === s.id ? '#111111' : '#FF6B8A'} />}
+                {s.id === 'favorites' && <Ionicons name="heart" size={12} color={shelf === s.id ? '#FFFFFF' : HEART} />}
                 <Text style={[styles.chipText, shelf === s.id && styles.chipTextActive]}>{s.label}</Text>
               </Pressable>
             ))}
@@ -318,7 +323,7 @@ export default function Filters() {
               return (
                 <Pressable key={key} onPress={() => choose(f)} style={[styles.card, active && styles.cardActive]}>
                   <View style={styles.cardImg}>{thumbs[key] ? <Image source={{ uri: thumbs[key] }} style={StyleSheet.absoluteFill} /> : null}</View>
-                  <Text numberOfLines={1} style={[styles.cardText, active && { color: dk.text }]}>
+                  <Text numberOfLines={1} style={[styles.cardText, active && styles.cardTextActive]}>
                     {f ? f.name : t('filters.original')}
                   </Text>
                 </Pressable>
@@ -337,11 +342,16 @@ export default function Filters() {
             <Text style={styles.pickHint}>{t('filters.pickHint')}</Text>
           )}
         </View>
+
+        <Pressable onPress={goHome} style={({ pressed }) => [styles.homeBtn, pressed && { opacity: 0.8 }]} accessibilityRole="button">
+          <Ionicons name="home-outline" size={18} color={tone.text} />
+          <Text style={styles.homeText}>{t('tabs.home')}</Text>
+        </Pressable>
       </View>
 
       {busy && image && (
         <View style={styles.overlay}>
-          <ActivityIndicator color={dk.accent} />
+          <ActivityIndicator color={tone.accent} />
           <Text style={styles.overlayText}>{busy}</Text>
         </View>
       )}
@@ -377,15 +387,15 @@ function IntensitySlider({ value, onChange }: { value: number; onChange: (v: num
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: dk.bg },
+  safe: { flex: 1, backgroundColor: tone.bg },
   column: { flex: 1, width: '100%', maxWidth: 620, alignSelf: 'center', paddingHorizontal: 12, paddingBottom: 10, gap: 10 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 6 },
-  roundBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: dk.chip, alignItems: 'center', justifyContent: 'center' },
-  title: { fontFamily: font.semi, fontSize: 16, color: dk.text },
-  saveBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFFFFF', borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9 },
-  saveText: { fontFamily: font.semi, fontSize: 14, color: '#111111' },
+  roundBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  title: { fontFamily: font.semi, fontSize: 16, color: tone.text },
+  saveBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 18, paddingVertical: 9 },
+  saveText: { fontFamily: font.semi, fontSize: 14, color: colors.onGold },
   stage: { flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center' },
-  photo: { borderRadius: 22, overflow: 'hidden', backgroundColor: dk.panel },
+  photo: { borderRadius: 22, overflow: 'hidden', backgroundColor: tone.chip, ...cardShadow },
   tag: { position: 'absolute', top: 12, left: 12, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 999, paddingHorizontal: 13, paddingVertical: 6 },
   tagText: { fontFamily: font.semi, fontSize: 13, color: '#FFFFFF' },
   flash: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
@@ -412,27 +422,40 @@ const styles = StyleSheet.create({
   hintText: { fontFamily: font.medium, fontSize: 13, color: '#FFFFFF' },
   photoActions: { position: 'absolute', right: 10, bottom: 10, flexDirection: 'row', gap: 8 },
   photoBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' },
-  panel: { backgroundColor: dk.panel, borderRadius: 24, paddingVertical: 12, gap: 12 },
+  panel: { backgroundColor: tone.panel, borderRadius: 24, borderWidth: 1, borderColor: colors.border, paddingVertical: 12, gap: 12, ...cardShadow },
   row: { flexGrow: 0, flexShrink: 0 },
   shelves: { paddingHorizontal: 12, gap: 8, alignItems: 'center' },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: dk.chip, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7 },
-  chipActive: { backgroundColor: dk.text },
-  chipText: { fontFamily: font.medium, fontSize: 12.5, color: dk.soft },
-  chipTextActive: { color: '#111111' },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: tone.chip, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7 },
+  chipActive: { backgroundColor: tone.accent },
+  chipText: { fontFamily: font.medium, fontSize: 12.5, color: tone.soft },
+  chipTextActive: { color: '#FFFFFF', fontFamily: font.semi },
   cards: { paddingHorizontal: 12, gap: CARD_GAP, alignItems: 'flex-start' },
   card: { width: CARD_W + 6, alignItems: 'center', gap: 5, padding: 3, borderRadius: 16, borderWidth: 2, borderColor: 'transparent' },
-  cardActive: { borderColor: dk.accent },
-  cardImg: { width: CARD_W - 2, height: CARD_W + 10, borderRadius: 12, overflow: 'hidden', backgroundColor: dk.chip },
-  cardText: { fontFamily: font.medium, fontSize: 10.5, color: dk.soft, maxWidth: CARD_W + 2 },
-  empty: { fontFamily: font.regular, fontSize: 12.5, color: dk.soft, alignSelf: 'center', marginLeft: 6 },
+  cardActive: { borderColor: tone.accent },
+  cardImg: { width: CARD_W - 2, height: CARD_W + 10, borderRadius: 12, overflow: 'hidden', backgroundColor: tone.chip },
+  cardText: { fontFamily: font.medium, fontSize: 10.5, color: tone.soft, maxWidth: CARD_W + 2 },
+  cardTextActive: { color: colors.goldDeep, fontFamily: font.semi },
+  empty: { fontFamily: font.regular, fontSize: 12.5, color: tone.soft, alignSelf: 'center', marginLeft: 6 },
   intensityRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16 },
-  intensityLabel: { fontFamily: font.medium, fontSize: 12.5, color: dk.soft },
-  intensityValue: { fontFamily: font.semi, fontSize: 13, color: dk.text, width: 28, textAlign: 'right' },
-  pickHint: { fontFamily: font.regular, fontSize: 12.5, color: dk.soft, textAlign: 'center', paddingVertical: 6 },
+  intensityLabel: { fontFamily: font.medium, fontSize: 12.5, color: tone.soft },
+  intensityValue: { fontFamily: font.semi, fontSize: 13, color: tone.text, width: 28, textAlign: 'right' },
+  homeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: tone.chip,
+    paddingVertical: 11,
+  },
+  homeText: { fontFamily: font.medium, fontSize: 14, color: tone.text },
+  pickHint: { fontFamily: font.regular, fontSize: 12.5, color: tone.soft, textAlign: 'center', paddingVertical: 6 },
   sliderHit: { flex: 1, height: 32, justifyContent: 'center' },
-  track: { height: 4, borderRadius: 2, backgroundColor: dk.chip, overflow: 'hidden' },
-  fill: { height: 4, backgroundColor: dk.accent },
-  knob: { position: 'absolute', width: KNOB, height: KNOB, borderRadius: KNOB / 2, backgroundColor: '#FFFFFF', borderWidth: 3, borderColor: dk.accent },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(13,13,15,0.75)', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  overlayText: { fontFamily: font.medium, fontSize: 14, color: dk.text },
+  track: { height: 4, borderRadius: 2, backgroundColor: colors.border, overflow: 'hidden' },
+  fill: { height: 4, backgroundColor: tone.accent },
+  knob: { position: 'absolute', width: KNOB, height: KNOB, borderRadius: KNOB / 2, backgroundColor: '#FFFFFF', borderWidth: 3, borderColor: tone.accent },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(250,246,240,0.82)', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  overlayText: { fontFamily: font.medium, fontSize: 14, color: tone.text },
 });

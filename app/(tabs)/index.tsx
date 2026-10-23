@@ -19,6 +19,7 @@ import { useRecents } from '@/src/recents';
 import { cardShadow, colors, font, MAX_CONTENT_WIDTH } from '@/src/theme';
 import { AppHeader, GoldButton, Screen, SectionHeader } from '@/src/ui';
 import { HScroll } from '@/src/HScroll';
+import { SocialLinks } from '@/src/SocialLinks';
 import { useT, type MessageKey } from '@/src/i18n';
 
 const slides: {
@@ -221,6 +222,9 @@ export default function Home() {
           </Pressable>
         ))}
       </HScroll>
+
+      {/* Web only: CamIA's social pages (links set on the admin page). */}
+      <SocialLinks />
 
       <Dialog
         visible={!!removing}

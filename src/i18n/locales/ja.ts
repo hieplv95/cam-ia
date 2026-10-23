@@ -84,6 +84,8 @@ const ja: Messages = {
   'home.aiTools': 'AI ツール',
   'home.presets': 'プリセット',
   'home.recent': '最近のプロジェクト',
+  'home.social': 'CamIA をフォロー',
+  'home.socialSub': '写真のコツ、新しいテンプレート、お得な情報',
   'home.removeDraft': '下書きを削除',
   'home.removeDraftTitle': '下書きを削除しますか？',
   'home.removeDraftMsg': 'この下書きの編集内容はすべて失われます。',

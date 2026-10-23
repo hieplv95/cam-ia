@@ -84,6 +84,8 @@ const pt: Messages = {
   'home.aiTools': 'Ferramentas de IA',
   'home.presets': 'Presets',
   'home.recent': 'Projetos recentes',
+  'home.social': 'Siga a CamIA',
+  'home.socialSub': 'Dicas de edição, novos modelos e ofertas',
   'home.removeDraft': 'Excluir rascunho',
   'home.removeDraftTitle': 'Excluir rascunho?',
   'home.removeDraftMsg': 'Todas as edições deste rascunho serão perdidas.',

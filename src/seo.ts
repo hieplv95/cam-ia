@@ -22,7 +22,7 @@ export type GeoSettings = {
   /** Let AI companies use the site to train models. Search and answer bots are always allowed. */
   allowTraining: boolean;
   /** Official profiles (structured data "sameAs"): full https:// links, '' when none. */
-  social: { instagram: string; tiktok: string; facebook: string; youtube: string };
+  social: { facebook: string; instagram: string; x: string; youtube: string; tiktok: string };
 };
 
 export type SeoSettings = {
@@ -35,7 +35,8 @@ export type SeoSettings = {
 };
 
 export const GEO_LIMITS = { about: 2000, faqItems: 12, question: 200, answer: 800, url: 200 } as const;
-export const SOCIAL_KEYS = ['instagram', 'tiktok', 'facebook', 'youtube'] as const;
+/** Also the order of the icons on the home page (web). */
+export const SOCIAL_KEYS = ['facebook', 'instagram', 'x', 'youtube', 'tiktok'] as const;
 
 /** AI crawlers named in robots.txt: search/answer bots (always allowed) and training bots (switch on the admin page). */
 export const AI_SEARCH_BOTS = ['OAI-SearchBot', 'ChatGPT-User', 'PerplexityBot', 'Perplexity-User', 'Claude-SearchBot', 'Claude-User', 'DuckAssistBot'];
@@ -43,7 +44,7 @@ export const AI_TRAINING_BOTS = ['GPTBot', 'ClaudeBot', 'Google-Extended', 'Appl
 
 export const DEFAULT_GEO: GeoSettings = {
   allowTraining: true,
-  social: { instagram: '', tiktok: '', facebook: '', youtube: '' },
+  social: { facebook: '', instagram: '', x: '', youtube: '', tiktok: '' },
   about: {
     es: 'CamIA (camia.app) es un editor de fotos con inteligencia artificial, gratis y sin descargar, que funciona en el navegador del celular o la PC, y pronto como app para Android e iPhone. Con CamIA puedes restaurar y colorear fotos antiguas, borrar objetos, personas o el fondo, crear fotos de producto profesionales para vender en línea, diseñar logos para tu negocio, probar peinados, colores de cabello y maquillaje, editar describiendo lo que quieres con tus propias palabras y aplicar filtros inspirados en Latinoamérica. Cada mes recibes puntos gratis para usar la IA y los invitados pueden probarla sin registrarse. Está disponible en 10 idiomas, incluido el español.',
     pt: 'CamIA (camia.app) é um editor de fotos com inteligência artificial, grátis e sem baixar nada, que funciona no navegador do celular ou do PC, e em breve como app para Android e iPhone. Com a CamIA você restaura e colore fotos antigas, apaga objetos, pessoas ou o fundo, cria fotos de produto profissionais para vender online, faz logos para o seu negócio, testa penteados, cores de cabelo e maquiagem, edita descrevendo o que quer com suas palavras e aplica filtros inspirados na América Latina. Todo mês você recebe pontos grátis para usar a IA e visitantes podem testar sem cadastro.',

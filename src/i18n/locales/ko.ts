@@ -84,6 +84,8 @@ const ko: Messages = {
   'home.aiTools': 'AI 도구',
   'home.presets': '프리셋',
   'home.recent': '최근 프로젝트',
+  'home.social': 'CamIA 팔로우',
+  'home.socialSub': '사진 팁, 새 템플릿과 혜택',
   'home.removeDraft': '임시 저장 삭제',
   'home.removeDraftTitle': '임시 저장을 삭제할까요?',
   'home.removeDraftMsg': '이 임시 저장의 모든 편집 내용이 사라져요.',

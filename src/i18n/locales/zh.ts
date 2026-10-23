@@ -84,6 +84,8 @@ const zh: Messages = {
   'home.aiTools': 'AI 工具',
   'home.presets': '预设',
   'home.recent': '最近项目',
+  'home.social': '关注 CamIA',
+  'home.socialSub': '修图技巧、新模板和优惠',
   'home.removeDraft': '删除草稿',
   'home.removeDraftTitle': '删除草稿？',
   'home.removeDraftMsg': '此草稿中的所有编辑都会丢失。',

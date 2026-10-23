@@ -84,6 +84,8 @@ const es: Messages = {
   'home.aiTools': 'Herramientas IA',
   'home.presets': 'Presets',
   'home.recent': 'Proyectos recientes',
+  'home.social': 'Sigue a CamIA',
+  'home.socialSub': 'Trucos de edición, nuevas plantillas y ofertas',
   'home.removeDraft': 'Eliminar borrador',
   'home.removeDraftTitle': '¿Eliminar borrador?',
   'home.removeDraftMsg': 'Se perderán todas las ediciones de este borrador.',

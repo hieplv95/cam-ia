@@ -84,6 +84,8 @@ const de: Messages = {
   'home.aiTools': 'KI-Tools',
   'home.presets': 'Presets',
   'home.recent': 'Letzte Projekte',
+  'home.social': 'Folge CamIA',
+  'home.socialSub': 'Foto-Tipps, neue Vorlagen und Angebote',
   'home.removeDraft': 'Entwurf löschen',
   'home.removeDraftTitle': 'Entwurf löschen?',
   'home.removeDraftMsg': 'Alle Änderungen in diesem Entwurf gehen verloren.',

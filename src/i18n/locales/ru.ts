@@ -84,6 +84,8 @@ const ru: Messages = {
   'home.aiTools': 'ИИ-инструменты',
   'home.presets': 'Пресеты',
   'home.recent': 'Недавние проекты',
+  'home.social': 'Подпишись на CamIA',
+  'home.socialSub': 'Советы по фото, новые шаблоны и акции',
   'home.removeDraft': 'Удалить черновик',
   'home.removeDraftTitle': 'Удалить черновик?',
   'home.removeDraftMsg': 'Все правки в этом черновике будут потеряны.',

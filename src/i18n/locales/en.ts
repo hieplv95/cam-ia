@@ -88,6 +88,8 @@ const en: Messages = {
   'home.aiTools': 'AI tools',
   'home.presets': 'Presets',
   'home.recent': 'Recent projects',
+  'home.social': 'Follow CamIA',
+  'home.socialSub': 'Photo tips, new templates and offers',
   'home.removeDraft': 'Delete draft',
   'home.removeDraftTitle': 'Delete draft?',
   'home.removeDraftMsg': 'All edits in this draft will be lost.',

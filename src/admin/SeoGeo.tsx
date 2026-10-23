@@ -9,7 +9,7 @@ import { Button, Card } from './ui';
 
 const langName = (l: Lang) => languages.find((x) => x.code === l)?.name ?? l;
 const siteOrigin = () => (Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : 'https://camia.app');
-const SOCIAL_LABEL: Record<(typeof SOCIAL_KEYS)[number], string> = { instagram: 'Instagram', tiktok: 'TikTok', facebook: 'Facebook', youtube: 'YouTube' };
+const SOCIAL_LABEL: Record<(typeof SOCIAL_KEYS)[number], string> = { facebook: 'Facebook', instagram: 'Instagram', x: 'X (Twitter)', youtube: 'YouTube', tiktok: 'TikTok' };
 
 /**
  * GEO on the SEO tab: what AI assistants (ChatGPT, Gemini, Perplexity, Claude) learn about CamIA — the "about" text
@@ -85,7 +85,7 @@ export function GeoCard({ lang, geo, onChange }: { lang: Lang; geo: GeoSettings;
 
       <View style={styles.field}>
         <Text style={styles.label}>Trang chính thức trên mạng xã hội (dùng chung mọi ngôn ngữ)</Text>
-        <Text style={styles.hint}>Google và AI dùng để biết đây đúng là CamIA. Để trống nếu chưa có.</Text>
+        <Text style={styles.hint}>Google và AI dùng để biết đây đúng là CamIA; các link này cũng hiện thành nút ở trang chủ bản web. Để trống nếu chưa có.</Text>
         {SOCIAL_KEYS.map((k) => (
           <View key={k} style={styles.row}>
             <Text style={styles.socialLabel}>{SOCIAL_LABEL[k]}</Text>
@@ -137,7 +137,7 @@ export function SeoScore({ seo, publishedPosts }: { seo: SeoSettings; publishedP
     { group: 'GEO', label: `Có giới thiệu CamIA cho AI (${langName(p)}, từ 200 ký tự)`, ok: about.length >= 200, tip: 'Viết vài câu sự thật về CamIA ở khu GEO.' },
     { group: 'GEO', label: 'Có ít nhất 4 câu hỏi thường gặp', ok: faq.filter((f) => f.q && f.a).length >= 4, tip: 'Thêm câu hỏi đúng như khách hỏi AI.' },
     { group: 'GEO', label: 'Có câu hỏi thường gặp cho Português và English', ok: (seo.geo.faq.pt?.length ?? 0) > 0 && (seo.geo.faq.en?.length ?? 0) > 0, tip: 'Chọn tab Português / English ở trên rồi thêm câu hỏi.' },
-    { group: 'GEO', label: 'Có link trang mạng xã hội chính thức', ok: Object.values(seo.geo.social).some(Boolean), tip: 'Thêm link Instagram, TikTok, Facebook hoặc YouTube.' },
+    { group: 'GEO', label: 'Có link trang mạng xã hội chính thức', ok: Object.values(seo.geo.social).some(Boolean), tip: 'Thêm link Facebook, Instagram, X, YouTube hoặc TikTok (cũng hiện ở trang chủ bản web).' },
     { group: 'GEO', label: 'Cho phép AI huấn luyện trên website', ok: seo.geo.allowTraining, tip: 'Bật để CamIA dễ được nhắc tới trong câu trả lời của AI.' },
   ];
   const passed = checks.filter((c) => c.ok).length;

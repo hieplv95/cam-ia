@@ -84,6 +84,8 @@ const fr: Messages = {
   'home.aiTools': 'Outils IA',
   'home.presets': 'Presets',
   'home.recent': 'Projets récents',
+  'home.social': 'Suis CamIA',
+  'home.socialSub': 'Astuces photo, nouveaux modèles et offres',
   'home.removeDraft': 'Supprimer le brouillon',
   'home.removeDraftTitle': 'Supprimer le brouillon ?',
   'home.removeDraftMsg': 'Toutes les modifications de ce brouillon seront perdues.',

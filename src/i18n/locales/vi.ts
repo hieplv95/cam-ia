@@ -90,6 +90,8 @@ const vi = {
   'home.aiTools': 'Công cụ AI',
   'home.presets': 'Presets',
   'home.recent': 'Dự án gần đây',
+  'home.social': 'Theo dõi CamIA',
+  'home.socialSub': 'Mẹo chỉnh ảnh, mẫu mới và ưu đãi',
   'home.removeDraft': 'Xóa bản nháp',
   'home.removeDraftTitle': 'Xóa bản nháp?',
   'home.removeDraftMsg': 'Mọi chỉnh sửa trong bản nháp này sẽ mất.',
